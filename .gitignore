@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.exe
+
+# Bun
+bun.lockb
+
+# Rust (legacy — safe to remove these dirs)
+target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# toksave cache
+.cache/

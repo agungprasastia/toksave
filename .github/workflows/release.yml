@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - target: linux-x64
+            bun-target: bun-linux-x64
+            os: ubuntu-latest
+            ext: ""
+          - target: linux-arm64
+            bun-target: bun-linux-arm64
+            os: ubuntu-latest
+            ext: ""
+          - target: darwin-x64
+            bun-target: bun-darwin-x64
+            os: macos-latest
+            ext: ""
+          - target: darwin-arm64
+            bun-target: bun-darwin-arm64
+            os: macos-latest
+            ext: ""
+          - target: windows-x64
+            bun-target: bun-windows-x64
+            os: windows-latest
+            ext: ".exe"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Compile
+        run: bun build ./src/index.ts --compile --target=${{ matrix.bun-target }} --outfile toksave-${{ matrix.target }}${{ matrix.ext }}
+
+      - name: Package (Unix)
+        if: matrix.ext == ''
+        run: tar czf toksave-${{ matrix.target }}.tar.gz toksave-${{ matrix.target }}
+
+      - name: Package (Windows)
+        if: matrix.ext == '.exe'
+        run: 7z a toksave-${{ matrix.target }}.zip toksave-${{ matrix.target }}.exe
+        shell: bash
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toksave-${{ matrix.target }}
+          path: toksave-${{ matrix.target }}.${{ matrix.ext == '.exe' && 'zip' || 'tar.gz' }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
