@@ -1,23 +1,56 @@
-# toksave
-
-**Zero-config token-saver for AI coding agents.**
-
-Install and wire [RTK](https://github.com/rtk-ai/rtk), [Caveman](https://github.com/JuliusBrussee/caveman), [CodeGraph](https://github.com/colbymchenry/codegraph), and [Context-Mode](https://github.com/mksglu/context-mode) into your AI agents — without hand-editing configs.
-
-<p align="center">
+<div align="center">
   <img src="assets/Logo.png" alt="toksave logo" width="300" />
-</p>
 
-## Supported Agents
+  # toksave
+
+  **Zero-config token-saver for AI coding agents.**
+
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Built with Bun](https://img.shields.io/badge/Built%20with-Bun-black?logo=bun)](https://bun.sh)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![CI](https://github.com/agungprasastia/toksave/actions/workflows/ci.yml/badge.svg)](https://github.com/agungprasastia/toksave/actions)
+
+  <p align="center">
+    Install and wire <a href="https://github.com/rtk-ai/rtk">RTK</a>, <a href="https://github.com/JuliusBrussee/caveman">Caveman</a>, <a href="https://github.com/colbymchenry/codegraph">CodeGraph</a>, and <a href="https://github.com/mksglu/context-mode">Context-Mode</a> into your AI agents — without hand-editing configs.
+  </p>
+</div>
+
+<hr />
+
+## ✨ Features
+
+- **Zero-config:** Run one command to equip all your agents.
+- **Idempotent & Safe:** Run multiple times without duplicating configurations.
+- **Clean Uninstall:** Tracks what it installed so it can cleanly revert changes.
+- **Cross-platform:** Ships as a standalone binary for macOS, Linux, and Windows.
+- **Preview Changes:** Use `--dry-run` to see what will happen before committing.
+
+## 🤖 Supported Agents & Tooling
 
 | Agent | MCP | Hooks | Caveman | Context-Mode Rules |
-|-------|-----|-------|---------|-------------------|
-| Claude Code | ✅ | ✅ RTK bash | ✅ SKILL.md | ✅ AGENTS.md |
-| OpenCode | ✅ | — | ✅ AGENTS.md | ✅ AGENTS.md |
-| Codex | ✅ (TOML) | ✅ RTK hook | ✅ instructions.md | ✅ instructions.md |
-| Antigravity | ✅ (multi-surface) | ✅ RTK + ctx | ✅ SKILL.md | ✅ AGENTS.md |
+|-------|:---:|:---:|:---:|:---:|
+| **Claude Code** | ✅ | ✅ RTK bash | ✅ SKILL.md | ✅ AGENTS.md |
+| **OpenCode** | ✅ | — | ✅ AGENTS.md | ✅ AGENTS.md |
+| **Codex** | ✅ (TOML) | ✅ RTK hook | ✅ instructions.md | ✅ instructions.md |
+| **Antigravity** | ✅ (JSON) | ✅ RTK + ctx | ✅ SKILL.md | ✅ AGENTS.md |
 
-## Install
+## 📦 What Gets Installed
+
+| Tool | Method | What It Does |
+|------|--------|-------------|
+| **RTK** | Prebuilt binary | CLI proxy that compresses tool output — **60-90% token savings** |
+| **Caveman** | Markdown file | Communication mode that cuts LLM response tokens **~75%** |
+| **CodeGraph** | `npm install -g` | Pre-indexed code knowledge graph — **fewer tool calls** |
+| **Context-Mode**| `npm install -g` | MCP server that sandboxes tool output — **98% context reduction** |
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js ≥ 22** (required for CodeGraph and Context-Mode)
+- At least one supported AI agent installed
+
+### Install
 
 **macOS / Linux:**
 ```bash
@@ -29,29 +62,15 @@ curl -fsSL https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts
 irm https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts/install.ps1 | iex
 ```
 
-## Usage
+## 💻 Usage
 
+### Quick Start
 ```bash
 # Interactive setup — detect agents, install tools, wire everything
 toksave
-
-# Target specific agents
-toksave --agents claude,antigravity
-
-# Target specific tools
-toksave --tools rtk,caveman
-
-# Non-interactive mode (CI/scripts)
-toksave --yes
-
-# Dry run — see what would happen
-toksave --dry-run
-
-# Verbose output
-toksave --verbose
 ```
 
-## Commands
+### Advanced Commands
 
 | Command | Description |
 |---------|-------------|
@@ -61,58 +80,37 @@ toksave --verbose
 | `toksave uninstall` | Remove toksave wiring from agents |
 | `toksave self-update` | Update the toksave CLI itself |
 
-## Flags
+### Helpful Flags
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--agents <ids>` | `-a` | Target specific agents (comma-separated) |
-| `--tools <ids>` | `-t` | Target specific tools (comma-separated) |
-| `--dry-run` | `-n` | Preview changes without modifying anything |
-| `--verbose` | `-v` | Show detailed output |
-| `--yes` | `-y` | Skip prompts, auto-select detected agents |
+| Flag | Description |
+|------|-------------|
+| `-a, --agents <ids>` | Target specific agents (e.g., `claude,antigravity`) |
+| `-t, --tools <ids>`  | Target specific tools (e.g., `rtk,caveman`) |
+| `-n, --dry-run`      | Preview changes without modifying anything |
+| `-y, --yes`          | Skip prompts, auto-select detected agents (CI-friendly) |
+| `-v, --verbose`      | Show detailed output |
 
-## What Gets Installed
+## 🛠️ Development
 
-| Tool | Method | What It Does |
-|------|--------|-------------|
-| **RTK** | Prebuilt binary from GitHub | CLI proxy that compresses tool output — 60-90% token savings |
-| **Caveman** | Markdown skill file | Communication mode that cuts LLM response tokens ~75% |
-| **CodeGraph** | `npm install -g` | Pre-indexed code knowledge graph — fewer tool calls |
-| **Context-Mode** | `npm install -g` + rules | MCP server that sandboxes tool output — 98% context reduction |
-
-## Idempotent & Safe
-
-- Run `toksave` multiple times — no duplicate entries
-- Tracks what it wired via `~/.cache/toksave/manifest.json`
-- `toksave uninstall` only removes what toksave added
-- `--dry-run` previews all changes before committing
-
-## Prerequisites
-
-- **Node.js ≥ 22** (for CodeGraph and Context-Mode)
-- At least one supported agent installed
-
-## Development
-
-Built with TypeScript + [Bun](https://bun.sh). Compiles to standalone binary via `bun build --compile`.
+Built with TypeScript + [Bun](https://bun.sh). Compiles to a standalone binary via `bun build --compile`.
 
 ```bash
-# Install dependencies
+# Clone and install dependencies
+git clone https://github.com/agungprasastia/toksave.git
+cd toksave
 bun install
 
-# Run in dev
-bun run src/index.ts
+# Development tasks
+bun run src/index.ts      # Run CLI in dev mode
+bun run typecheck         # Run TypeScript checks
+bun test                  # Run unit tests
+bun run lint              # Lint with Biome
+bun run build             # Build local binary
 
-# Type check
-bun run typecheck
-
-# Build binary
-bun run build
-
-# Build all platforms
+# Build all cross-platform releases
 bash scripts/build-release.sh
 ```
 
-## License
+## 📜 License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE)
