@@ -1,28 +1,34 @@
-import pc from "picocolors";
+import { existsSync, rmSync } from "node:fs";
 import * as clack from "@clack/prompts";
+import pc from "picocolors";
 import {
-  ALL_AGENTS, ALL_TOOLS, type AgentId, type ToolId,
-  parseAgentId, parseToolId, agentInfo, toolInfo,
-  detectAgent, unwireTool, type RunOpts,
+  ALL_AGENTS,
+  ALL_TOOLS,
+  type AgentId,
+  type RunOpts,
+  type ToolId,
+  agentInfo,
+  detectAgent,
+  parseAgentId,
+  parseToolId,
+  toolInfo,
+  unwireTool,
 } from "../registry.js";
-import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 import * as colors from "../util/colors.js";
-import { removeWire, clearManifest } from "../util/manifest.js";
+import { clearManifest, removeWire } from "../util/manifest.js";
 import { cacheDir } from "../util/paths.js";
-import { existsSync, rmSync } from "fs";
+import { type SelectOption, isInteractive, multiSelect } from "../util/prompt.js";
 
 /** Run the uninstall command: unwire tools from agents. */
 export async function run(
   agentsFilter: AgentId[],
   toolsFilter: ToolId[],
-  opts: RunOpts
+  opts: RunOpts,
 ): Promise<number> {
   colors.banner("toksave", "uninstall");
 
   // ── Detect installed agents ──────────────────────────────
-  const detected = ALL_AGENTS
-    .filter((a) => detectAgent(a.id).installed)
-    .map((a) => a.id);
+  const detected = ALL_AGENTS.filter((a) => detectAgent(a.id).installed).map((a) => a.id);
 
   if (detected.length === 0) {
     colors.raw("  Nothing wired.");
@@ -55,8 +61,7 @@ export async function run(
   }
 
   // ── Pick tools ──────────────────────────────────────────
-  const tools: ToolId[] =
-    toolsFilter.length > 0 ? toolsFilter : ALL_TOOLS.map((t) => t.id);
+  const tools: ToolId[] = toolsFilter.length > 0 ? toolsFilter : ALL_TOOLS.map((t) => t.id);
 
   // ── Unwire ──────────────────────────────────────────────
   const s = clack.spinner();
@@ -76,7 +81,11 @@ export async function run(
   if (!opts.dryRun && tools.length === ALL_TOOLS.length && agentIds.length === detected.length) {
     const cache = cacheDir();
     if (existsSync(cache)) {
-      try { rmSync(cache, { recursive: true, force: true }); } catch { /* ignore */ }
+      try {
+        rmSync(cache, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 

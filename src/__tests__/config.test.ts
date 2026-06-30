@@ -1,8 +1,14 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { join } from "path";
-import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from "fs";
-import { readJsonFile, writeJsonFile, getOrCreateObject, addToArrayIfMissing, removeFromArray } from "../config/json.js";
-import { readTomlFile, writeTomlFile, upsertTable, hasTable, removeTable } from "../config/toml.js";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  addToArrayIfMissing,
+  getOrCreateObject,
+  readJsonFile,
+  removeFromArray,
+  writeJsonFile,
+} from "../config/json.js";
+import { hasTable, readTomlFile, removeTable, upsertTable, writeTomlFile } from "../config/toml.js";
 
 const TMP = join(import.meta.dir, "__tmp_config__");
 

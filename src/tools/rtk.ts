@@ -1,10 +1,10 @@
+import { join } from "node:path";
 import type { RunOpts } from "../registry.js";
-import { isOnPath } from "../util/detect.js";
-import { run, runStdout } from "../util/exec.js";
-import { downloadTarGz, downloadZip, fetchJson, makeExecutable } from "../util/download.js";
-import { localBin, ensureDir } from "../util/paths.js";
 import { verbose } from "../util/colors.js";
-import { join } from "path";
+import { isOnPath } from "../util/detect.js";
+import { downloadTarGz, downloadZip, fetchJson, makeExecutable } from "../util/download.js";
+import { run, runStdout } from "../util/exec.js";
+import { ensureDir, localBin } from "../util/paths.js";
 
 /** Platform-specific asset name for prebuilt binary. */
 function assetName(): string | null {
@@ -91,6 +91,8 @@ export function latestVersion(): string | null {
     if (r.code === 0 && r.stdout) {
       return r.stdout.replace(/^v/, "").trim() || null;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }

@@ -9,22 +9,15 @@ export interface SelectOption {
 }
 
 /** Interactive multi-select. Returns chosen values. */
-export async function multiSelect(
-  title: string,
-  options: SelectOption[]
-): Promise<string[]> {
+export async function multiSelect(title: string, options: SelectOption[]): Promise<string[]> {
   const result = await clack.multiselect({
     message: title,
     options: options.map((o) => ({
       value: o.value,
       label: o.label,
-      hint: o.disabled
-        ? o.hint ?? "not available"
-        : o.hint ?? undefined,
+      hint: o.disabled ? (o.hint ?? "not available") : (o.hint ?? undefined),
     })),
-    initialValues: options
-      .filter((o) => o.selected && !o.disabled)
-      .map((o) => o.value),
+    initialValues: options.filter((o) => o.selected && !o.disabled).map((o) => o.value),
     required: false,
   });
 

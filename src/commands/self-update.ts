@@ -2,7 +2,7 @@ import pc from "picocolors";
 import * as colors from "../util/colors.js";
 import { fetchJson } from "../util/download.js";
 import { run as execRun, runOk } from "../util/exec.js";
-import { toksaveVersion, isUpToDate } from "../util/version.js";
+import { isUpToDate, toksaveVersion } from "../util/version.js";
 
 const OWNER = "agungprasastia";
 const REPO = "toksave";
@@ -16,16 +16,14 @@ export async function run(): Promise<number> {
 
   let latest: string;
   try {
-    const json = await fetchJson(
-      `https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`
-    );
+    const json = await fetchJson(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`);
     latest = (json?.tag_name ?? "").replace(/^v/, "");
     if (!latest) throw new Error("No tag_name");
   } catch {
     colors.err("Could not reach GitHub Releases. Try again later.");
     colors.warn("Manual update:");
     colors.raw(
-      `  ${pc.cyan(`curl -fsSL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.sh | bash`)}`
+      `  ${pc.cyan(`curl -fsSL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.sh | bash`)}`,
     );
     return 1;
   }
@@ -42,7 +40,7 @@ export async function run(): Promise<number> {
   if (process.platform === "win32") {
     colors.warn("On Windows, run:");
     colors.raw(
-      `  ${pc.cyan(`irm https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.ps1 | iex`)}`
+      `  ${pc.cyan(`irm https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.ps1 | iex`)}`,
     );
     return 0;
   }
@@ -60,7 +58,7 @@ export async function run(): Promise<number> {
 
   colors.warn("Manual update:");
   colors.raw(
-    `  ${pc.cyan(`curl -fsSL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.sh | bash`)}`
+    `  ${pc.cyan(`curl -fsSL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.sh | bash`)}`,
   );
   return 0;
 }

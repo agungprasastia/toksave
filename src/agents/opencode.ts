@@ -1,11 +1,15 @@
+import { existsSync } from "node:fs";
+import { getOrCreateObject, hasKey, readJsonFile, writeJsonFile } from "../config/json.js";
+import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
+import {
+  CTX_RULES_BLOCK,
+  hasCtxRules,
+  removeCtxRules as stripCtxRules,
+} from "../content/ctx-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
-import { readJsonFile, writeJsonFile, getOrCreateObject, hasKey } from "../config/json.js";
+import { verbose } from "../util/colors.js";
 import { findBinaryIn, isOnPath } from "../util/detect.js";
 import * as paths from "../util/paths.js";
-import { verbose } from "../util/colors.js";
-import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
-import { CTX_RULES_BLOCK, hasCtxRules, removeCtxRules as stripCtxRules } from "../content/ctx-rules.js";
-import { existsSync } from "fs";
 
 /** Detect if OpenCode is installed. */
 export function detect(): Detection {
@@ -37,20 +41,32 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
 /** Unwire a tool from OpenCode. */
 export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
   switch (tool) {
-    case "codegraph": removeMcp("codegraph"); return true;
-    case "context-mode": removeMcp("context-mode"); removeCtxRulesFile(); return true;
-    case "caveman": removeCavemanRules(); return true;
-    case "rtk": return true;
+    case "codegraph":
+      removeMcp("codegraph");
+      return true;
+    case "context-mode":
+      removeMcp("context-mode");
+      removeCtxRulesFile();
+      return true;
+    case "caveman":
+      removeCavemanRules();
+      return true;
+    case "rtk":
+      return true;
   }
 }
 
 /** Verify a tool is wired into OpenCode. */
 export function verify(tool: ToolId): boolean | null {
   switch (tool) {
-    case "codegraph": return hasMcp("codegraph");
-    case "context-mode": return hasMcp("context-mode");
-    case "caveman": return hasCavemanRules();
-    case "rtk": return isOnPath("rtk");
+    case "codegraph":
+      return hasMcp("codegraph");
+    case "context-mode":
+      return hasMcp("context-mode");
+    case "caveman":
+      return hasCavemanRules();
+    case "rtk":
+      return isOnPath("rtk");
   }
 }
 
@@ -62,11 +78,11 @@ function wireMcp(toolId: string, command: string[], opts: RunOpts): boolean {
   verbose(`Wiring MCP ${toolId} into OpenCode`, opts.verbose);
 
   const p = paths.opencodePaths();
-  let cfg = readJsonFile(p.config) ?? {};
+  const cfg = readJsonFile(p.config) ?? {};
 
   // Ensure $schema
   if (!hasKey(cfg, "$schema")) {
-    cfg["$schema"] = "https://opencode.ai/config.json";
+    cfg.$schema = "https://opencode.ai/config.json";
   }
 
   const mcp = getOrCreateObject(cfg, "mcp");
@@ -119,7 +135,7 @@ function wireCaveman(opts: RunOpts): boolean {
   const existing = paths.readFile(p.agentsMd) ?? "";
   if (existing.includes("CAVEMAN_START")) return true;
 
-  paths.writeFile(p.agentsMd, existing + "\n" + CAVEMAN_AGENTS_BLOCK);
+  paths.writeFile(p.agentsMd, `${existing}\n${CAVEMAN_AGENTS_BLOCK}`);
   return true;
 }
 
@@ -127,9 +143,7 @@ function removeCavemanRules(): void {
   const p = paths.opencodePaths();
   const existing = paths.readFile(p.agentsMd);
   if (!existing) return;
-  const stripped = existing
-    .replace(/\n?<!-- CAVEMAN_START[\s\S]*?CAVEMAN_END -->\n?/g, "")
-    .trim();
+  const stripped = existing.replace(/\n?<!-- CAVEMAN_START[\s\S]*?CAVEMAN_END -->\n?/g, "").trim();
   paths.writeFile(p.agentsMd, stripped);
 }
 
@@ -150,7 +164,7 @@ function wireCtxRules(opts: RunOpts): void {
   const existing = paths.readFile(p.agentsMd) ?? "";
   if (hasCtxRules(existing)) return;
 
-  paths.writeFile(p.agentsMd, existing + "\n" + CTX_RULES_BLOCK);
+  paths.writeFile(p.agentsMd, `${existing}\n${CTX_RULES_BLOCK}`);
 }
 
 function removeCtxRulesFile(): void {

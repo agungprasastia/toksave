@@ -1,12 +1,21 @@
+import { existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import {
+  addToArrayIfMissing,
+  getOrCreateObject,
+  readJsonFile,
+  writeJsonFile,
+} from "../config/json.js";
+import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
+import {
+  CTX_RULES_BLOCK,
+  hasCtxRules,
+  removeCtxRules as stripCtxRules,
+} from "../content/ctx-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
-import { readJsonFile, writeJsonFile, getOrCreateObject, addToArrayIfMissing } from "../config/json.js";
+import { verbose } from "../util/colors.js";
 import { findBinaryIn, isOnPath } from "../util/detect.js";
 import * as paths from "../util/paths.js";
-import { verbose } from "../util/colors.js";
-import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
-import { CTX_RULES_BLOCK, hasCtxRules, removeCtxRules as stripCtxRules } from "../content/ctx-rules.js";
-import { existsSync, rmSync } from "fs";
-import { join } from "path";
 
 /** Detect if Antigravity is installed. */
 export function detect(): Detection {
@@ -48,20 +57,34 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
 /** Unwire a tool from Antigravity. */
 export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
   switch (tool) {
-    case "codegraph": removeMcp("codegraph"); return true;
-    case "context-mode": removeMcp("context-mode"); removeContextModeHook(); removeCtxRulesFile(); return true;
-    case "rtk": removeRtkHook(); return true;
-    case "caveman": removeCaveman(); return true;
+    case "codegraph":
+      removeMcp("codegraph");
+      return true;
+    case "context-mode":
+      removeMcp("context-mode");
+      removeContextModeHook();
+      removeCtxRulesFile();
+      return true;
+    case "rtk":
+      removeRtkHook();
+      return true;
+    case "caveman":
+      removeCaveman();
+      return true;
   }
 }
 
 /** Verify a tool is wired into Antigravity. */
 export function verify(tool: ToolId): boolean | null {
   switch (tool) {
-    case "codegraph": return hasMcp("codegraph");
-    case "context-mode": return hasMcp("context-mode");
-    case "rtk": return hasRtkHook();
-    case "caveman": return hasCavemanSkill();
+    case "codegraph":
+      return hasMcp("codegraph");
+    case "context-mode":
+      return hasMcp("context-mode");
+    case "rtk":
+      return hasRtkHook();
+    case "caveman":
+      return hasCavemanSkill();
   }
 }
 
@@ -73,8 +96,8 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
   verbose(`Wiring MCP ${toolId} into Antigravity (multi-surface)`, opts.verbose);
 
   for (const f of paths.antigravityMcpFiles()) {
-    paths.ensureDir(require("path").dirname(f));
-    let cfg = readJsonFile(f) ?? {};
+    paths.ensureDir(require("node:path").dirname(f));
+    const cfg = readJsonFile(f) ?? {};
     const servers = getOrCreateObject(cfg, "mcpServers");
 
     const entry: any = { command };
@@ -108,8 +131,8 @@ function hasMcp(toolId: string): boolean {
 
 function allowEntry(entry: string): void {
   for (const f of paths.antigravitySettingsFiles()) {
-    paths.ensureDir(require("path").dirname(f));
-    let cfg = readJsonFile(f) ?? {};
+    paths.ensureDir(require("node:path").dirname(f));
+    const cfg = readJsonFile(f) ?? {};
     const perms = getOrCreateObject(cfg, "permissions");
     if (!Array.isArray(perms.allow)) perms.allow = [];
     addToArrayIfMissing(perms.allow, entry);
@@ -121,19 +144,21 @@ function allowEntry(entry: string): void {
 
 function installRtkHook(opts: RunOpts): void {
   const hooksFile = paths.antigravityPaths().hooks;
-  paths.ensureDir(require("path").dirname(hooksFile));
+  paths.ensureDir(require("node:path").dirname(hooksFile));
 
   verbose("Installing RTK hook for Antigravity", opts.verbose);
 
-  let cfg = readJsonFile(hooksFile) ?? {};
+  const cfg = readJsonFile(hooksFile) ?? {};
   const tok = paths.toksaveAbs();
   const command = `${tok} rtk-hook agy`;
 
   cfg.rtk = {
-    PreToolUse: [{
-      matcher: "",
-      hooks: [{ type: "command", command, timeout: 10 }],
-    }],
+    PreToolUse: [
+      {
+        matcher: "",
+        hooks: [{ type: "command", command, timeout: 10 }],
+      },
+    ],
   };
 
   writeJsonFile(hooksFile, cfg);
@@ -143,7 +168,7 @@ function removeRtkHook(): void {
   const hooksFile = paths.antigravityPaths().hooks;
   const cfg = readJsonFile(hooksFile);
   if (cfg?.rtk) {
-    delete cfg.rtk;
+    cfg.rtk = undefined;
     writeJsonFile(hooksFile, cfg);
   }
 }
@@ -158,21 +183,33 @@ function hasRtkHook(): boolean {
 
 function installContextModeHook(opts: RunOpts): void {
   const hooksFile = paths.antigravityPaths().hooks;
-  paths.ensureDir(require("path").dirname(hooksFile));
+  paths.ensureDir(require("node:path").dirname(hooksFile));
 
   verbose("Installing Context-Mode hook for Antigravity", opts.verbose);
 
-  let cfg = readJsonFile(hooksFile) ?? {};
+  const cfg = readJsonFile(hooksFile) ?? {};
 
   cfg.ctx = {
-    PreInvocation: [{
-      matcher: "",
-      hooks: [{ type: "command", command: `${paths.toksaveAbs()} context-mode-hook agy preinvocation`, timeout: 10 }],
-    }],
-    PreToolUse: [{
-      matcher: "read_url_content|run_command|view_file",
-      hooks: [{ type: "command", command: "context-mode hook gemini-cli beforetool", timeout: 10 }],
-    }],
+    PreInvocation: [
+      {
+        matcher: "",
+        hooks: [
+          {
+            type: "command",
+            command: `${paths.toksaveAbs()} context-mode-hook agy preinvocation`,
+            timeout: 10,
+          },
+        ],
+      },
+    ],
+    PreToolUse: [
+      {
+        matcher: "read_url_content|run_command|view_file",
+        hooks: [
+          { type: "command", command: "context-mode hook gemini-cli beforetool", timeout: 10 },
+        ],
+      },
+    ],
   };
 
   writeJsonFile(hooksFile, cfg);
@@ -182,7 +219,7 @@ function removeContextModeHook(): void {
   const hooksFile = paths.antigravityPaths().hooks;
   const cfg = readJsonFile(hooksFile);
   if (cfg?.ctx) {
-    delete cfg.ctx;
+    cfg.ctx = undefined;
     writeJsonFile(hooksFile, cfg);
   }
 }
@@ -205,7 +242,11 @@ function wireCaveman(opts: RunOpts): boolean {
 function removeCaveman(): void {
   const gemini = paths.antigravityPaths().dir;
   const skillDir = join(gemini, "config", "skills", "caveman");
-  try { rmSync(skillDir, { recursive: true, force: true }); } catch { /* ignore */ }
+  try {
+    rmSync(skillDir, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
 }
 
 function hasCavemanSkill(): boolean {
@@ -223,7 +264,7 @@ function wireCtxRules(opts: RunOpts): void {
   const existing = paths.readFile(mdFile) ?? "";
   if (hasCtxRules(existing)) return;
 
-  paths.writeFile(mdFile, existing + "\n" + CTX_RULES_BLOCK);
+  paths.writeFile(mdFile, `${existing}\n${CTX_RULES_BLOCK}`);
 }
 
 function removeCtxRulesFile(): void {

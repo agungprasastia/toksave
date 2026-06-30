@@ -1,6 +1,6 @@
-import { homedir } from "os";
-import { join } from "path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 function home(): string {
   return homedir();
@@ -71,10 +71,7 @@ export function opencodePaths(): OpenCodePaths {
 }
 
 export function opencodeKnownBinDirs(): string[] {
-  const dirs = [
-    join(home(), ".opencode", "bin"),
-    join(home(), ".local", "bin"),
-  ];
+  const dirs = [join(home(), ".opencode", "bin"), join(home(), ".local", "bin")];
   if (process.platform === "win32") {
     dirs.push(join(home(), "scoop", "shims"));
   }
@@ -230,15 +227,15 @@ export function readFile(path: string): string | null {
 
 /** Write a file, creating parent dirs if needed. */
 export function writeFile(path: string, content: string): void {
-  const { dirname } = require("path");
+  const { dirname } = require("node:path");
   ensureDir(dirname(path));
   writeFileSync(path, content, "utf-8");
 }
 
 /** Append to a file, creating it if needed. */
 export function appendFile(path: string, content: string): void {
-  const { dirname } = require("path");
-  const { appendFileSync } = require("fs");
+  const { dirname } = require("node:path");
+  const { appendFileSync } = require("node:fs");
   ensureDir(dirname(path));
   appendFileSync(path, content, "utf-8");
 }

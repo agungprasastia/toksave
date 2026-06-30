@@ -1,7 +1,7 @@
-import { createWriteStream, existsSync, mkdirSync, chmodSync } from "fs";
-import { join, dirname } from "path";
-import * as tar from "tar";
+import { chmodSync, createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 import AdmZip from "adm-zip";
+import * as tar from "tar";
 
 /** Download a URL to a file path. */
 export async function downloadFile(url: string, dest: string): Promise<void> {
@@ -34,8 +34,12 @@ export async function downloadTarGz(url: string, destDir: string): Promise<void>
 
   await tar.x({ file: tmpFile, cwd: destDir });
 
-  const { unlinkSync } = await import("fs");
-  try { unlinkSync(tmpFile); } catch { /* ignore */ }
+  const { unlinkSync } = await import("node:fs");
+  try {
+    unlinkSync(tmpFile);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Download and extract a .zip to a destination directory. */
@@ -69,6 +73,10 @@ export async function fetchJson(url: string): Promise<any> {
 /** Make a file executable (Unix only). */
 export function makeExecutable(path: string): void {
   if (process.platform !== "win32") {
-    try { chmodSync(path, 0o755); } catch { /* ignore */ }
+    try {
+      chmodSync(path, 0o755);
+    } catch {
+      /* ignore */
+    }
   }
 }

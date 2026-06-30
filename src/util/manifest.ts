@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
-import { dirname, join } from "path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { cacheDir } from "./paths.js";
 
 export interface ManifestEntry {
@@ -40,9 +40,7 @@ export function writeManifest(m: Manifest): void {
 export function recordWire(agent: string, tool: string, version?: string): void {
   const m = readManifest();
   // Remove existing entry for this agent+tool combo
-  m.entries = m.entries.filter(
-    (e) => !(e.agent === agent && e.tool === tool)
-  );
+  m.entries = m.entries.filter((e) => !(e.agent === agent && e.tool === tool));
   m.entries.push({
     agent,
     tool,
@@ -55,9 +53,7 @@ export function recordWire(agent: string, tool: string, version?: string): void 
 /** Remove a wiring record. */
 export function removeWire(agent: string, tool: string): void {
   const m = readManifest();
-  m.entries = m.entries.filter(
-    (e) => !(e.agent === agent && e.tool === tool)
-  );
+  m.entries = m.entries.filter((e) => !(e.agent === agent && e.tool === tool));
   writeManifest(m);
 }
 
@@ -70,5 +66,9 @@ export function wasWiredByUs(agent: string, tool: string): boolean {
 /** Clear the entire manifest. */
 export function clearManifest(): void {
   const p = manifestPath();
-  try { writeFileSync(p, JSON.stringify({ entries: [] }, null, 2)); } catch { /* ignore */ }
+  try {
+    writeFileSync(p, JSON.stringify({ entries: [] }, null, 2));
+  } catch {
+    /* ignore */
+  }
 }

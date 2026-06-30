@@ -49,7 +49,5 @@ export function hasCtxRules(content: string): boolean {
 
 /** Remove context-mode rules from a file. */
 export function removeCtxRules(content: string): string {
-  return content
-    .replace(/\n?<!-- CONTEXT-MODE_START[\s\S]*?CONTEXT-MODE_END -->\n?/g, "")
-    .trim();
+  return content.replace(/\n?<!-- CONTEXT-MODE_START[\s\S]*?CONTEXT-MODE_END -->\n?/g, "").trim();
 }

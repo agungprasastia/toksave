@@ -1,34 +1,38 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import {
-  ALL_AGENTS, ALL_TOOLS, type AgentId, type ToolId,
-  agentInfo, toolInfo, detectAgent, installTool, wireTool,
-  toolInstalledVersion, type RunOpts,
+  ALL_AGENTS,
+  ALL_TOOLS,
+  type AgentId,
+  type RunOpts,
+  type ToolId,
+  agentInfo,
+  detectAgent,
+  installTool,
+  toolInfo,
+  toolInstalledVersion,
+  wireTool,
 } from "../registry.js";
-import { checkNode } from "../util/npm.js";
-import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 import * as colors from "../util/colors.js";
 import { recordWire } from "../util/manifest.js";
+import { checkNode } from "../util/npm.js";
+import { type SelectOption, isInteractive, multiSelect } from "../util/prompt.js";
 
 /** Run the default install flow: install tools → detect agents → wire. */
 export async function run(
   agentsFilter: AgentId[],
   toolsFilter: ToolId[],
-  opts: RunOpts
+  opts: RunOpts,
 ): Promise<number> {
   colors.banner("toksave", "global token-saver for AI agents");
 
   // ── Step 1: Check dependencies ──────────────────────────
-  const tools = ALL_TOOLS.filter(
-    (t) => toolsFilter.length === 0 || toolsFilter.includes(t.id)
-  );
+  const tools = ALL_TOOLS.filter((t) => toolsFilter.length === 0 || toolsFilter.includes(t.id));
 
   const maxNode = Math.max(0, ...tools.map((t) => t.minNodeMajor));
   const nodeOk = maxNode === 0 || checkNode(maxNode);
   if (!nodeOk && maxNode > 0) {
-    colors.warn(
-      `Node.js >= ${maxNode} required for some tools. https://nodejs.org/en/download`
-    );
+    colors.warn(`Node.js >= ${maxNode} required for some tools. https://nodejs.org/en/download`);
   }
 
   // ── Step 2: Install tools ───────────────────────────────
@@ -44,7 +48,7 @@ export async function run(
       s.stop(
         ok
           ? `${pc.green(colors.CHECK)} ${tool.label}`
-          : `${pc.yellow(colors.WARN)} ${tool.label} — skipped`
+          : `${pc.yellow(colors.WARN)} ${tool.label} — skipped`,
       );
     } catch (e: any) {
       s.stop(`${pc.red(colors.CROSS)} ${tool.label} — ${firstLine(e.message)}`);
@@ -118,9 +122,7 @@ export async function run(
     if (failedTools.length === 0) {
       s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
     } else {
-      s.stop(
-        `${pc.yellow(colors.WARN)} ${info.label} — ${failedTools.join(", ")} not wired`
-      );
+      s.stop(`${pc.yellow(colors.WARN)} ${info.label} — ${failedTools.join(", ")} not wired`);
       failures.push({ id: agentId, failed: failedTools });
     }
   }
@@ -138,7 +140,7 @@ export async function run(
 
   for (const f of failures) {
     colors.warn(
-      `${agentInfo(f.id).label}: ${f.failed.join(", ")} not wired. Run \`toksave doctor\` for details.`
+      `${agentInfo(f.id).label}: ${f.failed.join(", ")} not wired. Run \`toksave doctor\` for details.`,
     );
   }
 

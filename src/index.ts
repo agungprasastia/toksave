@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 import { parseCli } from "./cli.js";
-import * as init from "./commands/init.js";
 import * as doctor from "./commands/doctor.js";
-import * as update from "./commands/update.js";
-import * as uninstall from "./commands/uninstall.js";
+import * as init from "./commands/init.js";
 import * as selfUpdate from "./commands/self-update.js";
+import * as uninstall from "./commands/uninstall.js";
+import * as update from "./commands/update.js";
 
 async function main(): Promise<void> {
   const cli = parseCli(process.argv);

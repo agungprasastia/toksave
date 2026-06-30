@@ -1,7 +1,7 @@
 import { Command } from "commander";
-import { toksaveVersion } from "./util/version.js";
-import type { AgentId, ToolId, RunOpts } from "./registry.js";
+import type { AgentId, RunOpts, ToolId } from "./registry.js";
 import { parseAgentId, parseToolId } from "./registry.js";
+import { toksaveVersion } from "./util/version.js";
 
 export interface ParsedCli {
   command: "init" | "doctor" | "update" | "uninstall" | "self-update";
@@ -12,7 +12,7 @@ export interface ParsedCli {
 }
 
 export function parseCli(argv: string[]): ParsedCli {
-  let result: ParsedCli = {
+  const result: ParsedCli = {
     command: "init",
     agents: [],
     tools: [],
@@ -27,8 +27,8 @@ export function parseCli(argv: string[]): ParsedCli {
     .version(toksaveVersion(), "-V, --version")
     .description(
       "Zero-config token-saver for AI coding agents.\n\n" +
-      "Installs and wires RTK, Caveman, CodeGraph, and Context-Mode\n" +
-      "into Claude Code, OpenCode, Codex, and Antigravity."
+        "Installs and wires RTK, Caveman, CodeGraph, and Context-Mode\n" +
+        "into Claude Code, OpenCode, Codex, and Antigravity.",
     )
     .option("-a, --agents <ids...>", "target specific agents (claude,opencode,codex,antigravity)")
     .option("-t, --tools <ids...>", "target specific tools (rtk,caveman,codegraph,context-mode)")

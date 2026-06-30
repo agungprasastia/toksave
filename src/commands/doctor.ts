@@ -1,7 +1,11 @@
 import pc from "picocolors";
 import {
-  ALL_AGENTS, ALL_TOOLS, detectAgent, verifyTool,
-  toolInstalledVersion, toolLatestVersion,
+  ALL_AGENTS,
+  ALL_TOOLS,
+  detectAgent,
+  toolInstalledVersion,
+  toolLatestVersion,
+  verifyTool,
 } from "../registry.js";
 import * as colors from "../util/colors.js";
 import { isUpToDate } from "../util/version.js";
@@ -15,7 +19,7 @@ export async function run(offline: boolean): Promise<number> {
     const det = detectAgent(agent.id);
     if (!det.installed) {
       colors.raw(
-        `  ${pc.dim(colors.BULLET)} ${colors.pad(agent.label, 14)}${pc.dim("not installed")}`
+        `  ${pc.dim(colors.BULLET)} ${colors.pad(agent.label, 14)}${pc.dim("not installed")}`,
       );
       continue;
     }
@@ -29,11 +33,11 @@ export async function run(offline: boolean): Promise<number> {
 
     if (missing.length === 0) {
       colors.raw(
-        `  ${pc.green(colors.CHECK)} ${colors.pad(agent.label, 14)}${pc.dim("all tools wired")}`
+        `  ${pc.green(colors.CHECK)} ${colors.pad(agent.label, 14)}${pc.dim("all tools wired")}`,
       );
     } else {
       colors.raw(
-        `  ${pc.yellow(colors.WARN)} ${colors.pad(agent.label, 14)}${pc.yellow(`missing: ${missing.join(", ")}`)}`
+        `  ${pc.yellow(colors.WARN)} ${colors.pad(agent.label, 14)}${pc.yellow(`missing: ${missing.join(", ")}`)}`,
       );
     }
   }
@@ -50,23 +54,17 @@ export async function run(offline: boolean): Promise<number> {
 
       if (installed && latest) {
         if (isUpToDate(installed, latest)) {
-          colors.raw(
-            `  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim(`v${installed}`)}`
-          );
+          colors.raw(`  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim(`v${installed}`)}`);
         } else {
           outdated++;
           colors.raw(
-            `  ${pc.yellow(colors.ARROW_UP)} ${pc.dim(`${label}v${installed}`)}${pc.green(` → v${latest}`)}`
+            `  ${pc.yellow(colors.ARROW_UP)} ${pc.dim(`${label}v${installed}`)}${pc.green(` → v${latest}`)}`,
           );
         }
       } else if (installed) {
-        colors.raw(
-          `  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim(`v${installed}`)}`
-        );
+        colors.raw(`  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim(`v${installed}`)}`);
       } else {
-        colors.raw(
-          `  ${pc.dim(colors.BULLET)} ${pc.dim(label)}${pc.dim("not installed")}`
-        );
+        colors.raw(`  ${pc.dim(colors.BULLET)} ${pc.dim(label)}${pc.dim("not installed")}`);
       }
     }
 

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync } from "node:fs";
 import { parse, stringify } from "smol-toml";
 import { writeFile } from "../util/paths.js";
 
@@ -15,14 +15,14 @@ export function readTomlFile(path: string): Record<string, any> {
 
 /** Write a TOML object to a file. */
 export function writeTomlFile(path: string, doc: Record<string, any>): void {
-  writeFile(path, stringify(doc) + "\n");
+  writeFile(path, `${stringify(doc)}\n`);
 }
 
 /** Upsert a dotted table path with key-value pairs. */
 export function upsertTable(
   doc: Record<string, any>,
   tablePath: string,
-  pairs: Record<string, string>
+  pairs: Record<string, string>,
 ): void {
   const parts = tablePath.split(".");
   let current = doc;
@@ -42,7 +42,7 @@ export function upsertTableBool(
   doc: Record<string, any>,
   tablePath: string,
   key: string,
-  value: boolean
+  value: boolean,
 ): void {
   const parts = tablePath.split(".");
   let current = doc;
@@ -65,7 +65,7 @@ export function setTableArray(
   doc: Record<string, any>,
   tablePath: string,
   key: string,
-  values: string[]
+  values: string[],
 ): void {
   const parts = tablePath.split(".");
   let current = doc;

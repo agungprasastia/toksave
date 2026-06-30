@@ -125,14 +125,14 @@ export function parseToolId(s: string): ToolId | null {
 
 // ─── Dispatch functions ─────────────────────────────────────
 
-import * as claude from "./agents/claude.js";
-import * as opencode from "./agents/opencode.js";
-import * as codex from "./agents/codex.js";
 import * as antigravity from "./agents/antigravity.js";
-import * as rtkTool from "./tools/rtk.js";
+import * as claude from "./agents/claude.js";
+import * as codex from "./agents/codex.js";
+import * as opencode from "./agents/opencode.js";
 import * as cavemanTool from "./tools/caveman.js";
 import * as codegraphTool from "./tools/codegraph.js";
 import * as contextModeTool from "./tools/context-mode.js";
+import * as rtkTool from "./tools/rtk.js";
 
 const agentModules = { claude, opencode, codex, antigravity };
 const toolModules = {

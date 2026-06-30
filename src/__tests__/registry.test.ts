@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
-  agentInfo, toolInfo, parseAgentId, parseToolId,
-  ALL_AGENTS, ALL_TOOLS,
+  ALL_AGENTS,
+  ALL_TOOLS,
+  agentInfo,
+  parseAgentId,
+  parseToolId,
+  toolInfo,
 } from "../registry.js";
 
 describe("Registry", () => {

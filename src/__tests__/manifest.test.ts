@@ -1,7 +1,14 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { join } from "path";
-import { mkdirSync, rmSync, readFileSync } from "fs";
-import { readManifest, writeManifest, recordWire, removeWire, wasWiredByUs, clearManifest } from "../util/manifest.js";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import {
+  clearManifest,
+  readManifest,
+  recordWire,
+  removeWire,
+  wasWiredByUs,
+  writeManifest,
+} from "../util/manifest.js";
 
 // Override cache dir for testing
 const originalEnv = process.env.HOME;
@@ -23,9 +30,7 @@ describe("Manifest", () => {
     recordWire("claude", "rtk", "0.42.0");
     recordWire("claude", "rtk", "0.43.0");
     const m = readManifest();
-    const matches = m.entries.filter(
-      (e) => e.agent === "claude" && e.tool === "rtk"
-    );
+    const matches = m.entries.filter((e) => e.agent === "claude" && e.tool === "rtk");
     expect(matches).toHaveLength(1);
     expect(matches[0].version).toBe("0.43.0");
   });

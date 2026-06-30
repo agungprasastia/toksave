@@ -31,6 +31,6 @@ export function checkNode(minMajor: number): boolean {
   const out = runStdout("node", ["--version"]);
   if (!out) return false;
   const v = out.trim().replace(/^v/, "");
-  const major = parseInt(v.split(".")[0], 10);
-  return !isNaN(major) && major >= minMajor;
+  const major = Number.parseInt(v.split(".")[0], 10);
+  return !Number.isNaN(major) && major >= minMajor;
 }

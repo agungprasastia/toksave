@@ -1,12 +1,17 @@
-import type { Detection, RunOpts, ToolId } from "../registry.js";
-import { readJsonFile, writeJsonFile, getOrCreateObject, addToArrayIfMissing } from "../config/json.js";
-import { findBinaryIn, isOnPath } from "../util/detect.js";
-import * as paths from "../util/paths.js";
-import { verbose } from "../util/colors.js";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import {
+  addToArrayIfMissing,
+  getOrCreateObject,
+  readJsonFile,
+  writeJsonFile,
+} from "../config/json.js";
 import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
 import { CTX_RULES_BLOCK, hasCtxRules } from "../content/ctx-rules.js";
-import { existsSync } from "fs";
-import { join } from "path";
+import type { Detection, RunOpts, ToolId } from "../registry.js";
+import { verbose } from "../util/colors.js";
+import { findBinaryIn, isOnPath } from "../util/detect.js";
+import * as paths from "../util/paths.js";
 
 /** Detect if Claude Code is installed. */
 export function detect(): Detection {
@@ -39,20 +44,32 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
 /** Unwire a tool from Claude Code. */
 export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
   switch (tool) {
-    case "codegraph": removeMcp("codegraph"); return true;
-    case "context-mode": removeMcp("context-mode"); removeCtxRules(); return true;
-    case "caveman": removeCaveman(); return true;
-    case "rtk": return true;
+    case "codegraph":
+      removeMcp("codegraph");
+      return true;
+    case "context-mode":
+      removeMcp("context-mode");
+      removeCtxRules();
+      return true;
+    case "caveman":
+      removeCaveman();
+      return true;
+    case "rtk":
+      return true;
   }
 }
 
 /** Verify a tool is wired into Claude Code. */
 export function verify(tool: ToolId): boolean | null {
   switch (tool) {
-    case "codegraph": return hasMcp("codegraph");
-    case "context-mode": return hasMcp("context-mode");
-    case "caveman": return hasCavemanSkill();
-    case "rtk": return isOnPath("rtk");
+    case "codegraph":
+      return hasMcp("codegraph");
+    case "context-mode":
+      return hasMcp("context-mode");
+    case "caveman":
+      return hasCavemanSkill();
+    case "rtk":
+      return isOnPath("rtk");
   }
 }
 
@@ -67,7 +84,7 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
   // Auto-approve MCP tools
   allowMcpTool(toolId);
 
-  let cfg = readJsonFile(p.globalJson) ?? {};
+  const cfg = readJsonFile(p.globalJson) ?? {};
   const servers = getOrCreateObject(cfg, "mcpServers");
 
   const entry: any = { type: "stdio", command, args };
@@ -99,7 +116,7 @@ function hasMcp(toolId: string): boolean {
 
 function allowMcpTool(toolId: string): void {
   const p = paths.claudePaths();
-  let cfg = readJsonFile(p.settings) ?? {};
+  const cfg = readJsonFile(p.settings) ?? {};
   const perms = getOrCreateObject(cfg, "permissions");
   if (!Array.isArray(perms.allow)) perms.allow = [];
   addToArrayIfMissing(perms.allow, `mcp__${toolId}__.*`);
@@ -108,7 +125,7 @@ function allowMcpTool(toolId: string): void {
 
 function allowBashPattern(pattern: string): void {
   const p = paths.claudePaths();
-  let cfg = readJsonFile(p.settings) ?? {};
+  const cfg = readJsonFile(p.settings) ?? {};
   const perms = getOrCreateObject(cfg, "permissions");
   if (!Array.isArray(perms.allow)) perms.allow = [];
   addToArrayIfMissing(perms.allow, pattern);
@@ -133,7 +150,11 @@ function wireCaveman(opts: RunOpts): boolean {
 function removeCaveman(): void {
   const p = paths.claudePaths();
   const skillDir = join(p.skillsDir, "caveman");
-  try { require("fs").rmSync(skillDir, { recursive: true, force: true }); } catch { /* ignore */ }
+  try {
+    require("node:fs").rmSync(skillDir, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
 }
 
 function hasCavemanSkill(): boolean {
@@ -152,7 +173,7 @@ function wireCtxRules(opts: RunOpts): void {
   const existing = paths.readFile(mdFile) ?? "";
   if (hasCtxRules(existing)) return; // Already present
 
-  paths.writeFile(mdFile, existing + "\n" + CTX_RULES_BLOCK);
+  paths.writeFile(mdFile, `${existing}\n${CTX_RULES_BLOCK}`);
 }
 
 function removeCtxRules(): void {

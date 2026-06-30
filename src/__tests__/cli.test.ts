@@ -64,8 +64,15 @@ describe("CLI parser", () => {
 
   test("combined flags", () => {
     const cli = parseCli([
-      "node", "toksave", "--dry-run", "--verbose", "--yes",
-      "--agents", "claude", "--tools", "rtk,codegraph",
+      "node",
+      "toksave",
+      "--dry-run",
+      "--verbose",
+      "--yes",
+      "--agents",
+      "claude",
+      "--tools",
+      "rtk,codegraph",
     ]);
     expect(cli.opts.dryRun).toBe(true);
     expect(cli.opts.verbose).toBe(true);

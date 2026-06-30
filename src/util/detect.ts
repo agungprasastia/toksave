@@ -1,6 +1,6 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import which from "which";
-import { existsSync } from "fs";
-import { join } from "path";
 
 /** Check if a binary is on PATH. */
 export function isOnPath(name: string): boolean {

@@ -1,9 +1,16 @@
-import pc from "picocolors";
 import * as clack from "@clack/prompts";
+import pc from "picocolors";
 import {
-  ALL_AGENTS, ALL_TOOLS, type RunOpts,
-  detectAgent, installTool, wireTool, verifyTool,
-  toolInfo, toolInstalledVersion, toolLatestVersion,
+  ALL_AGENTS,
+  ALL_TOOLS,
+  type RunOpts,
+  detectAgent,
+  installTool,
+  toolInfo,
+  toolInstalledVersion,
+  toolLatestVersion,
+  verifyTool,
+  wireTool,
 } from "../registry.js";
 import * as colors from "../util/colors.js";
 import { isUpToDate } from "../util/version.js";
@@ -13,7 +20,7 @@ export async function run(opts: RunOpts): Promise<number> {
   colors.banner("toksave update", "refresh tools to latest");
 
   // ── Probe versions ──────────────────────────────────────
-  const changed: typeof ALL_TOOLS[number]["id"][] = [];
+  const changed: (typeof ALL_TOOLS)[number]["id"][] = [];
 
   for (const tool of ALL_TOOLS) {
     const installed = toolInstalledVersion(tool.id);
@@ -26,16 +33,14 @@ export async function run(opts: RunOpts): Promise<number> {
     if (installed && latest && !isUpToDate(installed, latest)) {
       changed.push(tool.id);
       colors.raw(
-        `  ${pc.yellow(colors.ARROW_UP)} ${label} ${instStr} → ${latStr} ${pc.yellow("→ upgrade")}`
+        `  ${pc.yellow(colors.ARROW_UP)} ${label} ${instStr} → ${latStr} ${pc.yellow("→ upgrade")}`,
       );
     } else if (!installed && latest) {
       changed.push(tool.id);
-      colors.raw(
-        `  ${pc.yellow("+")} ${label} ${instStr} → ${latStr} ${pc.yellow("→ install")}`
-      );
+      colors.raw(`  ${pc.yellow("+")} ${label} ${instStr} → ${latStr} ${pc.yellow("→ install")}`);
     } else {
       colors.raw(
-        `  ${pc.green(colors.CHECK)} ${label} ${instStr} → ${latStr} ${pc.dim("(up to date)")}`
+        `  ${pc.green(colors.CHECK)} ${label} ${instStr} → ${latStr} ${pc.dim("(up to date)")}`,
       );
     }
   }

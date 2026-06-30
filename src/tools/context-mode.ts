@@ -1,7 +1,11 @@
 import type { RunOpts } from "../registry.js";
-import { isOnPath } from "../util/detect.js";
-import { installGlobal, installedVersion as npmInstalledVersion, latestVersion as npmLatestVersion } from "../util/npm.js";
 import { verbose } from "../util/colors.js";
+import { isOnPath } from "../util/detect.js";
+import {
+  installGlobal,
+  installedVersion as npmInstalledVersion,
+  latestVersion as npmLatestVersion,
+} from "../util/npm.js";
 
 const PACKAGE = "context-mode";
 

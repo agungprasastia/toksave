@@ -1,23 +1,23 @@
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync } from "node:fs";
 import { writeFile } from "../util/paths.js";
 
 /** Strip single-line // comments from JSON (JSONC → JSON). */
 function stripComments(input: string): string {
   let out = "";
   let inString = false;
-  let escape = false;
+  let isEscaped = false;
 
   for (let i = 0; i < input.length; i++) {
     const ch = input[i];
 
-    if (escape) {
+    if (isEscaped) {
       out += ch;
-      escape = false;
+      isEscaped = false;
       continue;
     }
     if (ch === "\\" && inString) {
       out += ch;
-      escape = true;
+      isEscaped = true;
       continue;
     }
     if (ch === '"') {
@@ -49,7 +49,7 @@ export function readJsonFile(path: string): any | null {
 
 /** Write a JSON value to a file, pretty-printed. */
 export function writeJsonFile(path: string, value: any): void {
-  writeFile(path, JSON.stringify(value, null, 2) + "\n");
+  writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 /** Get or create a nested object. */

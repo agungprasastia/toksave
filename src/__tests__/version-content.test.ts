@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { toksaveVersion, semverCmp, isUpToDate } from "../util/version.js";
-import { CTX_RULES_BLOCK, hasCtxRules, removeCtxRules } from "../content/ctx-rules.js";
 import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
+import { CTX_RULES_BLOCK, hasCtxRules, removeCtxRules } from "../content/ctx-rules.js";
+import { isUpToDate, semverCmp, toksaveVersion } from "../util/version.js";
 
 describe("Version utils", () => {
   test("toksaveVersion returns semver", () => {
