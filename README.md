@@ -113,4 +113,4 @@ bash scripts/build-release.sh
 
 ## 📜 License
 
-[MIT](LICENSE)
+Licensed under the MIT License — [see LICENSE](LICENSE).
