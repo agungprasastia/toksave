@@ -40,7 +40,7 @@
     "@types/semver": "^7",
     "@types/tar": "^6",
     "@types/which": "^3",
-    "@biomejs/biome": "^1.9",
+    "@biomejs/biome": "^2.5",
     "typescript": "^5"
   }
 }
