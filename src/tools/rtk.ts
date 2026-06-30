@@ -2,7 +2,7 @@ import { join } from "node:path";
 import type { RunOpts } from "../registry.js";
 import { verbose } from "../util/colors.js";
 import { isOnPath } from "../util/detect.js";
-import { downloadTarGz, downloadZip, fetchJson, makeExecutable } from "../util/download.js";
+import { downloadTarGz, downloadZip, makeExecutable } from "../util/download.js";
 import { run, runStdout } from "../util/exec.js";
 import { ensureDir, localBin } from "../util/paths.js";
 

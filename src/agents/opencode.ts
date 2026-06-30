@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import { getOrCreateObject, hasKey, readJsonFile, writeJsonFile } from "../config/json.js";
-import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
 import {
   CTX_RULES_BLOCK,
   hasCtxRules,

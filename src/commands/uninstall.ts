@@ -2,22 +2,20 @@ import { existsSync, rmSync } from "node:fs";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import {
+  type AgentId,
   ALL_AGENTS,
   ALL_TOOLS,
-  type AgentId,
-  type RunOpts,
-  type ToolId,
   agentInfo,
   detectAgent,
-  parseAgentId,
-  parseToolId,
+  type RunOpts,
+  type ToolId,
   toolInfo,
   unwireTool,
 } from "../registry.js";
 import * as colors from "../util/colors.js";
-import { clearManifest, removeWire } from "../util/manifest.js";
+import { removeWire } from "../util/manifest.js";
 import { cacheDir } from "../util/paths.js";
-import { type SelectOption, isInteractive, multiSelect } from "../util/prompt.js";
+import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 
 /** Run the uninstall command: unwire tools from agents. */
 export async function run(

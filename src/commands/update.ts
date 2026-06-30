@@ -3,9 +3,9 @@ import pc from "picocolors";
 import {
   ALL_AGENTS,
   ALL_TOOLS,
-  type RunOpts,
   detectAgent,
   installTool,
+  type RunOpts,
   toolInfo,
   toolInstalledVersion,
   toolLatestVersion,

@@ -8,7 +8,7 @@ import {
 } from "../content/ctx-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
 import { verbose } from "../util/colors.js";
-import { findBinaryIn, isOnPath } from "../util/detect.js";
+import { findBinaryIn } from "../util/detect.js";
 import * as paths from "../util/paths.js";
 
 /** Detect if Codex is installed. */

@@ -1,17 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import {
-  clearManifest,
-  readManifest,
-  recordWire,
-  removeWire,
-  wasWiredByUs,
-  writeManifest,
-} from "../util/manifest.js";
+import { describe, expect, test } from "bun:test";
+import { readManifest, recordWire, removeWire, wasWiredByUs } from "../util/manifest.js";
 
 // Override cache dir for testing
-const originalEnv = process.env.HOME;
+const _originalEnv = process.env.HOME;
 
 describe("Manifest", () => {
   test("readManifest returns empty for fresh state", () => {

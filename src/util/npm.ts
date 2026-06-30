@@ -1,5 +1,4 @@
-import { npmCmd } from "./exec.js";
-import { run, runStdout } from "./exec.js";
+import { npmCmd, run, runStdout } from "./exec.js";
 
 /** Install an npm package globally. */
 export function installGlobal(pkg: string): boolean {

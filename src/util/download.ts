@@ -1,4 +1,4 @@
-import { chmodSync, createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import AdmZip from "adm-zip";
 import * as tar from "tar";

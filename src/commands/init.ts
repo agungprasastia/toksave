@@ -1,22 +1,21 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import {
+  type AgentId,
   ALL_AGENTS,
   ALL_TOOLS,
-  type AgentId,
-  type RunOpts,
-  type ToolId,
   agentInfo,
   detectAgent,
   installTool,
-  toolInfo,
+  type RunOpts,
+  type ToolId,
   toolInstalledVersion,
   wireTool,
 } from "../registry.js";
 import * as colors from "../util/colors.js";
 import { recordWire } from "../util/manifest.js";
 import { checkNode } from "../util/npm.js";
-import { type SelectOption, isInteractive, multiSelect } from "../util/prompt.js";
+import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 
 /** Run the default install flow: install tools → detect agents → wire. */
 export async function run(

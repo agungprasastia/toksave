@@ -25,22 +25,22 @@
     "format": "biome format --write ./src"
   },
   "dependencies": {
-    "@clack/prompts": "^0.10",
-    "adm-zip": "^0.5",
-    "commander": "^13",
-    "picocolors": "^1.1",
-    "semver": "^7",
-    "smol-toml": "^1",
-    "tar": "^7",
-    "which": "^5"
+    "@clack/prompts": "1.6.0",
+    "adm-zip": "^0.5.18",
+    "commander": "15.0.0",
+    "picocolors": "^1.1.1",
+    "semver": "^7.8.5",
+    "smol-toml": "^1.7.0",
+    "tar": "^7.5.19",
+    "which": "7.0.0"
   },
   "devDependencies": {
-    "@types/adm-zip": "^0.5",
+    "@biomejs/biome": "2.5.1",
+    "@types/adm-zip": "^0.5.8",
     "@types/bun": "latest",
-    "@types/semver": "^7",
-    "@types/tar": "^6",
-    "@types/which": "^3",
-    "@biomejs/biome": "^1.9",
-    "typescript": "^5"
+    "@types/semver": "^7.7.1",
+    "@types/tar": "7.0.0",
+    "@types/which": "^3.0.4",
+    "typescript": "5.9.3"
   }
 }
