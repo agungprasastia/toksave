@@ -53,16 +53,24 @@ export async function run(offline: boolean): Promise<number> {
       const label = colors.pad(tool.label, 14);
 
       if (installed && latest) {
+        const instStr = installed.startsWith("v") ? installed : `v${installed}`;
+        const latestStr = latest.startsWith("v") ? latest : `v${latest}`;
         if (isUpToDate(installed, latest)) {
-          colors.raw(`  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim(`v${installed}`)}`);
+          colors.raw(`  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim(instStr)}`);
         } else {
           outdated++;
           colors.raw(
-            `  ${pc.yellow(colors.ARROW_UP)} ${pc.dim(`${label}v${installed}`)}${pc.green(` → v${latest}`)}`,
+            `  ${pc.yellow(colors.ARROW_UP)} ${pc.dim(`${label}${instStr}`)}${pc.green(` → ${latestStr}`)}`,
           );
         }
       } else if (installed) {
-        colors.raw(`  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim(`v${installed}`)}`);
+        const instStr =
+          installed === "skill"
+            ? installed
+            : installed.startsWith("v")
+              ? installed
+              : `v${installed}`;
+        colors.raw(`  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim(instStr)}`);
       } else {
         colors.raw(`  ${pc.dim(colors.BULLET)} ${pc.dim(label)}${pc.dim("not installed")}`);
       }

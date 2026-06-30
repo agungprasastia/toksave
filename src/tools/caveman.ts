@@ -10,7 +10,7 @@ export async function install(_opts: RunOpts): Promise<boolean> {
 
 /** Not version-trackable. */
 export function installedVersion(): string | null {
-  return null;
+  return "skill";
 }
 
 /** Not version-trackable. */
