@@ -25,7 +25,7 @@
     "format": "biome format --write ./src"
   },
   "dependencies": {
-    "@clack/prompts": "^0.10",
+    "@clack/prompts": "^1.6",
     "adm-zip": "^0.5",
     "commander": "^13",
     "picocolors": "^1.1",
