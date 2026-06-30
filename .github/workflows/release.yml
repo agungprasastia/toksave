@@ -64,13 +64,19 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
 
+      - name: Extract Release Notes
+        id: extract-release-notes
+        uses: ffurrer2/extract-release-notes@v2
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
           files: artifacts/*
-          generate_release_notes: true
+          body: ${{ steps.extract-release-notes.outputs.release_notes }}
