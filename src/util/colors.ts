@@ -1,12 +1,12 @@
 import pc from "picocolors";
 
 // ─── Symbols ─────────────────────────────────────────────────
-export const CHECK = "✔";
-export const CROSS = "✖";
-export const WARN = "⚠";
-export const BULLET = "•";
-export const ARROW_UP = "↑";
-export const INFO = "ℹ";
+export const CHECK = "✔ ";
+export const CROSS = "✖ ";
+export const WARN = "⚠ ";
+export const BULLET = "• ";
+export const ARROW_UP = "↑ ";
+export const INFO = "ℹ ";
 
 // ─── Printers ────────────────────────────────────────────────
 

@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+// Override cache dir for testing
+import { join } from "node:path";
 import { readManifest, recordWire, removeWire, wasWiredByUs } from "../util/manifest.js";
 
-// Override cache dir for testing
-const _originalEnv = process.env.HOME;
-
+const tmp = mkdtempSync(join(tmpdir(), "toksave-test-"));
+process.env.TOKSAVE_CACHE_DIR = tmp;
 describe("Manifest", () => {
   test("readManifest returns empty for fresh state", () => {
     const m = readManifest();

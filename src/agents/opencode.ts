@@ -25,9 +25,13 @@ export function detect(): Detection {
 export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
-      return wireMcp("codegraph", ["codegraph", "serve", "--mcp"], opts);
+      return wireMcp(
+        "codegraph",
+        [paths.toksaveAbs(), "runmcp", "codegraph", "serve", "--mcp"],
+        opts,
+      );
     case "context-mode":
-      wireMcp("context-mode", ["context-mode"], opts);
+      wireMcp("context-mode", [paths.toksaveAbs(), "runmcp", "context-mode"], opts);
       if (!opts.dryRun) wireCtxRules(opts);
       return true;
     case "caveman":
@@ -77,7 +81,7 @@ function wireMcp(toolId: string, command: string[], opts: RunOpts): boolean {
   verbose(`Wiring MCP ${toolId} into OpenCode`, opts.verbose);
 
   const p = paths.opencodePaths();
-  const cfg = readJsonFile(p.config) ?? {};
+  const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
 
   // Ensure $schema
   if (!hasKey(cfg, "$schema")) {
@@ -98,17 +102,19 @@ function wireMcp(toolId: string, command: string[], opts: RunOpts): boolean {
 
 function removeMcp(toolId: string): void {
   const p = paths.opencodePaths();
-  const cfg = readJsonFile(p.config);
-  if (cfg?.mcp?.[toolId]) {
-    delete cfg.mcp[toolId];
+  const cfg = readJsonFile(p.config) as Record<string, unknown>;
+  const mcp = cfg.mcp as Record<string, unknown> | undefined;
+  if (mcp?.[toolId]) {
+    delete mcp[toolId];
     writeJsonFile(p.config, cfg);
   }
 }
 
 function hasMcp(toolId: string): boolean {
   const p = paths.opencodePaths();
-  const cfg = readJsonFile(p.config);
-  return !!cfg?.mcp?.[toolId];
+  const cfg = readJsonFile(p.config) as Record<string, unknown>;
+  const mcp = cfg.mcp as Record<string, unknown> | undefined;
+  return !!mcp?.[toolId];
 }
 
 // ─── Caveman via AGENTS.md ──────────────────────────────────

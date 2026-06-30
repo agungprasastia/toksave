@@ -1,5 +1,4 @@
 import { existsSync, rmSync } from "node:fs";
-import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import {
   type AgentId,
@@ -15,6 +14,7 @@ import {
 import * as colors from "../util/colors.js";
 import { removeWire } from "../util/manifest.js";
 import { cacheDir } from "../util/paths.js";
+import { Progress } from "../util/progress.js";
 import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 
 /** Run the uninstall command: unwire tools from agents. */
@@ -62,10 +62,11 @@ export async function run(
   const tools: ToolId[] = toolsFilter.length > 0 ? toolsFilter : ALL_TOOLS.map((t) => t.id);
 
   // ── Unwire ──────────────────────────────────────────────
-  const s = clack.spinner();
+  const s = new Progress();
+  s.start("Removing TokSave tools");
   for (const agentId of agentIds) {
     const info = agentInfo(agentId);
-    s.start(`Unwiring ${info.label}`);
+    s.update(`Unwiring ${info.label}`);
     for (const toolId of tools) {
       if (!opts.dryRun) {
         await unwireTool(agentId, toolId, opts);

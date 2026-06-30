@@ -1,4 +1,4 @@
-import * as clack from "@clack/prompts";
+import boxen from "boxen";
 import pc from "picocolors";
 import {
   ALL_AGENTS,
@@ -13,6 +13,7 @@ import {
   wireTool,
 } from "../registry.js";
 import * as colors from "../util/colors.js";
+import { Progress } from "../util/progress.js";
 import { isUpToDate } from "../util/version.js";
 
 /** Run the update command: check for tool updates and upgrade. */
@@ -61,7 +62,7 @@ export async function run(opts: RunOpts): Promise<number> {
 
   // ── Upgrade changed tools ───────────────────────────────
   const upgradeOpts: RunOpts = { ...opts, dryRun: false, upgrade: true };
-  const s = clack.spinner();
+  const s = new Progress();
 
   for (const id of changed) {
     const info = toolInfo(id);
@@ -69,8 +70,9 @@ export async function run(opts: RunOpts): Promise<number> {
     try {
       await installTool(id, upgradeOpts);
       s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
-    } catch (e: any) {
-      s.stop(`${pc.red(colors.CROSS)} ${info.label} — ${e.message}`);
+    } catch (err: unknown) {
+      const e = err as Error;
+      s.stop(`${pc.red(colors.CROSS)} ${info.label} — ${String(e.message || e)}`);
     }
   }
 
@@ -87,7 +89,14 @@ export async function run(opts: RunOpts): Promise<number> {
 
   console.log();
   const names = changed.map((id) => toolInfo(id).label);
-  colors.ok(`Updated ${names.join(", ")}.`);
+  console.log(
+    boxen(pc.green(`Updated ${pc.bold(names.join(", "))}.`), {
+      padding: 1,
+      margin: { bottom: 1 },
+      borderStyle: "round",
+      borderColor: "green",
+    }),
+  );
   console.log();
   return 0;
 }

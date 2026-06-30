@@ -3,8 +3,18 @@ import type { AgentId, RunOpts, ToolId } from "./registry.js";
 import { parseAgentId, parseToolId } from "./registry.js";
 import { toksaveVersion } from "./util/version.js";
 
+export type CommandType =
+  | "init"
+  | "doctor"
+  | "update"
+  | "uninstall"
+  | "self-update"
+  | "codex-perm-hook"
+  | "runmcp"
+  | "index";
+
 export interface ParsedCli {
-  command: "init" | "doctor" | "update" | "uninstall" | "self-update";
+  command: CommandType;
   agents: AgentId[];
   tools: ToolId[];
   opts: RunOpts;
@@ -74,18 +84,43 @@ export function parseCli(argv: string[]): ParsedCli {
       applyGlobalOpts(result, program.opts());
     });
 
+  program
+    .command("codex-perm-hook")
+    .description("Internal hook for Codex permissions")
+    .action(() => {
+      result.command = "codex-perm-hook";
+      applyGlobalOpts(result, program.opts());
+    });
+
+  program
+    .command("runmcp")
+    .description("Internal hook to proxy MCP execution securely")
+    .allowUnknownOption()
+    .action(() => {
+      result.command = "runmcp";
+      applyGlobalOpts(result, program.opts());
+    });
+
+  program
+    .command("index")
+    .description("Build per-project indexes (codegraph) in the current dir")
+    .action(() => {
+      result.command = "index";
+      applyGlobalOpts(result, program.opts());
+    });
+
   program.parse(argv);
 
   return result;
 }
 
-function applyGlobalOpts(result: ParsedCli, opts: any): void {
-  result.opts.dryRun = opts.dryRun ?? false;
-  result.opts.verbose = opts.verbose ?? false;
-  result.opts.yes = opts.yes ?? false;
+function applyGlobalOpts(result: ParsedCli, opts: Record<string, unknown>): void {
+  result.opts.dryRun = (opts.dryRun as boolean) ?? false;
+  result.opts.verbose = (opts.verbose as boolean) ?? false;
+  result.opts.yes = (opts.yes as boolean) ?? false;
 
   if (opts.agents) {
-    for (const raw of opts.agents) {
+    for (const raw of opts.agents as string[]) {
       for (const s of raw.split(",")) {
         const id = parseAgentId(s.trim());
         if (id) result.agents.push(id);
@@ -94,7 +129,7 @@ function applyGlobalOpts(result: ParsedCli, opts: any): void {
   }
 
   if (opts.tools) {
-    for (const raw of opts.tools) {
+    for (const raw of opts.tools as string[]) {
       for (const s of raw.split(",")) {
         const id = parseToolId(s.trim());
         if (id) result.tools.push(id);

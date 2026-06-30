@@ -28,9 +28,14 @@ export function detect(): Detection {
 export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
-      return wireMcp("codegraph", "codegraph", ["serve", "--mcp"], opts);
+      return wireMcp(
+        "codegraph",
+        paths.toksaveAbs(),
+        ["runmcp", "codegraph", "serve", "--mcp"],
+        opts,
+      );
     case "context-mode":
-      wireMcp("context-mode", "context-mode", [], opts);
+      wireMcp("context-mode", paths.toksaveAbs(), ["runmcp", "context-mode"], opts);
       if (!opts.dryRun) wireCtxRules(opts);
       return true;
     case "caveman":
@@ -84,51 +89,53 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
   // Auto-approve MCP tools
   allowMcpTool(toolId);
 
-  const cfg = readJsonFile(p.globalJson) ?? {};
+  const cfg = (readJsonFile(p.globalJson) as Record<string, unknown>) ?? {};
   const servers = getOrCreateObject(cfg, "mcpServers");
 
-  const entry: any = { type: "stdio", command, args };
+  const entry: Record<string, unknown> = { type: "stdio", command, args };
 
   // Check if already identical
-  if (servers[toolId] && JSON.stringify(servers[toolId]) === JSON.stringify(entry)) {
+  const srv = servers as Record<string, unknown>;
+  if (srv[toolId] && JSON.stringify(srv[toolId]) === JSON.stringify(entry)) {
     return true;
   }
-
-  servers[toolId] = entry;
+  srv[toolId] = entry;
   writeJsonFile(p.globalJson, cfg);
   return true;
 }
 
 function removeMcp(toolId: string): void {
   const p = paths.claudePaths();
-  const cfg = readJsonFile(p.globalJson);
-  if (cfg?.mcpServers?.[toolId]) {
-    delete cfg.mcpServers[toolId];
+  const cfg = readJsonFile(p.globalJson) as Record<string, unknown>;
+  const mcp = cfg.mcpServers as Record<string, unknown> | undefined;
+  if (mcp?.[toolId]) {
+    delete mcp[toolId];
     writeJsonFile(p.globalJson, cfg);
   }
 }
 
 function hasMcp(toolId: string): boolean {
   const p = paths.claudePaths();
-  const cfg = readJsonFile(p.globalJson);
-  return !!cfg?.mcpServers?.[toolId];
+  const cfg = readJsonFile(p.globalJson) as Record<string, unknown>;
+  const mcp = cfg.mcpServers as Record<string, unknown> | undefined;
+  return !!mcp?.[toolId];
 }
 
 function allowMcpTool(toolId: string): void {
   const p = paths.claudePaths();
-  const cfg = readJsonFile(p.settings) ?? {};
+  const cfg = (readJsonFile(p.settings) as Record<string, unknown>) ?? {};
   const perms = getOrCreateObject(cfg, "permissions");
   if (!Array.isArray(perms.allow)) perms.allow = [];
-  addToArrayIfMissing(perms.allow, `mcp__${toolId}__.*`);
+  addToArrayIfMissing(perms.allow as unknown[], `mcp__${toolId}__.*`);
   writeJsonFile(p.settings, cfg);
 }
 
 function allowBashPattern(pattern: string): void {
   const p = paths.claudePaths();
-  const cfg = readJsonFile(p.settings) ?? {};
+  const cfg = (readJsonFile(p.settings) as Record<string, unknown>) ?? {};
   const perms = getOrCreateObject(cfg, "permissions");
   if (!Array.isArray(perms.allow)) perms.allow = [];
-  addToArrayIfMissing(perms.allow, pattern);
+  addToArrayIfMissing(perms.allow as unknown[], pattern);
   writeJsonFile(p.settings, cfg);
 }
 

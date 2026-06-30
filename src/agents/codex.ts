@@ -23,9 +23,14 @@ export function detect(): Detection {
 export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
-      return wireMcp("codegraph", "codegraph", ["serve", "--mcp"], opts);
+      return wireMcp(
+        "codegraph",
+        paths.toksaveAbs(),
+        ["runmcp", "codegraph", "serve", "--mcp"],
+        opts,
+      );
     case "context-mode":
-      wireMcp("context-mode", "context-mode", [], opts);
+      wireMcp("context-mode", paths.toksaveAbs(), ["runmcp", "context-mode"], opts);
       if (!opts.dryRun) wireCtxRules(opts);
       return true;
     case "rtk":
@@ -126,15 +131,21 @@ function wireRtkHook(opts: RunOpts): boolean {
   const tok = paths.toksaveAbs();
   const command = `${tok} rtk-hook codex`;
 
-  const cfg = readJsonFile(p.hooks) ?? {};
+  const cfg = (readJsonFile(p.hooks) as Record<string, unknown>) ?? {};
   const hooks = getOrCreateObject(cfg, "hooks");
 
-  hooks.PreToolUse = [
-    {
-      matcher: "Bash",
-      hooks: [{ type: "command", command, timeout: 10 }],
-    },
-  ];
+  const rtkHook = {
+    matcher: "Bash",
+    hooks: [{ type: "command", command, timeout: 10 }],
+  };
+
+  const permHook = {
+    matcher: "",
+    hooks: [{ type: "command", command: `${tok} codex-perm-hook`, timeout: 5 }],
+  };
+
+  hooks.PreToolUse = [rtkHook];
+  hooks.PermissionRequest = [permHook];
 
   writeJsonFile(p.hooks, cfg);
   return true;
@@ -142,19 +153,26 @@ function wireRtkHook(opts: RunOpts): boolean {
 
 function removeRtkHook(): void {
   const p = paths.codexPaths();
-  const cfg = readJsonFile(p.hooks);
-  if (cfg?.hooks?.PreToolUse) {
-    cfg.hooks.PreToolUse = undefined;
-    writeJsonFile(p.hooks, cfg);
+  const cfg = readJsonFile(p.hooks) as Record<string, unknown>;
+  if (((cfg as Record<string, unknown>)?.hooks as Record<string, unknown>)?.PreToolUse) {
+    ((cfg as Record<string, unknown>).hooks as Record<string, unknown>).PreToolUse = undefined;
   }
+  if (((cfg as Record<string, unknown>)?.hooks as Record<string, unknown>)?.PermissionRequest) {
+    ((cfg as Record<string, unknown>).hooks as Record<string, unknown>).PermissionRequest =
+      undefined;
+  }
+  writeJsonFile(p.hooks, cfg);
 }
 
 function hasRtkHook(): boolean {
   const p = paths.codexPaths();
-  const cfg = readJsonFile(p.hooks);
-  const arr = cfg?.hooks?.PreToolUse;
+  const cfg = readJsonFile(p.hooks) as Record<string, unknown>;
+  const arr = ((cfg as Record<string, unknown>)?.hooks as Record<string, unknown>)?.PreToolUse;
   if (!Array.isArray(arr)) return false;
-  return arr.some((g: any) => g?.hooks?.some((h: any) => h?.command?.includes("rtk-hook codex")));
+  return arr.some((g: unknown) => {
+    const group = g as { hooks?: { command?: string }[] };
+    return group?.hooks?.some((h) => h?.command?.includes("rtk-hook codex"));
+  });
 }
 
 // ─── Caveman via instructions.md ─────────────────────────────

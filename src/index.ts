@@ -27,6 +27,21 @@ async function main(): Promise<void> {
     case "self-update":
       code = await selfUpdate.run();
       break;
+    case "codex-perm-hook": {
+      const { runCodexPermHook } = require("./commands/codex-perm-hook.js");
+      code = runCodexPermHook();
+      break;
+    }
+    case "runmcp": {
+      const { runMcp } = require("./commands/runmcp.js");
+      code = await runMcp();
+      break;
+    }
+    case "index": {
+      const { runIndex } = require("./commands/build-index.js");
+      code = runIndex();
+      break;
+    }
   }
 
   process.exit(code);

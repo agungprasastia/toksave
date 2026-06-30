@@ -206,6 +206,7 @@ export function localBin(): string {
 
 /** Cache directory for toksave. */
 export function cacheDir(): string {
+  if (process.env.TOKSAVE_CACHE_DIR) return process.env.TOKSAVE_CACHE_DIR;
   return join(home(), ".cache", "toksave");
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "toksave",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "description": "Global token-saver CLI for AI agents",
   "author": "agungprasastia",
@@ -25,8 +25,9 @@
     "format": "biome format --write ./src"
   },
   "dependencies": {
-    "@clack/prompts": "1.6.0",
     "adm-zip": "^0.5.18",
+    "boxen": "^8.0.1",
+    "cli-table3": "^0.6.5",
     "commander": "15.0.0",
     "picocolors": "^1.1.1",
     "semver": "^7.8.5",

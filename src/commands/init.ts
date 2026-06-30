@@ -1,4 +1,5 @@
-import * as clack from "@clack/prompts";
+import boxen from "boxen";
+import Table from "cli-table3";
 import pc from "picocolors";
 import {
   type AgentId,
@@ -15,6 +16,7 @@ import {
 import * as colors from "../util/colors.js";
 import { recordWire } from "../util/manifest.js";
 import { checkNode } from "../util/npm.js";
+import { Progress } from "../util/progress.js";
 import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 
 /** Run the default install flow: install tools → detect agents → wire. */
@@ -35,7 +37,7 @@ export async function run(
   }
 
   // ── Step 2: Install tools ───────────────────────────────
-  const s = clack.spinner();
+  const s = new Progress();
   for (const tool of tools) {
     s.start(`Installing ${tool.label}`);
     if (tool.channel === "npm" && !nodeOk) {
@@ -44,13 +46,15 @@ export async function run(
     }
     try {
       const ok = await installTool(tool.id, opts);
+      if (opts.dryRun) await new Promise((r) => setTimeout(r, 800)); // Fake delay for UI demo
       s.stop(
         ok
           ? `${pc.green(colors.CHECK)} ${tool.label}`
           : `${pc.yellow(colors.WARN)} ${tool.label} — skipped`,
       );
-    } catch (e: any) {
-      s.stop(`${pc.red(colors.CROSS)} ${tool.label} — ${firstLine(e.message)}`);
+    } catch (err: unknown) {
+      const e = err as Error;
+      s.stop(`${pc.red(colors.CROSS)} ${tool.label} — ${firstLine(e.message || String(e))}`);
     }
   }
 
@@ -77,7 +81,7 @@ export async function run(
         label: a.label,
         disabled: !det,
         hint: det ? det.source : a.homepage,
-        selected: !!det,
+        selected: false,
       };
     });
 
@@ -109,6 +113,7 @@ export async function run(
     for (const tool of tools) {
       try {
         const ok = await wireTool(agentId, tool.id, opts);
+        if (opts.dryRun) await new Promise((r) => setTimeout(r, 600)); // Fake delay for UI demo
         if (ok && !opts.dryRun) {
           recordWire(agentId, tool.id, toolInstalledVersion(tool.id) ?? undefined);
         }
@@ -134,7 +139,14 @@ export async function run(
     .map((id) => agentInfo(id).label);
 
   if (wired.length > 0) {
-    colors.ok(`Equipped ${wired.join(", ")}.`);
+    console.log(
+      boxen(pc.green(`Equipped ${pc.bold(wired.join(", "))}.`), {
+        padding: 1,
+        margin: { bottom: 1 },
+        borderStyle: "round",
+        borderColor: "green",
+      }),
+    );
   }
 
   for (const f of failures) {
@@ -152,15 +164,36 @@ export async function run(
 }
 
 function printVersionTable(tools: typeof ALL_TOOLS): void {
+  const table = new Table({
+    chars: {
+      top: "",
+      "top-mid": "",
+      "top-left": "",
+      "top-right": "",
+      bottom: "",
+      "bottom-mid": "",
+      "bottom-left": "",
+      "bottom-right": "",
+      left: "",
+      "left-mid": "",
+      mid: "",
+      "mid-mid": "",
+      right: "",
+      "right-mid": "",
+      middle: "   ",
+    },
+    style: { "padding-left": 0, "padding-right": 0, border: [] },
+  });
+
   for (const tool of tools) {
     const installed = toolInstalledVersion(tool.id);
-    const label = colors.pad(tool.label, 14);
     if (installed) {
-      colors.ok(`${label}${installed}`);
+      table.push([`  ${pc.green(colors.CHECK)}`, tool.label, installed]);
     } else {
-      colors.raw(`  ${colors.BULLET} ${label}${pc.dim("not installed")}`);
+      table.push([`  ${colors.BULLET}`, pc.dim(tool.label), pc.dim("not installed")]);
     }
   }
+  console.log(table.toString());
 }
 
 function firstLine(s: string): string {

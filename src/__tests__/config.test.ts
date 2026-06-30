@@ -41,10 +41,10 @@ describe("JSON config", () => {
   });
 
   test("getOrCreateObject creates nested key", () => {
-    const obj: any = {};
+    const obj: Record<string, unknown> = {};
     const sub = getOrCreateObject(obj, "mcpServers");
     sub.test = true;
-    expect(obj.mcpServers.test).toBe(true);
+    expect((obj.mcpServers as Record<string, unknown>).test).toBe(true);
   });
 
   test("addToArrayIfMissing avoids duplicates", () => {
@@ -76,9 +76,11 @@ describe("TOML config", () => {
   });
 
   test("upsertTable creates nested table", () => {
-    const doc: Record<string, any> = {};
+    const doc: Record<string, unknown> = {};
     upsertTable(doc, "mcp_servers.codegraph", { command: "codegraph" });
-    expect(doc.mcp_servers.codegraph.command).toBe("codegraph");
+    expect(
+      ((doc.mcp_servers as Record<string, unknown>).codegraph as Record<string, unknown>).command,
+    ).toBe("codegraph");
   });
 
   test("hasTable checks existence", () => {
@@ -91,6 +93,6 @@ describe("TOML config", () => {
     const doc = { a: { b: { c: 1 }, d: 2 } };
     removeTable(doc, "a.b");
     expect(doc.a.d).toBe(2);
-    expect((doc.a as any).b).toBeUndefined();
+    expect((doc.a as Record<string, unknown>).b).toBeUndefined();
   });
 });

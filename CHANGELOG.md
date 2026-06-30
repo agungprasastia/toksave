@@ -1,9 +1,14 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [0.2.0] — 2026-07-01
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Added
+- **Codex Permission Auto-Allow (`toksave codex-perm-hook`)**: Intercepts Codex permission requests to automatically allow harmless commands and MCP tool calls. Drastically reduces manual prompts.
+- **MCP Proxy (`toksave runmcp`)**: A secure wrapper to resolve Node.js binaries and proxy stdio. Ensures MCP servers run flawlessly across platforms (especially Windows).
+- **Proactive Indexing (`toksave index`)**: New command to pre-build CodeGraph indexes in the current directory to speed up the agent's first query.
+
+### Fixed
+- **RTK MCP Compliance**: Fixed an issue where the RTK hook intercepted MCP tools in Antigravity. The matcher is now specifically restricted to terminal commands (`Bash`, `cmd`, etc.), restoring 100% MCP compliance.
 
 ## [0.1.1] — 2026-06-30
 

@@ -27,3 +27,23 @@ export function installedVersion(): string | null {
 export function latestVersion(): string | null {
   return npmLatestVersion(PACKAGE);
 }
+
+/** Pre-build index for the given directory. */
+export function indexProject(dir: string): boolean {
+  try {
+    const { execSync } = require("node:child_process");
+    const hasIndex = require("node:fs").existsSync(require("node:path").join(dir, ".codegraph"));
+    if (hasIndex) {
+      execSync("codegraph sync", { cwd: dir, stdio: "ignore" });
+      return true;
+    }
+    try {
+      execSync("codegraph init -i", { cwd: dir, stdio: "ignore" });
+    } catch {
+      execSync("codegraph init", { cwd: dir, stdio: "ignore" });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}

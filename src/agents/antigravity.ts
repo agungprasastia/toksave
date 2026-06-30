@@ -32,11 +32,11 @@ export function detect(): Detection {
 export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
-      wireMcp("codegraph", "codegraph", ["serve", "--mcp"], opts);
+      wireMcp("codegraph", paths.toksaveAbs(), ["runmcp", "codegraph", "serve", "--mcp"], opts);
       if (!opts.dryRun) allowEntry("mcp(codegraph/*)");
       return true;
     case "context-mode":
-      wireMcp("context-mode", "context-mode", [], opts);
+      wireMcp("context-mode", paths.toksaveAbs(), ["runmcp", "context-mode"], opts);
       if (!opts.dryRun) {
         allowEntry("mcp(context-mode/*)");
         installContextModeHook(opts);
@@ -97,23 +97,24 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
 
   for (const f of paths.antigravityMcpFiles()) {
     paths.ensureDir(require("node:path").dirname(f));
-    const cfg = readJsonFile(f) ?? {};
+    const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
     const servers = getOrCreateObject(cfg, "mcpServers");
 
-    const entry: any = { command };
+    const entry: Record<string, unknown> = { command };
     if (args.length > 0) entry.args = args;
     entry.trust = true;
 
-    servers[toolId] = entry;
+    (servers as Record<string, unknown>)[toolId] = entry;
     writeJsonFile(f, cfg);
   }
 }
 
 function removeMcp(toolId: string): void {
   for (const f of paths.antigravityMcpFiles()) {
-    const cfg = readJsonFile(f);
-    if (cfg?.mcpServers?.[toolId]) {
-      delete cfg.mcpServers[toolId];
+    const cfg = readJsonFile(f) as Record<string, unknown>;
+    const mcp = cfg.mcpServers as Record<string, unknown> | undefined;
+    if (mcp?.[toolId]) {
+      delete mcp[toolId];
       writeJsonFile(f, cfg);
     }
   }
@@ -121,8 +122,9 @@ function removeMcp(toolId: string): void {
 
 function hasMcp(toolId: string): boolean {
   for (const f of paths.antigravityMcpFiles()) {
-    const cfg = readJsonFile(f);
-    if (!cfg?.mcpServers?.[toolId]) return false;
+    const cfg = readJsonFile(f) as Record<string, unknown>;
+    const mcp = cfg.mcpServers as Record<string, unknown> | undefined;
+    if (!mcp?.[toolId]) return false;
   }
   return true;
 }
@@ -132,10 +134,10 @@ function hasMcp(toolId: string): boolean {
 function allowEntry(entry: string): void {
   for (const f of paths.antigravitySettingsFiles()) {
     paths.ensureDir(require("node:path").dirname(f));
-    const cfg = readJsonFile(f) ?? {};
+    const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
     const perms = getOrCreateObject(cfg, "permissions");
     if (!Array.isArray(perms.allow)) perms.allow = [];
-    addToArrayIfMissing(perms.allow, entry);
+    addToArrayIfMissing(perms.allow as unknown[], entry);
     writeJsonFile(f, cfg);
   }
 }
@@ -148,14 +150,14 @@ function installRtkHook(opts: RunOpts): void {
 
   verbose("Installing RTK hook for Antigravity", opts.verbose);
 
-  const cfg = readJsonFile(hooksFile) ?? {};
+  const cfg = (readJsonFile(hooksFile) as Record<string, unknown>) ?? {};
   const tok = paths.toksaveAbs();
   const command = `${tok} rtk-hook agy`;
 
-  cfg.rtk = {
+  (cfg as Record<string, unknown>).rtk = {
     PreToolUse: [
       {
-        matcher: "",
+        matcher: "^(Bash|run_command|execute_command|cmd|sh|pwsh)$",
         hooks: [{ type: "command", command, timeout: 10 }],
       },
     ],
@@ -166,17 +168,17 @@ function installRtkHook(opts: RunOpts): void {
 
 function removeRtkHook(): void {
   const hooksFile = paths.antigravityPaths().hooks;
-  const cfg = readJsonFile(hooksFile);
-  if (cfg?.rtk) {
-    cfg.rtk = undefined;
+  const cfg = readJsonFile(hooksFile) as Record<string, unknown>;
+  if ((cfg as Record<string, unknown>)?.rtk) {
+    (cfg as Record<string, unknown>).rtk = undefined;
     writeJsonFile(hooksFile, cfg);
   }
 }
 
 function hasRtkHook(): boolean {
   const hooksFile = paths.antigravityPaths().hooks;
-  const cfg = readJsonFile(hooksFile);
-  return !!cfg?.rtk;
+  const cfg = readJsonFile(hooksFile) as Record<string, unknown>;
+  return !!(cfg as Record<string, unknown>)?.rtk;
 }
 
 // ─── Context-Mode hook ──────────────────────────────────────
@@ -187,9 +189,9 @@ function installContextModeHook(opts: RunOpts): void {
 
   verbose("Installing Context-Mode hook for Antigravity", opts.verbose);
 
-  const cfg = readJsonFile(hooksFile) ?? {};
+  const cfg = (readJsonFile(hooksFile) as Record<string, unknown>) ?? {};
 
-  cfg.ctx = {
+  (cfg as Record<string, unknown>).ctx = {
     PreInvocation: [
       {
         matcher: "",
@@ -217,9 +219,9 @@ function installContextModeHook(opts: RunOpts): void {
 
 function removeContextModeHook(): void {
   const hooksFile = paths.antigravityPaths().hooks;
-  const cfg = readJsonFile(hooksFile);
-  if (cfg?.ctx) {
-    cfg.ctx = undefined;
+  const cfg = readJsonFile(hooksFile) as Record<string, unknown>;
+  if ((cfg as Record<string, unknown>)?.ctx) {
+    (cfg as Record<string, unknown>).ctx = undefined;
     writeJsonFile(hooksFile, cfg);
   }
 }
