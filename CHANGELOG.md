@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.1] — 2026-07-01
+
+### Changed
+- **UX Progress Delay**: Added a slight artificial delay during `init`, `update`, and `uninstall` commands. This ensures the progress spinner is always visible, preventing the terminal from appearing to flash instantly to completion.
+
+### Fixed
+- **MCP Proxy Path Resolution Bug**: Replaced `process.argv[0]` with `"toksave"` in `toksaveAbs()` to correctly resolve the executable path when installed globally via npm. This prevents catastrophic crashes where AI agents attempt to execute `node runmcp` instead of the TokSave binary.
+- **Windows File Descriptor Leak**: Refactored MCP binary shebang detection (`isNodeShebangScript`) to use a robust `try...finally` block. This guarantees file handles are closed even during read errors, preventing `toksave` from permanently locking executable files on Windows.
+
 ## [0.3.0] — 2026-07-01
 
 ### Added

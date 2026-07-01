@@ -69,6 +69,7 @@ export async function run(opts: RunOpts): Promise<number> {
     s.start(`Upgrading ${info.label}`);
     try {
       await installTool(id, upgradeOpts);
+      await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
       s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
     } catch (err: unknown) {
       const e = err as Error;

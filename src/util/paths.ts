@@ -241,7 +241,9 @@ export function appendFile(path: string, content: string): void {
   appendFileSync(path, content, "utf-8");
 }
 
-/** Get the toksave binary absolute path. */
+/** Get the toksave binary absolute path or alias. */
 export function toksaveAbs(): string {
-  return process.argv[0] ?? "toksave";
+  // Relying on process.argv[0] is unsafe as it resolves to Node.js when invoked via npm globally.
+  // Instead, since `toksave` is a global npm binary, it will be in the system PATH.
+  return "toksave";
 }

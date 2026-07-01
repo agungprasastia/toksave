@@ -2,15 +2,23 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolveNode } from "../util/detect.js";
 
-function isNodeShebangScript(filePath: string): boolean {
+export function isNodeShebangScript(filePath: string): boolean {
+  let fd: number | null = null;
   try {
     const buf = Buffer.alloc(32);
-    const fd = require("node:fs").openSync(filePath, "r");
+    fd = require("node:fs").openSync(filePath, "r");
     require("node:fs").readSync(fd, buf, 0, 32, 0);
-    require("node:fs").closeSync(fd);
     return buf.toString().startsWith("#!/usr/bin/env node");
   } catch {
     return false;
+  } finally {
+    if (fd !== null) {
+      try {
+        require("node:fs").closeSync(fd);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
 

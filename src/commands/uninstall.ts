@@ -72,6 +72,7 @@ export async function run(
         await unwireTool(agentId, toolId, opts);
         removeWire(agentId, toolId);
       }
+      await new Promise((r) => setTimeout(r, 150)); // UX delay so progress bar is visible
     }
     s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
   }

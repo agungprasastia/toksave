@@ -46,7 +46,7 @@ export async function run(
     }
     try {
       const ok = await installTool(tool.id, opts);
-      if (opts.dryRun) await new Promise((r) => setTimeout(r, 800)); // Fake delay for UI demo
+      await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
       s.stop(
         ok
           ? `${pc.green(colors.CHECK)} ${tool.label}`
@@ -113,7 +113,7 @@ export async function run(
     for (const tool of tools) {
       try {
         const ok = await wireTool(agentId, tool.id, opts);
-        if (opts.dryRun) await new Promise((r) => setTimeout(r, 600)); // Fake delay for UI demo
+        await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
         if (ok && !opts.dryRun) {
           recordWire(agentId, tool.id, toolInstalledVersion(tool.id) ?? undefined);
         }
