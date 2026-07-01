@@ -73,7 +73,7 @@ jobs:
 
       - name: Extract Release Notes
         id: extract-release-notes
-        uses: ffurrer2/extract-release-notes@v2
+        uses: ffurrer2/extract-release-notes@v3
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
