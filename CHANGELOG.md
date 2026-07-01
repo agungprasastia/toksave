@@ -1,5 +1,68 @@
 # Changelog
 
+All notable changes to TokSave will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.0] - 2026-07-01
+
+### Added
+
+#### Enhanced Error Handling (Sprint 1.1)
+- **Structured Error Classes**: Introduced comprehensive error hierarchy with context and remediation guidance
+  - `ToolError`: Base error class with error codes and structured context
+  - `InstallError`: Installation failures with actionable remediation steps
+  - `DownloadError`: Network download failures with HTTP status codes
+  - `NetworkError`: Network connectivity issues with retry suggestions
+  - `HealthCheckError`: Health check failures with diagnostic information
+  - `IntegrityError`: Checksum/integrity verification failures
+  - `PlatformError`: Unsupported platform errors with fallback suggestions
+  - `IndexError`: CodeGraph indexing failures with permission/binary checks
+- **Actionable Error Messages**: All errors now include root cause explanation, specific remediation steps, relevant context (URLs, file paths, status codes), and caused-by stack traces for debugging
+
+#### Health Check & Repair System (Sprint 1.2)
+- **Tool Health Checks**: Added `healthCheck()` method to all tools
+  - RTK: Verifies binary installation, PATH configuration, and version detection
+  - CodeGraph: Checks npm package installation and binary availability
+  - Context-Mode: Validates npm global installation
+  - Caveman: Verifies skill file presence and version compatibility
+- **Automated Repair**: Added `repair()` method to all tools that attempts automatic fixes for common installation issues
+- **Health Status Types**: New structured health status interface with `HealthStatus`, `HealthIssue`, and `RepairResult`
+
+#### Download Resilience (Sprint 1.3)
+- **Retry Logic**: Implemented exponential backoff for network requests (default 3 retries with 1s, 2s, 4s delays)
+- **Progress Reporting**: Added `onProgress(downloaded, total)` callback support for real-time progress on large downloads
+- **Download Options**: New `DownloadOptions` interface with configurable `retries`, `timeout`, `onProgress`, `checksum`, and `fallbackUrls`
+
+#### Caveman Version Tracking (Sprint 4)
+- **Version Management**: Caveman skill now tracks semantic versions with `CAVEMAN_SKILL_VERSION` constant
+- **Version Comparison**: Health check detects outdated skills and warns when installed version doesn't match latest
+- **Backward Compatibility**: Old skills without version field default to "0.0.0"
+
+### Changed
+
+#### Tool Improvements
+- **RTK**: Enhanced installation error handling, post-install verification, better platform detection errors
+- **CodeGraph**: Replaced dynamic `require()` calls with static ES imports for type safety, enhanced `indexProject()` with `IndexResult` and `IndexOptions` interfaces
+- **Context-Mode**: Enhanced error handling for npm installation failures, added health check for PATH verification
+- **Download Utilities**: Refactored all download functions to use `fetchWithRetry()`, added streaming progress support, better HTTP error status handling
+- **npm Utilities**: Enhanced `installGlobal()` error handling with npm configuration troubleshooting hints
+
+### Fixed
+- CodeGraph: Fixed silent failures in `indexProject()` (now throws `IndexError`)
+- Download: Fixed missing error context in download failures
+- RTK: Fixed installation failures not reporting specific error causes
+- npm: Fixed generic error messages that didn't help troubleshooting
+
+### Technical Improvements
+- All tool modules now export `healthCheck()` and `repair()` methods
+- Registry exports `toolHealthCheck()` and `toolRepair()` dispatchers
+- New [src/util/errors.ts](src/util/errors.ts) module with error class hierarchy
+- New [src/util/health.ts](src/util/health.ts) module with health status types
+- Enhanced type safety throughout download and installation flows
+- All tests pass (56 tests), TypeScript compilation clean
+
 ## [0.3.1] — 2026-07-01
 
 ### Changed

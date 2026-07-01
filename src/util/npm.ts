@@ -1,10 +1,15 @@
+import { InstallError } from "./errors.js";
 import { npmCmd, run, runStdout } from "./exec.js";
 
 /** Install an npm package globally. */
 export function installGlobal(pkg: string): boolean {
   const r = run(npmCmd(), ["install", "-g", pkg]);
   if (r.code === 0) return true;
-  throw new Error(`npm install -g ${pkg} failed: ${r.stderr}`);
+  throw new InstallError(pkg, {
+    message: `Failed to install npm package globally: ${pkg}`,
+    cause: r.stderr,
+    remediation: "Check npm configuration and network connectivity. Try running: npm config get prefix",
+  });
 }
 
 /** Get installed version of a global npm package. */

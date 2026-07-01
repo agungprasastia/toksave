@@ -1,6 +1,10 @@
+/** Caveman skill version - update when skill content changes. */
+export const CAVEMAN_SKILL_VERSION = "1.0.0";
+
 /** Full Caveman SKILL.md content — based on official JuliusBrussee/caveman repo. */
 export const CAVEMAN_SKILL_MD = `---
 name: caveman
+version: ${CAVEMAN_SKILL_VERSION}
 description: Ultra-compressed communication mode. Cuts token usage ~75% by speaking like caveman while keeping full technical accuracy. Supports intensity levels.
 ---
 

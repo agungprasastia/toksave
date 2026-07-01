@@ -133,6 +133,7 @@ import * as cavemanTool from "./tools/caveman.js";
 import * as codegraphTool from "./tools/codegraph.js";
 import * as contextModeTool from "./tools/context-mode.js";
 import * as rtkTool from "./tools/rtk.js";
+import type { HealthStatus, RepairResult } from "./util/health.js";
 
 const agentModules = { claude, opencode, codex, antigravity };
 const toolModules = {
@@ -168,4 +169,12 @@ export function toolInstalledVersion(id: ToolId): string | null {
 
 export async function toolLatestVersion(id: ToolId): Promise<string | null> {
   return toolModules[id].latestVersion();
+}
+
+export function toolHealthCheck(id: ToolId): HealthStatus {
+  return toolModules[id].healthCheck();
+}
+
+export async function toolRepair(id: ToolId, opts: RunOpts): Promise<RepairResult> {
+  return toolModules[id].repair(opts);
 }

@@ -2,7 +2,7 @@ import * as semver from "semver";
 
 /** Build-time version from package.json. */
 export function toksaveVersion(): string {
-  return "0.3.1"; // Updated at build time
+  return "0.4.0"; // Updated at build time
 }
 
 /** Compare two semver strings. Returns -1, 0, or 1. */
