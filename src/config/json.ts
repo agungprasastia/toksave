@@ -1,5 +1,5 @@
-import { parse, stringify } from "comment-json";
 import { existsSync, readFileSync } from "node:fs";
+import { parse, stringify } from "comment-json";
 import { writeFile } from "../util/paths.js";
 
 /** Read a JSON/JSONC file. */

@@ -84,7 +84,7 @@ export function installedVersion(): string | null {
 export async function latestVersion(): Promise<string | null> {
   try {
     const res = await fetch("https://api.github.com/repos/rtk-ai/rtk/releases/latest", {
-      headers: { "User-Agent": "toksave" }
+      headers: { "User-Agent": "toksave" },
     });
     if (!res.ok) return null;
     const json = await res.json();
