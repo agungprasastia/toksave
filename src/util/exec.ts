@@ -13,6 +13,7 @@ export function run(cmd: string, args: string[]): RunResult {
       encoding: "utf-8",
       timeout: 120_000,
       stdio: ["pipe", "pipe", "pipe"],
+      shell: process.platform === "win32",
     });
     return {
       code: result.status ?? -1,

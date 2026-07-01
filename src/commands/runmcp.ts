@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { resolveNode } from "../util/detect.js";
 
 function isNodeShebangScript(filePath: string): boolean {
   try {
@@ -26,7 +27,12 @@ export function runMcp(): Promise<number> {
 
     if (existsSync(exe) && isNodeShebangScript(exe)) {
       cmdArgs = [exe, ...cmdArgs];
-      exe = process.execPath; // Use the current node binary
+      const systemNode = resolveNode();
+      if (!systemNode) {
+        console.error("Error: Could not find 'node' executable on PATH to run MCP server.");
+        return resolve(1);
+      }
+      exe = systemNode;
     }
 
     const child = spawn(exe, cmdArgs, {

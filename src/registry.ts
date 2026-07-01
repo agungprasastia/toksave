@@ -166,6 +166,6 @@ export function toolInstalledVersion(id: ToolId): string | null {
   return toolModules[id].installedVersion();
 }
 
-export function toolLatestVersion(id: ToolId): string | null {
+export async function toolLatestVersion(id: ToolId): Promise<string | null> {
   return toolModules[id].latestVersion();
 }

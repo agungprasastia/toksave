@@ -1,47 +1,13 @@
+import { parse, stringify } from "comment-json";
 import { existsSync, readFileSync } from "node:fs";
 import { writeFile } from "../util/paths.js";
-
-/** Strip single-line // comments from JSON (JSONC → JSON). */
-function stripComments(input: string): string {
-  let out = "";
-  let inString = false;
-  let isEscaped = false;
-
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
-
-    if (isEscaped) {
-      out += ch;
-      isEscaped = false;
-      continue;
-    }
-    if (ch === "\\" && inString) {
-      out += ch;
-      isEscaped = true;
-      continue;
-    }
-    if (ch === '"') {
-      inString = !inString;
-      out += ch;
-      continue;
-    }
-    if (!inString && ch === "/" && input[i + 1] === "/") {
-      // Skip until end of line
-      while (i < input.length && input[i] !== "\n") i++;
-      out += "\n";
-      continue;
-    }
-    out += ch;
-  }
-  return out;
-}
 
 /** Read a JSON/JSONC file. */
 export function readJsonFile(path: string): unknown | null {
   if (!existsSync(path)) return null;
   try {
     const raw = readFileSync(path, "utf-8");
-    return JSON.parse(stripComments(raw));
+    return parse(raw);
   } catch {
     return null;
   }
@@ -49,7 +15,7 @@ export function readJsonFile(path: string): unknown | null {
 
 /** Write a JSON value to a file, pretty-printed. */
 export function writeJsonFile(path: string, value: unknown): void {
-  writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+  writeFile(path, `${stringify(value, null, 2)}\n`);
 }
 
 /** Get or create a nested object. */

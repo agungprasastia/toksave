@@ -20,9 +20,17 @@ export function installedVersion(pkg: string): string | null {
 }
 
 /** Get latest version of an npm package from registry. */
-export function latestVersion(pkg: string): string | null {
-  const out = runStdout(npmCmd(), ["view", pkg, "version"]);
-  return out?.trim() || null;
+export async function latestVersion(pkg: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://registry.npmjs.org/${pkg}/latest`, {
+      headers: { "User-Agent": "toksave" }
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.version || null;
+  } catch {
+    return null;
+  }
 }
 
 /** Check if Node.js is installed and meets minimum version. */

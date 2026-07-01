@@ -24,7 +24,7 @@ export function installedVersion(): string | null {
 }
 
 /** Get latest CodeGraph version from npm registry. */
-export function latestVersion(): string | null {
+export async function latestVersion(): Promise<string | null> {
   return npmLatestVersion(PACKAGE);
 }
 

@@ -81,18 +81,15 @@ export function installedVersion(): string | null {
 }
 
 /** Get latest RTK version from GitHub. */
-export function latestVersion(): string | null {
+export async function latestVersion(): Promise<string | null> {
   try {
-    // Use sync fetch workaround via exec
-    const r = run("node", [
-      "-e",
-      `fetch("https://api.github.com/repos/rtk-ai/rtk/releases/latest",{headers:{"User-Agent":"toksave"}}).then(r=>r.json()).then(j=>console.log(j.tag_name||"")).catch(()=>{})`,
-    ]);
-    if (r.code === 0 && r.stdout) {
-      return r.stdout.replace(/^v/, "").trim() || null;
-    }
+    const res = await fetch("https://api.github.com/repos/rtk-ai/rtk/releases/latest", {
+      headers: { "User-Agent": "toksave" }
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.tag_name?.replace(/^v/, "").trim() || null;
   } catch {
-    /* ignore */
+    return null;
   }
-  return null;
 }

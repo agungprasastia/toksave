@@ -49,7 +49,7 @@ export async function run(offline: boolean): Promise<number> {
 
     for (const tool of ALL_TOOLS) {
       const installed = toolInstalledVersion(tool.id);
-      const latest = toolLatestVersion(tool.id);
+      const latest = await toolLatestVersion(tool.id);
       const label = colors.pad(tool.label, 14);
 
       if (installed && latest) {

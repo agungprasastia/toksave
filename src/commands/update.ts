@@ -25,7 +25,7 @@ export async function run(opts: RunOpts): Promise<number> {
 
   for (const tool of ALL_TOOLS) {
     const installed = toolInstalledVersion(tool.id);
-    const latest = toolLatestVersion(tool.id);
+    const latest = await toolLatestVersion(tool.id);
     const label = colors.pad(tool.label, 14);
 
     const instStr = installed ? `v${installed}` : "not on PATH";

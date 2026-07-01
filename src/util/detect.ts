@@ -40,3 +40,12 @@ export function findBinaryIn(name: string, extraDirs: string[]): string | null {
   }
   return null;
 }
+
+/** Find the node executable on the system. */
+export function resolveNode(): string | null {
+  const onPath = findBinary("node");
+  if (onPath) return onPath;
+
+  const extraDirs = ["/usr/local/bin", "/usr/bin", "/opt/homebrew/bin"];
+  return findBinaryIn("node", extraDirs);
+}

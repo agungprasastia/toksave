@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0] — 2026-07-01
+
+### Added
+- **JSONC Config Preservation**: Replaced standard JSON parser with `comment-json`. TokSave now flawlessly preserves all user comments (`//`, `/* */`) and key order when modifying agent configurations like `settings.json`.
+
+### Fixed
+- **Windows Command Execution Bug**: Added `shell: process.platform === "win32"` to subprocess execution. Fixes catastrophic installation failures for global npm packages (like CodeGraph and Context-Mode) on Windows.
+- **Node.js MCP Proxy Shebang Resolution Bug**: Fixed an issue where `toksave runmcp` attempted to spawn `toksave.exe` instead of `node` for node-based MCP servers. Tools now correctly resolve and execute using the system's `node` binary.
+- **Async Fetch Refactor**: Removed anti-pattern synchronous Node subprocessing for network requests (`node -e 'fetch'`) in favor of native asynchronous API calls (`await fetch`), improving performance and environment portability.
+
 ## [0.2.0] — 2026-07-01
 
 ### Added
