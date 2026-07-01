@@ -45,11 +45,20 @@ CI runs `bun run typecheck`, `bun run lint`, `bun test`, and a `bun build --comp
 - [src/content/](src/content/) stores managed markdown blocks for Caveman and Context-Mode. Keep marker comments stable because tests and uninstall use them.
 - [src/util/manifest.ts](src/util/manifest.ts) tracks wires in `TOKSAVE_CACHE_DIR` or `~/.cache/toksave/manifest.json`. Tests override `TOKSAVE_CACHE_DIR`.
 
+## Error Handling & Health Checks (v0.4.0+)
+
+- [src/util/errors.ts](src/util/errors.ts) defines structured error classes: `ToolError`, `InstallError`, `DownloadError`, `NetworkError`, `HealthCheckError`, `IntegrityError`, `PlatformError`, `IndexError`. All errors include context, cause, and remediation guidance.
+- [src/util/health.ts](src/util/health.ts) defines health check types: `HealthStatus`, `HealthIssue`, `RepairResult`. Used by all tool modules to verify installation and suggest fixes.
+- Tool modules ([src/tools/](src/tools/)) export: `install()`, `installedVersion()`, `latestVersion()`, `healthCheck()`, `repair()`. Registry dispatches via `toolHealthCheck()` and `toolRepair()`.
+- Download utilities ([src/util/download.ts](src/util/download.ts)) have retry logic with exponential backoff (3 retries: 1s, 2s, 4s). Support progress callbacks via `DownloadOptions.onProgress`.
+
 ## Important details
 
 - This repo has [.codegraph/](.codegraph/). Use `rtk codegraph explore "<symbol or question>"` before broad grep/read sweeps.
 - TypeScript is strict, ESM, `moduleResolution: "bundler"`, and `noEmit`; Bun runs TypeScript sources directly.
 - Biome formats with 2 spaces, double quotes, semicolons, trailing commas, line width 100.
-- Version currently lives in both [package.json](package.json) and [src/util/version.ts](src/util/version.ts); keep them in sync for releases.
+- Version lives in both [package.json](package.json) and [src/util/version.ts](src/util/version.ts); keep them in sync for releases.
+- This is a Bun-only project. `package-lock.json` is not used; `bun.lock` is the active lock file.
 - `runmcp` proxies MCP server execution and handles Node shebang scripts; keep stdout piping behavior intact.
 - Agent wiring edits files under user config directories, not only repo files. Use `--dry-run` flows or temp env/path overrides in tests when possible.
+- When adding new tools or agents, update the registry first ([src/registry.ts](src/registry.ts)), then add matching modules with all required methods.

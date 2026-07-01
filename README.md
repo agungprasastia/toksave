@@ -20,6 +20,9 @@
 ## ✨ Features
 
 - **Zero-config:** Run one command to equip all your agents.
+- **Smart Health Checks:** Built-in diagnostics verify installations and suggest fixes automatically.
+- **Actionable Error Messages:** When things fail, get clear explanations and remediation steps.
+- **Download Resilience:** Automatic retry with exponential backoff handles flaky networks.
 - **Idempotent & Safe:** Run multiple times without duplicating configurations.
 - **Clean Uninstall:** Tracks what it installed so it can cleanly revert changes.
 - **Cross-platform:** Ships as a standalone binary for macOS, Linux, and Windows.
@@ -75,7 +78,7 @@ toksave
 | Command | Description |
 |---------|-------------|
 | `toksave` | Install + wire all tools into detected agents |
-| `toksave doctor` | Health check — show what's wired and what's broken |
+| `toksave doctor` | Health check with diagnostics and automated repair suggestions |
 | `toksave update` | Update all tools to latest versions |
 | `toksave uninstall` | Remove toksave wiring from agents |
 | `toksave self-update` | Update the toksave CLI itself |
@@ -110,6 +113,8 @@ bun run build             # Build local binary
 # Build all cross-platform releases
 bash scripts/build-release.sh
 ```
+
+See [CHANGELOG.md](CHANGELOG.md) for release history and detailed changes.
 
 ## 📜 License
 

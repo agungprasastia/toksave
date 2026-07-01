@@ -16,10 +16,7 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchWithRetry(
-  url: string,
-  opts: DownloadOptions = {},
-): Promise<Response> {
+async function fetchWithRetry(url: string, opts: DownloadOptions = {}): Promise<Response> {
   const retries = opts.retries ?? 3;
   const timeout = opts.timeout ?? 120_000;
   let lastError: Error | null = null;
@@ -52,7 +49,7 @@ async function fetchWithRetry(
       }
 
       // Exponential backoff: 1s, 2s, 4s
-      const backoffMs = 1000 * Math.pow(2, attempt);
+      const backoffMs = 1000 * 2 ** attempt;
       await sleep(backoffMs);
     }
   }
@@ -61,7 +58,11 @@ async function fetchWithRetry(
 }
 
 /** Download a URL to a file path. */
-export async function downloadFile(url: string, dest: string, opts?: DownloadOptions): Promise<void> {
+export async function downloadFile(
+  url: string,
+  dest: string,
+  opts?: DownloadOptions,
+): Promise<void> {
   try {
     const resp = await fetchWithRetry(url, opts);
 
@@ -77,13 +78,18 @@ export async function downloadFile(url: string, dest: string, opts?: DownloadOpt
       message: `Network error downloading from ${url}`,
       cause: err,
       url,
-      remediation: "Check your internet connection. If behind a proxy, ensure proxy settings are configured.",
+      remediation:
+        "Check your internet connection. If behind a proxy, ensure proxy settings are configured.",
     });
   }
 }
 
 /** Download and extract a .tar.gz to a destination directory. */
-export async function downloadTarGz(url: string, destDir: string, opts?: DownloadOptions): Promise<void> {
+export async function downloadTarGz(
+  url: string,
+  destDir: string,
+  opts?: DownloadOptions,
+): Promise<void> {
   try {
     const resp = await fetchWithRetry(url, opts);
 
@@ -134,7 +140,11 @@ export async function downloadTarGz(url: string, destDir: string, opts?: Downloa
 }
 
 /** Download and extract a .zip to a destination directory. */
-export async function downloadZip(url: string, destDir: string, opts?: DownloadOptions): Promise<void> {
+export async function downloadZip(
+  url: string,
+  destDir: string,
+  opts?: DownloadOptions,
+): Promise<void> {
   try {
     const resp = await fetchWithRetry(url, opts);
 

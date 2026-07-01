@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { RunOpts } from "../registry.js";
 import { CAVEMAN_SKILL_VERSION } from "../content/caveman-skill.js";
+import type { RunOpts } from "../registry.js";
 import type { HealthIssue, HealthStatus, RepairResult } from "../util/health.js";
 import * as paths from "../util/paths.js";
 
@@ -72,7 +72,7 @@ export function healthCheck(): HealthStatus {
 }
 
 /** Attempt to repair Caveman installation. */
-export async function repair(opts: RunOpts): Promise<RepairResult> {
+export async function repair(_opts: RunOpts): Promise<RepairResult> {
   const beforeHealth = healthCheck();
 
   if (beforeHealth.healthy) {

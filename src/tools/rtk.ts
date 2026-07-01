@@ -79,7 +79,7 @@ export async function install(opts: RunOpts): Promise<boolean> {
           run("rtk", ["init", "-g"]);
           return true;
         }
-      } catch (err) {
+      } catch {
         verbose("Install script failed, trying cargo", opts.verbose);
       }
     }

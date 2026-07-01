@@ -8,7 +8,8 @@ export function installGlobal(pkg: string): boolean {
   throw new InstallError(pkg, {
     message: `Failed to install npm package globally: ${pkg}`,
     cause: r.stderr,
-    remediation: "Check npm configuration and network connectivity. Try running: npm config get prefix",
+    remediation:
+      "Check npm configuration and network connectivity. Try running: npm config get prefix",
   });
 }
 

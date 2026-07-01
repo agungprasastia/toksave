@@ -58,7 +58,11 @@ export class InstallError extends ToolError {
 }
 
 export class DownloadError extends ToolError {
-  constructor(toolId: string, url: string, context: Omit<ErrorContext, "message"> & { message?: string }) {
+  constructor(
+    toolId: string,
+    url: string,
+    context: Omit<ErrorContext, "message"> & { message?: string },
+  ) {
     super(toolId, "download-failed", {
       message: context.message ?? `Failed to download ${toolId} from ${url}`,
       url,
@@ -109,7 +113,11 @@ export class IntegrityError extends ToolError {
 }
 
 export class PlatformError extends ToolError {
-  constructor(toolId: string, platform: string, context: Omit<ErrorContext, "message"> & { message?: string }) {
+  constructor(
+    toolId: string,
+    platform: string,
+    context: Omit<ErrorContext, "message"> & { message?: string },
+  ) {
     super(toolId, "platform-unsupported", {
       message: context.message ?? `Platform ${platform} is not supported for ${toolId}`,
       platform,
