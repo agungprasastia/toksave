@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import { writeFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
+import { unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { isNodeShebangScript } from "../commands/runmcp.js";
 
 test("isNodeShebangScript correctly identifies shebang", () => {
@@ -13,7 +13,11 @@ test("isNodeShebangScript correctly identifies shebang", () => {
     writeFileSync(p, "console.log('no shebang');");
     expect(isNodeShebangScript(p)).toBe(false);
   } finally {
-    try { unlinkSync(p); } catch {}
+    try {
+      unlinkSync(p);
+    } catch {
+      /* ignore */
+    }
   }
 });
 
