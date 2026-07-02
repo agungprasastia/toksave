@@ -15,19 +15,26 @@ export async function install(_opts: RunOpts): Promise<boolean> {
 
 /** Get installed Caveman skill version by reading skill file. */
 export function installedVersion(): string | null {
-  try {
-    const claudeSkillPath = join(paths.claudePaths().skillsDir, "caveman/SKILL.md");
-    if (!existsSync(claudeSkillPath)) return null;
+  // Check all agents that use SKILL.md files (Claude Code, Antigravity)
+  const skillPaths = [
+    join(paths.claudePaths().skillsDir, "caveman/SKILL.md"),
+    join(paths.antigravityPaths().dir, "config", "skills", "caveman", "SKILL.md"),
+  ];
 
-    const content = readFileSync(claudeSkillPath, "utf-8");
-    const versionMatch = content.match(/^version:\s*(.+)$/m);
-    if (versionMatch) return versionMatch[1].trim();
+  for (const skillPath of skillPaths) {
+    try {
+      if (!existsSync(skillPath)) continue;
 
-    // Fallback: if no version field, assume it's an old version
-    return "0.0.0";
-  } catch {
-    return null;
+      const content = readFileSync(skillPath, "utf-8");
+      const versionMatch = content.match(/^version:\s*(.+)$/m);
+      if (versionMatch) return versionMatch[1].trim();
+
+      // Fallback: if no version field, assume it's an old version
+      return "0.0.0";
+    } catch {}
   }
+
+  return null;
 }
 
 /** Get latest Caveman skill version. */

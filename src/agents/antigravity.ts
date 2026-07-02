@@ -234,7 +234,7 @@ function wireCaveman(opts: RunOpts): boolean {
   const skillDir = join(gemini, "config", "skills", "caveman");
   paths.ensureDir(skillDir);
   const skillFile = join(skillDir, "SKILL.md");
-  if (!existsSync(skillFile)) {
+  if (!existsSync(skillFile) || opts.upgrade) {
     verbose("Writing Caveman SKILL.md for Antigravity", opts.verbose);
     paths.writeFile(skillFile, CAVEMAN_SKILL_MD);
   }

@@ -5,6 +5,14 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-07-02
+
+### Fixed
+- **Caveman version tracking**: Fixed bug where Caveman showed version "0.0.0" even after running `toksave update`
+  - Root cause: `wireCaveman()` functions only wrote skill files if they didn't exist, so update operations never rewrote old files with the new template containing `version: 1.0.0`
+  - Modified agent wire functions in [claude.ts](src/agents/claude.ts) and [antigravity.ts](src/agents/antigravity.ts) to rewrite skill files when `opts.upgrade` is true
+  - Enhanced `installedVersion()` in [caveman.ts](src/tools/caveman.ts) to check both Claude Code and Antigravity skill paths (previously only checked Claude Code)
+
 ## [0.4.0] - 2026-07-01
 
 ### Added

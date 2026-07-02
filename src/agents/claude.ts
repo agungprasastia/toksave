@@ -147,7 +147,7 @@ function wireCaveman(opts: RunOpts): boolean {
   const skillDir = join(p.skillsDir, "caveman");
   paths.ensureDir(skillDir);
   const skillFile = join(skillDir, "SKILL.md");
-  if (!existsSync(skillFile)) {
+  if (!existsSync(skillFile) || opts.upgrade) {
     verbose("Writing Caveman SKILL.md for Claude Code", opts.verbose);
     paths.writeFile(skillFile, CAVEMAN_SKILL_MD);
   }
