@@ -44,10 +44,13 @@ Write artifacts to FILES — never inline. Return: file path + 1-line descriptio
 
 /** Check if context-mode rules are already present in a file. */
 export function hasCtxRules(content: string): boolean {
-  return content.includes("CONTEXT-MODE_START");
+  return /CONTEXT-MODE_START\b/.test(content);
 }
 
 /** Remove context-mode rules from a file. */
 export function removeCtxRules(content: string): string {
-  return content.replace(/\n?<!-- CONTEXT-MODE_START[\s\S]*?CONTEXT-MODE_END -->\n?/g, "").trim();
+  return content.replace(
+    /\r?\n?<!--\s*CONTEXT-MODE_START\b[\s\S]*?CONTEXT-MODE_END\s*-->\r?\n?/g,
+    "\n",
+  );
 }

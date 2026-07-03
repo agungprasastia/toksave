@@ -32,40 +32,47 @@ function verifyChecksum(buffer: Buffer, expectedChecksum: string, url: string): 
 }
 
 async function fetchWithRetry(url: string, opts: DownloadOptions = {}): Promise<Response> {
-  const retries = opts.retries ?? 3;
-  const timeout = opts.timeout ?? 120_000;
+  const urls = [url, ...(opts.fallbackUrls ?? [])];
   let lastError: Error | null = null;
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const resp = await fetch(url, {
-        headers: { "User-Agent": userAgent() },
-        signal: AbortSignal.timeout(timeout),
-      });
+  for (const currentUrl of urls) {
+    const retries = opts.retries ?? 3;
+    const timeout = opts.timeout ?? 120_000;
 
-      if (resp.ok) return resp;
-
-      // Don't retry 404s
-      if (resp.status === 404) {
-        throw new DownloadError("resource", url, {
-          message: `HTTP ${resp.status} ${resp.statusText}`,
-          statusCode: resp.status,
-          remediation: "URL not found. Check if the resource exists or try a different version.",
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const resp = await fetch(currentUrl, {
+          headers: { "User-Agent": userAgent() },
+          signal: AbortSignal.timeout(timeout),
         });
+
+        if (resp.ok) return resp;
+
+        // Don't retry 404s
+        if (resp.status === 404) {
+          throw new DownloadError("resource", currentUrl, {
+            message: `HTTP ${resp.status} ${resp.statusText}`,
+            statusCode: resp.status,
+            remediation: "URL not found. Check if the resource exists or try a different version.",
+          });
+        }
+
+        throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+      } catch (err) {
+        lastError = err as Error;
+
+        // Don't retry 404s or on last attempt
+        if (
+          attempt === retries ||
+          (err instanceof DownloadError && err.context.statusCode === 404)
+        ) {
+          break;
+        }
+
+        // Exponential backoff: 1s, 2s, 4s
+        const backoffMs = 1000 * 2 ** attempt;
+        await sleep(backoffMs);
       }
-
-      throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-    } catch (err) {
-      lastError = err as Error;
-
-      // Don't retry 404s or on last attempt
-      if (attempt === retries || (err as any)?.statusCode === 404) {
-        throw err;
-      }
-
-      // Exponential backoff: 1s, 2s, 4s
-      const backoffMs = 1000 * 2 ** attempt;
-      await sleep(backoffMs);
     }
   }
 
@@ -88,12 +95,22 @@ async function fetchBuffer(resp: Response, opts?: DownloadOptions): Promise<Buff
     chunks.push(value);
     downloaded += value.length;
 
-    if (opts?.onProgress && contentLength > 0) {
+    if (opts?.onProgress) {
       opts.onProgress(downloaded, contentLength);
     }
   }
 
   return Buffer.concat(chunks);
+}
+
+function isSafeArchivePath(entryPath: string, destDir: string): boolean {
+  if (isAbsolute(entryPath)) return false;
+  const normalized = normalize(entryPath);
+  if (normalized.startsWith("..") || normalized.includes("..\\") || normalized.includes("../")) {
+    return false;
+  }
+  const targetPath = join(destDir, entryPath);
+  return !relative(destDir, targetPath).startsWith("..");
 }
 
 /** Download a URL to a file path. */
@@ -108,13 +125,13 @@ export async function downloadFile(
     const parent = dirname(dest);
     if (!existsSync(parent)) mkdirSync(parent, { recursive: true });
 
-    const buffer = Buffer.from(await resp.arrayBuffer());
+    const buffer = await fetchBuffer(resp, opts);
     if (opts?.checksum) {
       verifyChecksum(buffer, opts.checksum, url);
     }
     await Bun.write(dest, buffer);
   } catch (err) {
-    if (err instanceof DownloadError) throw err;
+    if (err instanceof DownloadError || err instanceof IntegrityError) throw err;
 
     throw new NetworkError("file", {
       message: `Network error downloading from ${url}`,
@@ -141,10 +158,14 @@ export async function downloadTarGz(
     if (opts?.checksum) {
       verifyChecksum(buffer, opts.checksum, url);
     }
-    const tmpFile = join(destDir, "__toksave_tmp.tar.gz");
+    const tmpFile = join(destDir, `__toksave_tmp_${process.pid}_${Date.now()}.tar.gz`);
     await Bun.write(tmpFile, buffer);
 
-    await tar.x({ file: tmpFile, cwd: destDir });
+    await tar.x({
+      file: tmpFile,
+      cwd: destDir,
+      filter: (entryPath) => isSafeArchivePath(entryPath, destDir),
+    });
 
     const { unlinkSync } = await import("node:fs");
     try {
@@ -153,7 +174,7 @@ export async function downloadTarGz(
       /* ignore */
     }
   } catch (err) {
-    if (err instanceof DownloadError) throw err;
+    if (err instanceof DownloadError || err instanceof IntegrityError) throw err;
 
     throw new NetworkError("tar.gz", {
       message: `Failed to download and extract tar.gz from ${url}`,
@@ -185,36 +206,14 @@ export async function downloadZip(
     for (const entry of zip.getEntries()) {
       const entryPath = entry.entryName;
 
-      // Reject absolute paths
-      if (isAbsolute(entryPath)) {
-        throw new DownloadError("zip", url, {
-          message: `Zip entry has absolute path: ${entryPath}`,
-          remediation: "The downloaded archive contains malicious entries. Aborting extraction.",
-        });
-      }
-
-      // Reject path traversal (../)
-      const normalized = normalize(entryPath);
-      if (
-        normalized.startsWith("..") ||
-        normalized.includes("..\\") ||
-        normalized.includes("../")
-      ) {
-        throw new DownloadError("zip", url, {
-          message: `Zip entry contains path traversal: ${entryPath}`,
-          remediation: "The downloaded archive contains malicious entries. Aborting extraction.",
-        });
-      }
-
-      // Verify resolved path stays within destDir
-      const targetPath = join(destDir, entryPath);
-      const rel = relative(destDir, targetPath);
-      if (rel.startsWith("..")) {
+      if (!isSafeArchivePath(entryPath, destDir)) {
         throw new DownloadError("zip", url, {
           message: `Zip entry escapes destination: ${entryPath}`,
           remediation: "The downloaded archive contains malicious entries. Aborting extraction.",
         });
       }
+
+      const targetPath = join(destDir, entryPath);
 
       // Extract entry
       if (entry.isDirectory) {
@@ -226,7 +225,7 @@ export async function downloadZip(
       }
     }
   } catch (err) {
-    if (err instanceof DownloadError) throw err;
+    if (err instanceof DownloadError || err instanceof IntegrityError) throw err;
 
     throw new NetworkError("zip", {
       message: `Failed to download and extract zip from ${url}`,

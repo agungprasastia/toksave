@@ -64,21 +64,26 @@ export async function run(opts: RunOpts): Promise<number> {
   const upgradeOpts: RunOpts = { ...opts, dryRun: false, upgrade: true };
   const s = new Progress();
 
+  const upgraded = new Set<(typeof changed)[number]>();
+  const failed: string[] = [];
+
   for (const id of changed) {
     const info = toolInfo(id);
     s.start(`Upgrading ${info.label}`);
     try {
       await installTool(id, upgradeOpts);
+      upgraded.add(id);
       await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
       s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
     } catch (err: unknown) {
       const e = err as Error;
+      failed.push(info.label);
       s.stop(`${pc.red(colors.CROSS)} ${info.label} — ${String(e.message || e)}`);
     }
   }
 
   // ── Re-sync wiring ──────────────────────────────────────
-  for (const toolId of changed) {
+  for (const toolId of upgraded) {
     for (const agent of ALL_AGENTS) {
       const det = detectAgent(agent.id);
       if (!det.installed) continue;
@@ -89,15 +94,20 @@ export async function run(opts: RunOpts): Promise<number> {
   }
 
   console.log();
-  const names = changed.map((id) => toolInfo(id).label);
-  console.log(
-    boxen(pc.green(`Updated ${pc.bold(names.join(", "))}.`), {
-      padding: 1,
-      margin: { bottom: 1 },
-      borderStyle: "round",
-      borderColor: "green",
-    }),
-  );
+  const names = [...upgraded].map((id) => toolInfo(id).label);
+  if (names.length > 0) {
+    console.log(
+      boxen(pc.green(`Updated ${pc.bold(names.join(", "))}.`), {
+        padding: 1,
+        margin: { bottom: 1 },
+        borderStyle: "round",
+        borderColor: "green",
+      }),
+    );
+  }
+  for (const name of failed) {
+    colors.warn(`${name} failed to update.`);
+  }
   console.log();
-  return 0;
+  return failed.length > 0 ? 1 : 0;
 }

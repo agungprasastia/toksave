@@ -30,6 +30,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Local template remains as fallback when GitHub fetch fails
   - Philosophy fulfilled: all tools (RTK, CodeGraph, Context-Mode, Caveman) now fetch latest from official sources
 
+### Fixed
+
+- **Manifest race conditions & parse safety**: Implemented file-based locking (`manifest.json.lock`) and atomic temp-write-rename pattern to prevent manifest corruption. Added parse error warnings instead of silent config resets.
+- **Safe configuration writes**: Updated config writers to throw on parse failures instead of returning empty objects/null, preventing existing configs from being overwritten on syntax errors. Implemented atomic file writes for all configuration files.
+- **Codex hook preservation**: Refactored RTK hook wiring to merge hooks into `PreToolUse` and `PermissionRequest` instead of completely overwriting them. Removed global `approval_policy = "never"` mutation to avoid modifying user settings outside TokSave scope.
+- **Antigravity multi-surface MCP safety**: Modified MCP wiring and settings updates to aggregate partial file write failures and throw explicit errors instead of failing silently. Corrected Context-Mode hook command path proxy target.
+- **Tar archive path traversal safety**: Added path validation checks for `.tar.gz` extractions to prevent directory traversal exploits.
+- **RTK installation fallback & cleanup**: Ensured downloaded RTK binary is removed if initial integration setup (`rtk init -g`) fails. Added script/cargo install fallbacks on GitHub release asset failures.
+- **RTK local path resolution**: Updated version detection to search the local bin directory when `PATH` is not yet updated.
+- **Indeterminate progress reporting**: Fixed download progress callback to trigger even when `Content-Length` is not provided (e.g. GitHub chunked transfers).
+- **Rule upgrade refresh & validation**: Modified rules wiring to overwrite rule blocks on upgrade instead of skipping early. Improved verification checks to inspect rule presence in `AGENTS.md` and `instructions.md`.
+- **Network timeout in fetches**: Added a 10-second timeout to all remote fetches (rtk, caveman, npm) to prevent indefinite hangs on poor connections.
+- **Regex rule markers**: Improved rules removal regex to be resilient to carriage returns (`\r?\n`) and flexible whitespace formatting.
+- **MCP idempotency**: Replaced fragile `JSON.stringify` comparisons with field-by-field validation to prevent false negatives caused by key ordering.
+- **Caveman version detection**: Fixed `installedVersion()` returning "0.0.0" when official SKILL.md has no version field, and added support for detecting version from OpenCode and Codex instructions.
+- **Caveman content extraction robustness**: Increased buffer from 12 to 20 lines in `getCavemanInstructionBlock()` for better handling of content structure changes.
+- **CodeGraph CI hang**: Removed `-i` interactive flag from `codegraph init` that caused indefinite hangs in non-interactive environments (CI, background processes).
+
 ## [0.5.0] - 2026-07-03
 
 ### Added

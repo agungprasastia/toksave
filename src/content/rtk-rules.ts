@@ -31,10 +31,10 @@ Skip \`rtk\` for:
 
 /** Check if RTK rules are already present in a file. */
 export function hasRtkRules(content: string): boolean {
-  return content.includes("RTK_START");
+  return /RTK_START\b/.test(content);
 }
 
 /** Remove RTK rules from a file. */
 export function removeRtkRules(content: string): string {
-  return content.replace(/\n?<!-- RTK_START[\s\S]*?RTK_END -->\n?/g, "").trim();
+  return content.replace(/\r?\n?<!--\s*RTK_START\b[\s\S]*?RTK_END\s*-->\r?\n?/g, "\n");
 }

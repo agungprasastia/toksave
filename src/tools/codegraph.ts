@@ -55,11 +55,7 @@ export function indexProject(dir: string, opts?: IndexOptions): IndexResult {
       execSync("codegraph sync", { cwd: dir, stdio: opts?.verbose ? "inherit" : "ignore" });
     } else {
       opts?.onProgress?.("Creating new index...");
-      try {
-        execSync("codegraph init -i", { cwd: dir, stdio: opts?.verbose ? "inherit" : "ignore" });
-      } catch {
-        execSync("codegraph init", { cwd: dir, stdio: opts?.verbose ? "inherit" : "ignore" });
-      }
+      execSync("codegraph init", { cwd: dir, stdio: opts?.verbose ? "inherit" : "ignore" });
     }
     return { success: true, indexPath };
   } catch (err) {

@@ -72,8 +72,10 @@ export function verify(tool: ToolId): boolean | null {
       return hasMcp("context-mode");
     case "caveman":
       return hasCavemanRules();
-    case "rtk":
-      return isOnPath("rtk");
+    case "rtk": {
+      const rules = paths.readFile(paths.opencodePaths().agentsMd);
+      return isOnPath("rtk") && !!rules && hasRtkRules(rules);
+    }
   }
 }
 
@@ -94,8 +96,17 @@ function wireMcp(toolId: string, command: string[], opts: RunOpts): boolean {
 
   const mcp = getOrCreateObject(cfg, "mcp");
   const entry = { type: "local", command, enabled: true };
+  const existing = mcp[toolId] as
+    | { type?: unknown; command?: unknown; enabled?: unknown }
+    | undefined;
 
-  if (mcp[toolId] && JSON.stringify(mcp[toolId]) === JSON.stringify(entry)) {
+  if (
+    existing?.type === entry.type &&
+    Array.isArray(existing.command) &&
+    existing.command.length === command.length &&
+    existing.command.every((arg, i) => arg === command[i]) &&
+    existing.enabled === entry.enabled
+  ) {
     return true;
   }
 
@@ -131,10 +142,14 @@ async function wireCaveman(opts: RunOpts): Promise<boolean> {
   verbose("Writing Caveman rules into OpenCode AGENTS.md", opts.verbose);
 
   const existing = paths.readFile(p.agentsMd) ?? "";
-  if (existing.includes("CAVEMAN_START")) return true;
+  if (existing.includes("CAVEMAN_START") && !opts.upgrade) return true;
 
   const cavemanBlock = await getCavemanInstructionBlock();
-  paths.writeFile(p.agentsMd, `${existing}\n${cavemanBlock}`);
+  const stripped = existing.replace(
+    /\r?\n?<!--\s*CAVEMAN_START[\s\S]*?CAVEMAN_END\s*-->\r?\n?/g,
+    "\n",
+  );
+  paths.writeFile(p.agentsMd, `${stripped}\n${cavemanBlock}`);
   return true;
 }
 
@@ -142,7 +157,9 @@ function removeCavemanRules(): void {
   const p = paths.opencodePaths();
   const existing = paths.readFile(p.agentsMd);
   if (!existing) return;
-  const stripped = existing.replace(/\n?<!-- CAVEMAN_START[\s\S]*?CAVEMAN_END -->\n?/g, "").trim();
+  const stripped = existing
+    .replace(/\r?\n?<!--\s*CAVEMAN_START[\s\S]*?CAVEMAN_END\s*-->\r?\n?/g, "")
+    .trim();
   paths.writeFile(p.agentsMd, stripped);
 }
 
@@ -178,9 +195,9 @@ function wireRtkRules(opts: RunOpts): void {
   verbose("Injecting RTK rules into OpenCode AGENTS.md", opts.verbose);
 
   const existing = paths.readFile(p.agentsMd) ?? "";
-  if (hasRtkRules(existing)) return;
+  if (hasRtkRules(existing) && !opts.upgrade) return;
 
-  paths.writeFile(p.agentsMd, `${existing}\n${RTK_RULES_BLOCK}`);
+  paths.writeFile(p.agentsMd, `${removeRtkRules(existing)}\n${RTK_RULES_BLOCK}`);
 }
 
 function removeRtkRulesFile(): void {

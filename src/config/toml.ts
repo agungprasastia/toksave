@@ -10,8 +10,7 @@ export function readTomlFile(path: string): Record<string, unknown> {
     return parse(raw) as Record<string, unknown>;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`Warning: Failed to parse TOML config at ${path}: ${msg}`);
-    return {};
+    throw new Error(`Failed to parse TOML config at ${path}: ${msg}`);
   }
 }
 
@@ -94,22 +93,25 @@ export function hasTable(doc: Record<string, unknown>, tablePath: string): boole
 }
 
 /** Remove a dotted table path. */
-export function removeTable(doc: Record<string, unknown>, tablePath: string): void {
+export function removeTable(doc: Record<string, unknown>, tablePath: string): boolean {
   const parts = tablePath.split(".");
-  if (parts.length === 0) return;
+  if (parts.length === 0) return false;
   const lastPart = parts[parts.length - 1];
-  if (!lastPart) return;
+  if (!lastPart) return false;
   if (parts.length === 1) {
+    const existed = lastPart in doc;
     delete doc[lastPart];
-    return;
+    return existed;
   }
   let current: Record<string, unknown> = doc;
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
-    if (!part || !current || typeof current !== "object") return;
+    if (!part || !current || typeof current !== "object" || !(part in current)) return false;
     current = current[part] as Record<string, unknown>;
   }
-  if (current && typeof current === "object") {
+  if (current && typeof current === "object" && lastPart in current) {
     delete current[lastPart];
+    return true;
   }
+  return false;
 }

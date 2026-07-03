@@ -1,3 +1,4 @@
+import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { RunOpts } from "../registry.js";
 import { verbose } from "../util/colors.js";
@@ -48,6 +49,11 @@ export async function install(opts: RunOpts): Promise<boolean> {
       const initResult = run(rtkPath, ["init", "-g"]);
 
       if (initResult.code !== 0) {
+        try {
+          rmSync(rtkPath, { force: true });
+        } catch {
+          /* ignore */
+        }
         throw new InstallError("rtk", {
           message: "Failed to initialize RTK shell integration",
           cause: initResult.stderr,
@@ -57,13 +63,15 @@ export async function install(opts: RunOpts): Promise<boolean> {
 
       return true;
     } catch (err) {
-      if (err instanceof InstallError) throw err;
-
-      throw new DownloadError("rtk", url, {
-        message: "Failed to download RTK binary",
-        cause: err,
-        remediation: "Check your internet connection or try using --method=cargo fallback",
-      });
+      const wrapped =
+        err instanceof InstallError
+          ? err
+          : new DownloadError("rtk", url, {
+              message: "Failed to download RTK binary",
+              cause: err,
+              remediation: "Trying fallback installation methods.",
+            });
+      verbose(`${wrapped.message}; trying fallback installation methods`, opts.verbose);
     }
   }
 
@@ -77,8 +85,13 @@ export async function install(opts: RunOpts): Promise<boolean> {
           "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh",
         ]);
         if (r.code === 0) {
-          run("rtk", ["init", "-g"]);
-          return true;
+          const init = run("rtk", ["init", "-g"]);
+          if (init.code === 0) return true;
+          throw new InstallError("rtk", {
+            message: "Failed to initialize RTK shell integration",
+            cause: init.stderr,
+            remediation: "Try running 'rtk init -g' manually after installation completes",
+          });
         }
       } catch {
         verbose("Install script failed, trying cargo", opts.verbose);
@@ -92,8 +105,13 @@ export async function install(opts: RunOpts): Promise<boolean> {
     try {
       const r = run("cargo", ["install", "--git", "https://github.com/rtk-ai/rtk"]);
       if (r.code === 0) {
-        run("rtk", ["init", "-g"]);
-        return true;
+        const init = run("rtk", ["init", "-g"]);
+        if (init.code === 0) return true;
+        throw new InstallError("rtk", {
+          message: "Failed to initialize RTK shell integration",
+          cause: init.stderr,
+          remediation: "Try running 'rtk init -g' manually after installation completes",
+        });
       }
     } catch (err) {
       throw new InstallError("rtk", {
@@ -113,7 +131,12 @@ export async function install(opts: RunOpts): Promise<boolean> {
 
 /** Get installed RTK version. */
 export function installedVersion(): string | null {
-  return runStdout("rtk", ["--version"])?.trim() ?? null;
+  const pathVersion = runStdout("rtk", ["--version"])?.trim();
+  if (pathVersion) return pathVersion;
+
+  const local = join(localBin(), process.platform === "win32" ? "rtk.exe" : "rtk");
+  if (!existsSync(local)) return null;
+  return runStdout(local, ["--version"])?.trim() ?? null;
 }
 
 /** Get latest RTK version from GitHub. */
@@ -121,6 +144,7 @@ export async function latestVersion(): Promise<string | null> {
   try {
     const res = await fetch("https://api.github.com/repos/rtk-ai/rtk/releases/latest", {
       headers: { "User-Agent": userAgent() },
+      signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return null;
     const json = await res.json();

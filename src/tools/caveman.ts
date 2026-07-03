@@ -17,6 +17,12 @@ export async function install(_opts: RunOpts): Promise<boolean> {
 /** Get installed Caveman skill version by reading skill file. */
 export function installedVersion(): string | null {
   // Check all agents that use SKILL.md files (Claude Code, Antigravity)
+  const instructionFiles = [paths.opencodePaths().agentsMd, paths.codexPaths().instructions];
+  for (const instructionFile of instructionFiles) {
+    const content = paths.readFile(instructionFile);
+    if (content?.includes("CAVEMAN_START")) return CAVEMAN_SKILL_VERSION;
+  }
+
   const skillPaths = [
     join(paths.claudePaths().skillsDir, "caveman/SKILL.md"),
     join(paths.antigravityPaths().dir, "config", "skills", "caveman", "SKILL.md"),
@@ -30,8 +36,9 @@ export function installedVersion(): string | null {
       const versionMatch = content.match(/^version:\s*(.+)$/m);
       if (versionMatch?.[1]) return versionMatch[1].trim();
 
-      // Fallback: if no version field, assume it's an old version
-      return "0.0.0";
+      // If SKILL.md exists but no version field, return current constant
+      // (official Caveman SKILL.md doesn't have version field in frontmatter)
+      return CAVEMAN_SKILL_VERSION;
     } catch {}
   }
 
@@ -43,6 +50,7 @@ export async function latestVersion(): Promise<string | null> {
   try {
     const resp = await fetch("https://api.github.com/repos/JuliusBrussee/caveman/releases/latest", {
       headers: { "User-Agent": userAgent() },
+      signal: AbortSignal.timeout(10000),
     });
     if (!resp.ok) return null;
     const json = await resp.json();
@@ -57,7 +65,10 @@ async function fetchOfficialSkill(): Promise<string | null> {
   try {
     const resp = await fetch(
       "https://raw.githubusercontent.com/JuliusBrussee/caveman/main/skills/caveman/SKILL.md",
-      { headers: { "User-Agent": userAgent() } },
+      {
+        headers: { "User-Agent": userAgent() },
+        signal: AbortSignal.timeout(10000),
+      },
     );
     if (!resp.ok) return null;
     return await resp.text();
@@ -91,8 +102,9 @@ export async function getCavemanInstructionBlock(): Promise<string> {
     }
   }
 
-  // Take first ~10 lines of actual content (the core Caveman rules)
-  const coreContent = contentLines.slice(0, 12).join("\n");
+  // Take first ~20 lines (increased buffer for content structure changes)
+  // Enough to capture: summary line + Persistence section + initial Rules
+  const coreContent = contentLines.slice(0, 20).join("\n");
 
   return `
 <!-- CAVEMAN_START — managed by toksave, do not edit -->

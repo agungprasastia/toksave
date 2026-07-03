@@ -1,6 +1,13 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 function home(): string {
   return homedir();
@@ -231,7 +238,9 @@ export function readFile(path: string): string | null {
 /** Write a file, creating parent dirs if needed. */
 export function writeFile(path: string, content: string): void {
   ensureDir(dirname(path));
-  writeFileSync(path, content, "utf-8");
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, content, "utf-8");
+  renameSync(tmp, path);
 }
 
 /** Append to a file, creating it if needed. */
@@ -242,7 +251,16 @@ export function appendFile(path: string, content: string): void {
 
 /** Get the toksave binary absolute path or alias. */
 export function toksaveAbs(): string {
-  // Relying on process.argv[0] is unsafe as it resolves to Node.js when invoked via npm globally.
-  // Instead, since `toksave` is a global npm binary, it will be in the system PATH.
+  if (process.env.NODE_ENV === "test") return "toksave";
+
+  const candidates = [process.argv[1], process.execPath, join(localBin(), "toksave")];
+  if (process.platform === "win32") candidates.push(join(localBin(), "toksave.exe"));
+
+  for (const candidate of candidates) {
+    if (!candidate || !existsSync(candidate)) continue;
+    const name = basename(candidate).toLowerCase();
+    if (name === "toksave" || name === "toksave.exe") return candidate;
+  }
+
   return "toksave";
 }

@@ -38,6 +38,7 @@ export async function run(
 
   // ── Step 2: Install tools ───────────────────────────────
   const s = new Progress();
+  const installedTools = new Set<ToolId>();
   for (const tool of tools) {
     s.start(`Installing ${tool.label}`);
     if (tool.channel === "npm" && !nodeOk) {
@@ -47,6 +48,7 @@ export async function run(
     try {
       const ok = await installTool(tool.id, opts);
       await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
+      if (ok) installedTools.add(tool.id);
       s.stop(
         ok
           ? `${pc.green(colors.CHECK)} ${tool.label}`
@@ -111,6 +113,10 @@ export async function run(
     const failedTools: string[] = [];
 
     for (const tool of tools) {
+      if (!installedTools.has(tool.id)) {
+        failedTools.push(tool.label);
+        continue;
+      }
       try {
         const ok = await wireTool(agentId, tool.id, opts);
         await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible

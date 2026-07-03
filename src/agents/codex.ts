@@ -70,8 +70,10 @@ export function verify(tool: ToolId): boolean | null {
       return hasMcp("codegraph");
     case "context-mode":
       return hasMcp("context-mode");
-    case "rtk":
-      return hasRtkHook();
+    case "rtk": {
+      const rules = paths.readFile(paths.codexPaths().instructions);
+      return hasRtkHook() && !!rules && hasRtkRules(rules);
+    }
     case "caveman":
       return hasCavemanRules();
   }
@@ -95,7 +97,6 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
     toml.setTableArray(doc, tablePath, "args", args);
   }
   toml.upsertTableBool(doc, tablePath, "enabled", true);
-  toml.setTopKey(doc, "approval_policy", "never");
 
   toml.writeTomlFile(p.config, doc);
   return true;
@@ -138,34 +139,55 @@ function wireRtkHook(opts: RunOpts): boolean {
   const cfg = (readJsonFile(p.hooks) as Record<string, unknown>) ?? {};
   const hooks = getOrCreateObject(cfg, "hooks");
 
-  const rtkHook = {
+  addHook(hooks, "PreToolUse", {
     matcher: "Bash",
     hooks: [{ type: "command", command, timeout: 10 }],
-  };
+  });
 
-  const permHook = {
+  addHook(hooks, "PermissionRequest", {
     matcher: "",
     hooks: [{ type: "command", command: `${tok} codex-perm-hook`, timeout: 5 }],
-  };
-
-  hooks.PreToolUse = [rtkHook];
-  hooks.PermissionRequest = [permHook];
+  });
 
   writeJsonFile(p.hooks, cfg);
   return true;
 }
 
+function addHook(
+  hooks: Record<string, unknown>,
+  name: string,
+  hook: Record<string, unknown>,
+): void {
+  if (!Array.isArray(hooks[name])) hooks[name] = [];
+  const arr = hooks[name] as unknown[];
+  const command = (hook.hooks as { command?: string }[] | undefined)?.[0]?.command;
+  if (command && arr.some((item) => hookGroupHasCommand(item, command))) return;
+  arr.push(hook);
+}
+
+function hookGroupHasCommand(group: unknown, command: string): boolean {
+  const hooks = (group as { hooks?: { command?: string }[] })?.hooks;
+  return Array.isArray(hooks) && hooks.some((hook) => hook.command === command);
+}
+
 function removeRtkHook(): void {
   const p = paths.codexPaths();
   const cfg = readJsonFile(p.hooks) as Record<string, unknown>;
-  if (((cfg as Record<string, unknown>)?.hooks as Record<string, unknown>)?.PreToolUse) {
-    ((cfg as Record<string, unknown>).hooks as Record<string, unknown>).PreToolUse = undefined;
-  }
-  if (((cfg as Record<string, unknown>)?.hooks as Record<string, unknown>)?.PermissionRequest) {
-    ((cfg as Record<string, unknown>).hooks as Record<string, unknown>).PermissionRequest =
-      undefined;
-  }
+  const hooks = ((cfg as Record<string, unknown>)?.hooks as Record<string, unknown>) ?? {};
+  hooks.PreToolUse = removeToksaveHookGroups(hooks.PreToolUse, "rtk-hook codex");
+  hooks.PermissionRequest = removeToksaveHookGroups(hooks.PermissionRequest, "codex-perm-hook");
   writeJsonFile(p.hooks, cfg);
+}
+
+function removeToksaveHookGroups(groups: unknown, marker: string): unknown[] | undefined {
+  if (!Array.isArray(groups)) return undefined;
+  const remaining = groups.filter((group) => !hookGroupContainsMarker(group, marker));
+  return remaining.length > 0 ? remaining : undefined;
+}
+
+function hookGroupContainsMarker(group: unknown, marker: string): boolean {
+  const hooks = (group as { hooks?: { command?: string }[] })?.hooks;
+  return Array.isArray(hooks) && hooks.some((hook) => hook.command?.includes(marker));
 }
 
 function hasRtkHook(): boolean {
@@ -189,10 +211,14 @@ async function wireCaveman(opts: RunOpts): Promise<boolean> {
   verbose("Writing Caveman rules into Codex instructions.md", opts.verbose);
 
   const existing = paths.readFile(p.instructions) ?? "";
-  if (existing.includes("CAVEMAN_START")) return true;
+  if (existing.includes("CAVEMAN_START") && !opts.upgrade) return true;
 
   const cavemanBlock = await getCavemanInstructionBlock();
-  paths.writeFile(p.instructions, `${existing}\n${cavemanBlock}`);
+  const stripped = existing.replace(
+    /\r?\n?<!--\s*CAVEMAN_START[\s\S]*?CAVEMAN_END\s*-->\r?\n?/g,
+    "\n",
+  );
+  paths.writeFile(p.instructions, `${stripped}\n${cavemanBlock}`);
   return true;
 }
 
@@ -200,7 +226,9 @@ function removeCavemanRules(): void {
   const p = paths.codexPaths();
   const existing = paths.readFile(p.instructions);
   if (!existing) return;
-  const stripped = existing.replace(/\n?<!-- CAVEMAN_START[\s\S]*?CAVEMAN_END -->\n?/g, "").trim();
+  const stripped = existing
+    .replace(/\r?\n?<!--\s*CAVEMAN_START[\s\S]*?CAVEMAN_END\s*-->\r?\n?/g, "")
+    .trim();
   paths.writeFile(p.instructions, stripped);
 }
 
@@ -236,9 +264,9 @@ function wireRtkRules(opts: RunOpts): void {
   verbose("Injecting RTK rules into Codex instructions.md", opts.verbose);
 
   const existing = paths.readFile(p.instructions) ?? "";
-  if (hasRtkRules(existing)) return;
+  if (hasRtkRules(existing) && !opts.upgrade) return;
 
-  paths.writeFile(p.instructions, `${existing}\n${RTK_RULES_BLOCK}`);
+  paths.writeFile(p.instructions, `${removeRtkRules(existing)}\n${RTK_RULES_BLOCK}`);
 }
 
 function removeRtkRulesFile(): void {

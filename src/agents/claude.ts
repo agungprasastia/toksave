@@ -82,8 +82,10 @@ export function verify(tool: ToolId): boolean | null {
       return hasMcp("context-mode");
     case "caveman":
       return hasCavemanSkill();
-    case "rtk":
-      return isOnPath("rtk");
+    case "rtk": {
+      const rules = paths.readFile(paths.claudePaths().agentsMd);
+      return isOnPath("rtk") && !!rules && hasRtkRules(rules);
+    }
   }
 }
 
@@ -105,7 +107,15 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
 
   // Check if already identical
   const srv = servers as Record<string, unknown>;
-  if (srv[toolId] && JSON.stringify(srv[toolId]) === JSON.stringify(entry)) {
+  const existing = srv[toolId] as { type?: unknown; command?: unknown; args?: unknown } | undefined;
+  if (
+    existing &&
+    existing.type === entry.type &&
+    existing.command === command &&
+    Array.isArray(existing.args) &&
+    existing.args.length === args.length &&
+    existing.args.every((arg, i) => arg === args[i])
+  ) {
     return true;
   }
   srv[toolId] = entry;
@@ -208,9 +218,9 @@ function wireRtkRules(opts: RunOpts): void {
   verbose("Injecting RTK rules into Claude Code AGENTS.md", opts.verbose);
 
   const existing = paths.readFile(p.agentsMd) ?? "";
-  if (hasRtkRules(existing)) return;
+  if (hasRtkRules(existing) && !opts.upgrade) return;
 
-  paths.writeFile(p.agentsMd, `${existing}\n${RTK_RULES_BLOCK}`);
+  paths.writeFile(p.agentsMd, `${stripRtkRules(existing)}\n${RTK_RULES_BLOCK}`);
 }
 
 function removeRtkRulesFile(): void {

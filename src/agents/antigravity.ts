@@ -84,8 +84,10 @@ export function verify(tool: ToolId): boolean | null {
       return hasMcp("codegraph");
     case "context-mode":
       return hasMcp("context-mode");
-    case "rtk":
-      return hasRtkHook();
+    case "rtk": {
+      const rules = paths.readFile(paths.antigravityPaths().agentsMd);
+      return hasRtkHook() && !!rules && hasRtkRules(rules);
+    }
     case "caveman":
       return hasCavemanSkill();
   }
@@ -98,17 +100,27 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
 
   verbose(`Wiring MCP ${toolId} into Antigravity (multi-surface)`, opts.verbose);
 
+  const failures: string[] = [];
   for (const f of paths.antigravityMcpFiles()) {
-    paths.ensureDir(require("node:path").dirname(f));
-    const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
-    const servers = getOrCreateObject(cfg, "mcpServers");
+    try {
+      paths.ensureDir(require("node:path").dirname(f));
+      const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
+      const servers = getOrCreateObject(cfg, "mcpServers");
 
-    const entry: Record<string, unknown> = { command };
-    if (args.length > 0) entry.args = args;
-    entry.trust = true;
+      const entry: Record<string, unknown> = { command };
+      if (args.length > 0) entry.args = args;
+      entry.trust = true;
 
-    (servers as Record<string, unknown>)[toolId] = entry;
-    writeJsonFile(f, cfg);
+      (servers as Record<string, unknown>)[toolId] = entry;
+      writeJsonFile(f, cfg);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      failures.push(`${f}: ${msg}`);
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`Failed to wire ${toolId} into Antigravity: ${failures.join("; ")}`);
   }
 }
 
@@ -135,13 +147,23 @@ function hasMcp(toolId: string): boolean {
 // ─── Permissions ─────────────────────────────────────────────
 
 function allowEntry(entry: string): void {
+  const failures: string[] = [];
   for (const f of paths.antigravitySettingsFiles()) {
-    paths.ensureDir(require("node:path").dirname(f));
-    const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
-    const perms = getOrCreateObject(cfg, "permissions");
-    if (!Array.isArray(perms.allow)) perms.allow = [];
-    addToArrayIfMissing(perms.allow as unknown[], entry);
-    writeJsonFile(f, cfg);
+    try {
+      paths.ensureDir(require("node:path").dirname(f));
+      const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
+      const perms = getOrCreateObject(cfg, "permissions");
+      if (!Array.isArray(perms.allow)) perms.allow = [];
+      addToArrayIfMissing(perms.allow as unknown[], entry);
+      writeJsonFile(f, cfg);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      failures.push(`${f}: ${msg}`);
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`Failed to update Antigravity permissions: ${failures.join("; ")}`);
   }
 }
 
@@ -211,7 +233,11 @@ function installContextModeHook(opts: RunOpts): void {
       {
         matcher: "read_url_content|run_command|view_file",
         hooks: [
-          { type: "command", command: "context-mode hook gemini-cli beforetool", timeout: 10 },
+          {
+            type: "command",
+            command: `${paths.toksaveAbs()} context-mode-hook gemini-cli beforetool`,
+            timeout: 10,
+          },
         ],
       },
     ],
@@ -285,9 +311,9 @@ function wireRtkRules(opts: RunOpts): void {
   verbose("Injecting RTK rules into Antigravity AGENTS.md", opts.verbose);
 
   const existing = paths.readFile(p.agentsMd) ?? "";
-  if (hasRtkRules(existing)) return;
+  if (hasRtkRules(existing) && !opts.upgrade) return;
 
-  paths.writeFile(p.agentsMd, `${existing}\n${RTK_RULES_BLOCK}`);
+  paths.writeFile(p.agentsMd, `${removeRtkRules(existing)}\n${RTK_RULES_BLOCK}`);
 }
 
 function removeRtkRulesFile(): void {

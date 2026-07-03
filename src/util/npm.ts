@@ -31,6 +31,7 @@ export async function latestVersion(pkg: string): Promise<string | null> {
   try {
     const res = await fetch(`https://registry.npmjs.org/${pkg}/latest`, {
       headers: { "User-Agent": userAgent() },
+      signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return null;
     const json = await res.json();
