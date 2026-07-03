@@ -5,6 +5,39 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-07-03
+
+### Added
+- **Missing hook commands**: Added `rtk-hook` and `context-mode-hook` CLI commands that were referenced in Codex and Antigravity agent wiring but didn't exist, causing RTK and Context-Mode hooks to fail silently
+  - [src/commands/rtk-hook.ts](src/commands/rtk-hook.ts) - PreToolUse hook that prefixes Bash commands with `rtk`
+  - [src/commands/context-mode-hook.ts](src/commands/context-mode-hook.ts) - PreInvocation hook that proxies to context-mode CLI
+  - Updated [src/cli.ts](src/cli.ts) and [src/index.ts](src/index.ts) to register both commands
+- **User-Agent with version**: Created `userAgent()` helper in [src/util/version.ts](src/util/version.ts) that returns `toksave/<version>` for better debugging of API issues
+  - Updated all HTTP requests in [src/util/download.ts](src/util/download.ts), [src/tools/rtk.ts](src/tools/rtk.ts), and [src/util/npm.ts](src/util/npm.ts)
+- **Test step in release workflow**: Added `bun test` step in [.github/workflows/release.yml](.github/workflows/release.yml) before building release artifacts to prevent shipping broken binaries
+- **Stricter TypeScript checks**: Added `noUncheckedIndexedAccess` and `noFallthroughCasesInSwitch` to [tsconfig.json](tsconfig.json) and fixed all 27 resulting type errors across the codebase
+
+### Fixed
+- **Security: Zip slip vulnerability**: Added path validation in [src/util/download.ts](src/util/download.ts) `downloadZip()` to prevent malicious archives from writing files outside the destination directory
+  - Rejects absolute paths, path traversal sequences (`../`), and entries that escape destDir
+- **Security: Config parse errors silently swallowed**: Added warnings when [src/config/json.ts](src/config/json.ts) and [src/config/toml.ts](src/config/toml.ts) fail to parse config files, preventing silent data loss when users make typos
+- **semverCmp invalid input bug**: Fixed [src/util/version.ts](src/util/version.ts) to return `-1` instead of `0` when version parsing fails, preventing updates from being silently skipped
+- **makeExecutable silent error**: Fixed [src/util/download.ts](src/util/download.ts) to throw error with remediation message instead of silently ignoring chmod failures
+- **Dead code in RTK health check**: Removed unreachable `!isOnPath("rtk")` check in [src/tools/rtk.ts](src/tools/rtk.ts) that could never be true if `installedVersion()` succeeded
+- **Dynamic require() usage**: Replaced dynamic `require()` calls with static ES imports in [src/util/paths.ts](src/util/paths.ts), [src/agents/claude.ts](src/agents/claude.ts), and [src/agents/antigravity.ts](src/agents/antigravity.ts)
+- **Windows platform support**:
+  - Added Windows-specific Node.js directories in [src/util/detect.ts](src/util/detect.ts) `resolveNode()`
+  - Added proper Windows fallback for `localBin()` in [src/util/paths.ts](src/util/paths.ts) when LOCALAPPDATA is unset
+- **Deleted misleading barrel file**: Removed [src/tools/index.ts](src/tools/index.ts) that only re-exported RTK while registry imports all tools directly
+
+### Changed
+- **Checksum verification**: Implemented SHA256 verification using existing `DownloadOptions.checksum` field in [src/util/download.ts](src/util/download.ts) for `downloadFile()`, `downloadTarGz()`, and `downloadZip()`
+- **fetchJson retry logic**: Updated [src/util/download.ts](src/util/download.ts) `fetchJson()` to use `fetchWithRetry()` for consistent network resilience across all download operations
+- **Pinned @types/bun version**: Changed from `"latest"` to `"1.3.14"` in [package.json](package.json) to prevent CI/local divergence
+- **Updated actions/checkout**: Changed from `@v4` to `@v7` in [.github/workflows/release.yml](.github/workflows/release.yml) for consistency with build job
+- **Removed dead tsconfig options**: Removed `outDir` and `rootDir` from [tsconfig.json](tsconfig.json) as they're meaningless with `noEmit: true`
+- **Extracted fetchBuffer helper**: Deduplicated 15-line chunk-reading logic between `downloadTarGz()` and `downloadZip()` in [src/util/download.ts](src/util/download.ts) by extracting shared `fetchBuffer()` helper
+
 ## [0.4.1] - 2026-07-02
 
 ### Fixed

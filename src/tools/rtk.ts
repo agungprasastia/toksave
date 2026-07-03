@@ -7,6 +7,7 @@ import { DownloadError, InstallError, PlatformError } from "../util/errors.js";
 import { run, runStdout } from "../util/exec.js";
 import type { HealthIssue, HealthStatus, RepairResult } from "../util/health.js";
 import { ensureDir, localBin } from "../util/paths.js";
+import { userAgent } from "../util/version.js";
 
 /** Platform-specific asset name for prebuilt binary. */
 function assetName(): string | null {
@@ -119,7 +120,7 @@ export function installedVersion(): string | null {
 export async function latestVersion(): Promise<string | null> {
   try {
     const res = await fetch("https://api.github.com/repos/rtk-ai/rtk/releases/latest", {
-      headers: { "User-Agent": "toksave" },
+      headers: { "User-Agent": userAgent() },
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -146,14 +147,6 @@ export function healthCheck(): HealthStatus {
         },
       ],
     };
-  }
-
-  if (!isOnPath("rtk")) {
-    issues.push({
-      severity: "warning",
-      message: "RTK binary found but may not be in PATH",
-      remediation: "Add RTK to your PATH or run: rtk init -g",
-    });
   }
 
   return {

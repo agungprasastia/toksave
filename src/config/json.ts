@@ -8,7 +8,9 @@ export function readJsonFile(path: string): unknown | null {
   try {
     const raw = readFileSync(path, "utf-8");
     return parse(raw);
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`Warning: Failed to parse JSON config at ${path}: ${msg}`);
     return null;
   }
 }

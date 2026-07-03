@@ -10,6 +10,8 @@ export type CommandType =
   | "uninstall"
   | "self-update"
   | "codex-perm-hook"
+  | "rtk-hook"
+  | "context-mode-hook"
   | "runmcp"
   | "index";
 
@@ -89,6 +91,26 @@ export function parseCli(argv: string[]): ParsedCli {
     .description("Internal hook for Codex permissions")
     .action(() => {
       result.command = "codex-perm-hook";
+      applyGlobalOpts(result, program.opts());
+    });
+
+  program
+    .command("rtk-hook")
+    .description("Internal hook for RTK command prefixing")
+    .argument("[args...]")
+    .allowUnknownOption()
+    .action(() => {
+      result.command = "rtk-hook";
+      applyGlobalOpts(result, program.opts());
+    });
+
+  program
+    .command("context-mode-hook")
+    .description("Internal hook for Context-Mode integration")
+    .argument("[args...]")
+    .allowUnknownOption()
+    .action(() => {
+      result.command = "context-mode-hook";
       applyGlobalOpts(result, program.opts());
     });
 

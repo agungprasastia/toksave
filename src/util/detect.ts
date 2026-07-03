@@ -46,6 +46,9 @@ export function resolveNode(): string | null {
   const onPath = findBinary("node");
   if (onPath) return onPath;
 
-  const extraDirs = ["/usr/local/bin", "/usr/bin", "/opt/homebrew/bin"];
+  const extraDirs =
+    process.platform === "win32"
+      ? ["C:\\Program Files\\nodejs", "C:\\Program Files (x86)\\nodejs"]
+      : ["/usr/local/bin", "/usr/bin", "/opt/homebrew/bin"];
   return findBinaryIn("node", extraDirs);
 }

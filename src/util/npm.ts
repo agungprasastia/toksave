@@ -1,5 +1,6 @@
 import { InstallError } from "./errors.js";
 import { npmCmd, run, runStdout } from "./exec.js";
+import { userAgent } from "./version.js";
 
 /** Install an npm package globally. */
 export function installGlobal(pkg: string): boolean {
@@ -29,7 +30,7 @@ export function installedVersion(pkg: string): string | null {
 export async function latestVersion(pkg: string): Promise<string | null> {
   try {
     const res = await fetch(`https://registry.npmjs.org/${pkg}/latest`, {
-      headers: { "User-Agent": "toksave" },
+      headers: { "User-Agent": userAgent() },
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -44,6 +45,8 @@ export function checkNode(minMajor: number): boolean {
   const out = runStdout("node", ["--version"]);
   if (!out) return false;
   const v = out.trim().replace(/^v/, "");
-  const major = Number.parseInt(v.split(".")[0], 10);
+  const firstPart = v.split(".")[0];
+  if (!firstPart) return false;
+  const major = Number.parseInt(firstPart, 10);
   return !Number.isNaN(major) && major >= minMajor;
 }

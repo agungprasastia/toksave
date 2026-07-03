@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 function home(): string {
   return homedir();
@@ -200,6 +200,8 @@ export function localBin(): string {
   if (process.platform === "win32") {
     const la = process.env.LOCALAPPDATA;
     if (la) return join(la, "Programs", "toksave");
+    // Fallback when LOCALAPPDATA is not set
+    return join(home(), "AppData", "Local", "Programs", "toksave");
   }
   return join(home(), ".local", "bin");
 }
@@ -228,15 +230,12 @@ export function readFile(path: string): string | null {
 
 /** Write a file, creating parent dirs if needed. */
 export function writeFile(path: string, content: string): void {
-  const { dirname } = require("node:path");
   ensureDir(dirname(path));
   writeFileSync(path, content, "utf-8");
 }
 
 /** Append to a file, creating it if needed. */
 export function appendFile(path: string, content: string): void {
-  const { dirname } = require("node:path");
-  const { appendFileSync } = require("node:fs");
   ensureDir(dirname(path));
   appendFileSync(path, content, "utf-8");
 }

@@ -2,14 +2,20 @@ import * as semver from "semver";
 
 /** Build-time version from package.json. */
 export function toksaveVersion(): string {
-  return "0.4.1"; // Updated at build time
+  return "0.5.0"; // Updated at build time
+}
+
+/** User-Agent string with version for HTTP requests. */
+export function userAgent(): string {
+  return `toksave/${toksaveVersion()}`;
 }
 
 /** Compare two semver strings. Returns -1, 0, or 1. */
 export function semverCmp(a: string, b: string): number {
   const va = semver.coerce(a.replace(/^v/, ""));
   const vb = semver.coerce(b.replace(/^v/, ""));
-  if (!va || !vb) return 0;
+  // Treat invalid version as older to avoid skipping updates
+  if (!va || !vb) return -1;
   return semver.compare(va, vb);
 }
 

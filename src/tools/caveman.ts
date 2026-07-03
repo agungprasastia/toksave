@@ -27,7 +27,7 @@ export function installedVersion(): string | null {
 
       const content = readFileSync(skillPath, "utf-8");
       const versionMatch = content.match(/^version:\s*(.+)$/m);
-      if (versionMatch) return versionMatch[1].trim();
+      if (versionMatch?.[1]) return versionMatch[1].trim();
 
       // Fallback: if no version field, assume it's an old version
       return "0.0.0";

@@ -31,6 +31,10 @@ export function runMcp(): Promise<number> {
     }
 
     let exe = args[0];
+    if (!exe) {
+      console.error("Error: No executable specified for MCP server.");
+      return resolve(1);
+    }
     let cmdArgs = args.slice(1);
 
     if (existsSync(exe) && isNodeShebangScript(exe)) {

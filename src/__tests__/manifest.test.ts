@@ -26,7 +26,7 @@ describe("Manifest", () => {
     const m = readManifest();
     const matches = m.entries.filter((e) => e.agent === "claude" && e.tool === "rtk");
     expect(matches).toHaveLength(1);
-    expect(matches[0].version).toBe("0.43.0");
+    expect(matches[0]?.version).toBe("0.43.0");
   });
 
   test("removeWire clears entry", () => {

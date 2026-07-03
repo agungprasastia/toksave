@@ -32,6 +32,16 @@ async function main(): Promise<void> {
       code = runCodexPermHook();
       break;
     }
+    case "rtk-hook": {
+      const { runRtkHook } = require("./commands/rtk-hook.js");
+      code = runRtkHook();
+      break;
+    }
+    case "context-mode-hook": {
+      const { runContextModeHook } = require("./commands/context-mode-hook.js");
+      code = runContextModeHook();
+      break;
+    }
     case "runmcp": {
       const { runMcp } = require("./commands/runmcp.js");
       code = await runMcp();

@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   addToArrayIfMissing,
@@ -158,7 +158,7 @@ function removeCaveman(): void {
   const p = paths.claudePaths();
   const skillDir = join(p.skillsDir, "caveman");
   try {
-    require("node:fs").rmSync(skillDir, { recursive: true, force: true });
+    rmSync(skillDir, { recursive: true, force: true });
   } catch {
     /* ignore */
   }

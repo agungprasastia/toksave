@@ -8,7 +8,9 @@ export function readTomlFile(path: string): Record<string, unknown> {
   try {
     const raw = readFileSync(path, "utf-8");
     return parse(raw) as Record<string, unknown>;
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`Warning: Failed to parse TOML config at ${path}: ${msg}`);
     return {};
   }
 }
@@ -95,16 +97,19 @@ export function hasTable(doc: Record<string, unknown>, tablePath: string): boole
 export function removeTable(doc: Record<string, unknown>, tablePath: string): void {
   const parts = tablePath.split(".");
   if (parts.length === 0) return;
+  const lastPart = parts[parts.length - 1];
+  if (!lastPart) return;
   if (parts.length === 1) {
-    delete doc[parts[0]];
+    delete doc[lastPart];
     return;
   }
   let current: Record<string, unknown> = doc;
   for (let i = 0; i < parts.length - 1; i++) {
-    if (!current || typeof current !== "object") return;
-    current = current[parts[i]] as Record<string, unknown>;
+    const part = parts[i];
+    if (!part || !current || typeof current !== "object") return;
+    current = current[part] as Record<string, unknown>;
   }
   if (current && typeof current === "object") {
-    delete current[parts[parts.length - 1]];
+    delete current[lastPart];
   }
 }

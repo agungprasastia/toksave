@@ -51,6 +51,7 @@ export async function multiSelect(title: string, options: SelectOption[]): Promi
 
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
+        if (!item) continue;
         const isHovered = i === cursor;
 
         let prefix = "  ";
@@ -98,21 +99,22 @@ export async function multiSelect(title: string, options: SelectOption[]): Promi
       }
       if (key.name === "up" || key.name === "k") {
         let next = cursor - 1;
-        while (next >= 0 && items[next].disabled) next--;
+        while (next >= 0 && items[next]?.disabled) next--;
         if (next >= 0) {
           cursor = next;
           render();
         }
       } else if (key.name === "down" || key.name === "j") {
         let next = cursor + 1;
-        while (next < items.length && items[next].disabled) next++;
+        while (next < items.length && items[next]?.disabled) next++;
         if (next < items.length) {
           cursor = next;
           render();
         }
       } else if (key.name === "space") {
-        if (!items[cursor].disabled) {
-          items[cursor].selected = !items[cursor].selected;
+        const current = items[cursor];
+        if (current && !current.disabled) {
+          current.selected = !current.selected;
           render();
         }
       } else if (key.name === "a") {

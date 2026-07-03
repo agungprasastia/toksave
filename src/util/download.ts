@@ -1,8 +1,10 @@
-import { chmodSync, existsSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { createHash } from "node:crypto";
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, normalize, relative } from "node:path";
 import AdmZip from "adm-zip";
 import * as tar from "tar";
-import { DownloadError, NetworkError } from "./errors.js";
+import { DownloadError, IntegrityError, NetworkError } from "./errors.js";
+import { userAgent } from "./version.js";
 
 export interface DownloadOptions {
   retries?: number;
@@ -16,6 +18,19 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function verifyChecksum(buffer: Buffer, expectedChecksum: string, url: string): void {
+  const actualChecksum = createHash("sha256").update(buffer).digest("hex");
+  if (actualChecksum !== expectedChecksum) {
+    throw new IntegrityError("downloaded file", {
+      message: `Checksum mismatch for ${url}`,
+      expected: expectedChecksum,
+      actual: actualChecksum,
+      remediation:
+        "The downloaded file may be corrupted or tampered with. Try again or verify the source.",
+    });
+  }
+}
+
 async function fetchWithRetry(url: string, opts: DownloadOptions = {}): Promise<Response> {
   const retries = opts.retries ?? 3;
   const timeout = opts.timeout ?? 120_000;
@@ -24,7 +39,7 @@ async function fetchWithRetry(url: string, opts: DownloadOptions = {}): Promise<
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const resp = await fetch(url, {
-        headers: { "User-Agent": "toksave" },
+        headers: { "User-Agent": userAgent() },
         signal: AbortSignal.timeout(timeout),
       });
 
@@ -57,6 +72,30 @@ async function fetchWithRetry(url: string, opts: DownloadOptions = {}): Promise<
   throw lastError;
 }
 
+async function fetchBuffer(resp: Response, opts?: DownloadOptions): Promise<Buffer> {
+  const contentLength = Number(resp.headers.get("content-length")) || 0;
+  let downloaded = 0;
+
+  const reader = resp.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  const chunks: Uint8Array[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    chunks.push(value);
+    downloaded += value.length;
+
+    if (opts?.onProgress && contentLength > 0) {
+      opts.onProgress(downloaded, contentLength);
+    }
+  }
+
+  return Buffer.concat(chunks);
+}
+
 /** Download a URL to a file path. */
 export async function downloadFile(
   url: string,
@@ -70,6 +109,9 @@ export async function downloadFile(
     if (!existsSync(parent)) mkdirSync(parent, { recursive: true });
 
     const buffer = Buffer.from(await resp.arrayBuffer());
+    if (opts?.checksum) {
+      verifyChecksum(buffer, opts.checksum, url);
+    }
     await Bun.write(dest, buffer);
   } catch (err) {
     if (err instanceof DownloadError) throw err;
@@ -95,27 +137,10 @@ export async function downloadTarGz(
 
     if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
 
-    const contentLength = Number(resp.headers.get("content-length")) || 0;
-    let downloaded = 0;
-
-    const reader = resp.body?.getReader();
-    if (!reader) throw new Error("No response body");
-
-    const chunks: Uint8Array[] = [];
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      chunks.push(value);
-      downloaded += value.length;
-
-      if (opts?.onProgress && contentLength > 0) {
-        opts.onProgress(downloaded, contentLength);
-      }
+    const buffer = await fetchBuffer(resp, opts);
+    if (opts?.checksum) {
+      verifyChecksum(buffer, opts.checksum, url);
     }
-
-    const buffer = Buffer.concat(chunks);
     const tmpFile = join(destDir, "__toksave_tmp.tar.gz");
     await Bun.write(tmpFile, buffer);
 
@@ -150,29 +175,56 @@ export async function downloadZip(
 
     if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
 
-    const contentLength = Number(resp.headers.get("content-length")) || 0;
-    let downloaded = 0;
+    const buffer = await fetchBuffer(resp, opts);
+    if (opts?.checksum) {
+      verifyChecksum(buffer, opts.checksum, url);
+    }
+    const zip = new AdmZip(buffer);
 
-    const reader = resp.body?.getReader();
-    if (!reader) throw new Error("No response body");
+    // Validate and extract entries to prevent zip slip
+    for (const entry of zip.getEntries()) {
+      const entryPath = entry.entryName;
 
-    const chunks: Uint8Array[] = [];
+      // Reject absolute paths
+      if (isAbsolute(entryPath)) {
+        throw new DownloadError("zip", url, {
+          message: `Zip entry has absolute path: ${entryPath}`,
+          remediation: "The downloaded archive contains malicious entries. Aborting extraction.",
+        });
+      }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      // Reject path traversal (../)
+      const normalized = normalize(entryPath);
+      if (
+        normalized.startsWith("..") ||
+        normalized.includes("..\\") ||
+        normalized.includes("../")
+      ) {
+        throw new DownloadError("zip", url, {
+          message: `Zip entry contains path traversal: ${entryPath}`,
+          remediation: "The downloaded archive contains malicious entries. Aborting extraction.",
+        });
+      }
 
-      chunks.push(value);
-      downloaded += value.length;
+      // Verify resolved path stays within destDir
+      const targetPath = join(destDir, entryPath);
+      const rel = relative(destDir, targetPath);
+      if (rel.startsWith("..")) {
+        throw new DownloadError("zip", url, {
+          message: `Zip entry escapes destination: ${entryPath}`,
+          remediation: "The downloaded archive contains malicious entries. Aborting extraction.",
+        });
+      }
 
-      if (opts?.onProgress && contentLength > 0) {
-        opts.onProgress(downloaded, contentLength);
+      // Extract entry
+      if (entry.isDirectory) {
+        mkdirSync(targetPath, { recursive: true });
+      } else {
+        const parent = dirname(targetPath);
+        if (!existsSync(parent)) mkdirSync(parent, { recursive: true });
+        writeFileSync(targetPath, entry.getData());
       }
     }
-
-    const buffer = Buffer.concat(chunks);
-    const zip = new AdmZip(buffer);
-    zip.extractAllTo(destDir, true);
   } catch (err) {
     if (err instanceof DownloadError) throw err;
 
@@ -187,13 +239,7 @@ export async function downloadZip(
 
 /** Fetch JSON from a URL. */
 export async function fetchJson(url: string): Promise<any> {
-  const resp = await fetch(url, {
-    headers: {
-      "User-Agent": "toksave",
-      Accept: "application/json",
-    },
-    signal: AbortSignal.timeout(10_000),
-  });
+  const resp = await fetchWithRetry(url, { timeout: 10_000 });
   if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${url}`);
   return resp.json();
 }
@@ -203,8 +249,11 @@ export function makeExecutable(path: string): void {
   if (process.platform !== "win32") {
     try {
       chmodSync(path, 0o755);
-    } catch {
-      /* ignore */
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `Failed to make ${path} executable: ${msg}. Check file permissions and try: chmod +x ${path}`,
+      );
     }
   }
 }

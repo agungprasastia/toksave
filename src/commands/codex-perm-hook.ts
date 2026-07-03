@@ -27,7 +27,7 @@ const ALLOWLIST: Record<string, boolean> = {
 
 function firstToken(s: string): string {
   const match = s.match(/^\s*(\S+)/);
-  return match ? match[1] : s;
+  return match?.[1] ?? s;
 }
 
 function stripPath(tok: string): string {
