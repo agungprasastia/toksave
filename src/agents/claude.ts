@@ -6,7 +6,11 @@ import {
   readJsonFile,
   writeJsonFile,
 } from "../config/json.js";
-import { CTX_RULES_BLOCK, hasCtxRules } from "../content/ctx-rules.js";
+import {
+  CTX_RULES_BLOCK,
+  hasCtxRules,
+  removeCtxRules as stripCtxRules,
+} from "../content/ctx-rules.js";
 import {
   hasRtkRules,
   RTK_RULES_BLOCK,
@@ -209,8 +213,7 @@ function removeCtxRules(): void {
   const existing = paths.readFile(mdFile);
   if (!existing) return;
 
-  const { removeCtxRules: strip } = require("../content/ctx-rules.js");
-  paths.writeFile(mdFile, strip(existing));
+  paths.writeFile(mdFile, stripCtxRules(existing));
 }
 
 function wireRtkRules(opts: RunOpts): void {

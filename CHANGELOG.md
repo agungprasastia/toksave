@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Caveman auto-fetch from GitHub**: Updated Caveman to fetch real SKILL.md content and versions from official source instead of hardcoded value
   - Modified [src/tools/caveman.ts](src/tools/caveman.ts) `latestVersion()` to fetch from GitHub releases API (https://api.github.com/repos/JuliusBrussee/caveman/releases/latest)
-  - Added [src/tools/caveman.ts](src/tools/caveman.ts) `getSkillContent()` to fetch official SKILL.md from https://raw.githubusercontent.com/JuliusBrussee/caveman/main/SKILL.md
+  - Added [src/tools/caveman.ts](src/tools/caveman.ts) `getSkillContent()` to fetch official SKILL.md from https://raw.githubusercontent.com/JuliusBrussee/caveman/main/skills/caveman/SKILL.md
   - Modified [src/agents/claude.ts](src/agents/claude.ts), [src/agents/antigravity.ts](src/agents/antigravity.ts) to use fetched content when wiring Caveman
   - Updated [src/content/caveman-skill.ts](src/content/caveman-skill.ts) `CAVEMAN_SKILL_VERSION` from "1.0.0" to "1.9.1" to match current official version
   - Users now get the latest Caveman skill content automatically on install/update
@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Caveman version detection**: Fixed `installedVersion()` returning "0.0.0" when official SKILL.md has no version field, and added support for detecting version from OpenCode and Codex instructions.
 - **Caveman content extraction robustness**: Increased buffer from 12 to 20 lines in `getCavemanInstructionBlock()` for better handling of content structure changes.
 - **CodeGraph CI hang**: Removed `-i` interactive flag from `codegraph init` that caused indefinite hangs in non-interactive environments (CI, background processes).
+- **Remaining dynamic `require()` calls**: Replaced leftover `require("../content/ctx-rules.js")` in [src/agents/claude.ts](src/agents/claude.ts) and `require("node:path")` calls in [src/agents/antigravity.ts](src/agents/antigravity.ts) with static ES imports.
 
 ## [0.5.0] - 2026-07-03
 

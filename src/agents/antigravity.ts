@@ -1,5 +1,5 @@
 import { existsSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   addToArrayIfMissing,
   getOrCreateObject,
@@ -103,7 +103,7 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
   const failures: string[] = [];
   for (const f of paths.antigravityMcpFiles()) {
     try {
-      paths.ensureDir(require("node:path").dirname(f));
+      paths.ensureDir(dirname(f));
       const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
       const servers = getOrCreateObject(cfg, "mcpServers");
 
@@ -150,7 +150,7 @@ function allowEntry(entry: string): void {
   const failures: string[] = [];
   for (const f of paths.antigravitySettingsFiles()) {
     try {
-      paths.ensureDir(require("node:path").dirname(f));
+      paths.ensureDir(dirname(f));
       const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
       const perms = getOrCreateObject(cfg, "permissions");
       if (!Array.isArray(perms.allow)) perms.allow = [];
@@ -171,7 +171,7 @@ function allowEntry(entry: string): void {
 
 function installRtkHook(opts: RunOpts): void {
   const hooksFile = paths.antigravityPaths().hooks;
-  paths.ensureDir(require("node:path").dirname(hooksFile));
+  paths.ensureDir(dirname(hooksFile));
 
   verbose("Installing RTK hook for Antigravity", opts.verbose);
 
@@ -210,7 +210,7 @@ function hasRtkHook(): boolean {
 
 function installContextModeHook(opts: RunOpts): void {
   const hooksFile = paths.antigravityPaths().hooks;
-  paths.ensureDir(require("node:path").dirname(hooksFile));
+  paths.ensureDir(dirname(hooksFile));
 
   verbose("Installing Context-Mode hook for Antigravity", opts.verbose);
 
