@@ -1,5 +1,5 @@
 /** Caveman skill version - update when skill content changes. */
-export const CAVEMAN_SKILL_VERSION = "1.0.0";
+export const CAVEMAN_SKILL_VERSION = "1.9.1";
 
 /** Full Caveman SKILL.md content — based on official JuliusBrussee/caveman repo. */
 export const CAVEMAN_SKILL_MD = `---

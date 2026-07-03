@@ -5,7 +5,9 @@ import {
   hasCtxRules,
   removeCtxRules as stripCtxRules,
 } from "../content/ctx-rules.js";
+import { hasRtkRules, RTK_RULES_BLOCK, removeRtkRules } from "../content/rtk-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
+import { getCavemanInstructionBlock } from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
 import { findBinaryIn, isOnPath } from "../util/detect.js";
 import * as paths from "../util/paths.js";
@@ -37,7 +39,8 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
     case "caveman":
       return wireCaveman(opts);
     case "rtk":
-      return true; // RTK wiring for OpenCode via AGENTS.md
+      if (!opts.dryRun) wireRtkRules(opts);
+      return true;
   }
 }
 
@@ -55,6 +58,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
       removeCavemanRules();
       return true;
     case "rtk":
+      removeRtkRulesFile();
       return true;
   }
 }
@@ -119,18 +123,7 @@ function hasMcp(toolId: string): boolean {
 
 // ─── Caveman via AGENTS.md ──────────────────────────────────
 
-const CAVEMAN_AGENTS_BLOCK = `
-<!-- CAVEMAN_START — managed by toksave, do not edit -->
-## Caveman Mode
-
-Respond terse like smart caveman. All technical substance stay. Only fluff die.
-Drop: articles (a/an/the), filler, pleasantries, hedging. Fragments OK.
-Pattern: [thing] [action] [reason]. [next step].
-Code/commits: write normal. "stop caveman": revert.
-<!-- CAVEMAN_END -->
-`;
-
-function wireCaveman(opts: RunOpts): boolean {
+async function wireCaveman(opts: RunOpts): Promise<boolean> {
   if (opts.dryRun) return true;
   const p = paths.opencodePaths();
   paths.ensureDir(p.dir);
@@ -140,7 +133,8 @@ function wireCaveman(opts: RunOpts): boolean {
   const existing = paths.readFile(p.agentsMd) ?? "";
   if (existing.includes("CAVEMAN_START")) return true;
 
-  paths.writeFile(p.agentsMd, `${existing}\n${CAVEMAN_AGENTS_BLOCK}`);
+  const cavemanBlock = await getCavemanInstructionBlock();
+  paths.writeFile(p.agentsMd, `${existing}\n${cavemanBlock}`);
   return true;
 }
 
@@ -177,4 +171,21 @@ function removeCtxRulesFile(): void {
   const existing = paths.readFile(p.agentsMd);
   if (!existing) return;
   paths.writeFile(p.agentsMd, stripCtxRules(existing));
+}
+
+function wireRtkRules(opts: RunOpts): void {
+  const p = paths.opencodePaths();
+  verbose("Injecting RTK rules into OpenCode AGENTS.md", opts.verbose);
+
+  const existing = paths.readFile(p.agentsMd) ?? "";
+  if (hasRtkRules(existing)) return;
+
+  paths.writeFile(p.agentsMd, `${existing}\n${RTK_RULES_BLOCK}`);
+}
+
+function removeRtkRulesFile(): void {
+  const p = paths.opencodePaths();
+  const existing = paths.readFile(p.agentsMd);
+  if (!existing) return;
+  paths.writeFile(p.agentsMd, removeRtkRules(existing));
 }

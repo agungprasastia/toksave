@@ -5,6 +5,31 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-03
+
+### Added
+
+- **RTK auto-on for all agents**: Added RTK instruction blocks to AGENTS.md/instructions.md for all 4 AI agents, completing the "run once, everything works" philosophy
+  - Created [src/content/rtk-rules.ts](src/content/rtk-rules.ts) with RTK usage instructions and helper functions
+  - Modified [src/agents/claude.ts](src/agents/claude.ts) to inject RTK rules into Claude Code AGENTS.md
+  - Modified [src/agents/opencode.ts](src/agents/opencode.ts) to inject RTK rules into OpenCode AGENTS.md
+  - Modified [src/agents/codex.ts](src/agents/codex.ts) to inject RTK rules into Codex instructions.md (alongside existing PreToolUse hook)
+  - Modified [src/agents/antigravity.ts](src/agents/antigravity.ts) to inject RTK rules into Antigravity AGENTS.md (alongside existing PreToolUse hook)
+  - Instructions guide when to use `rtk` prefix for commands with large output, complement existing hooks where available
+  - Claude Code and OpenCode now have RTK guidance via instructions (no hook support)
+  - Codex and Antigravity have both hooks (auto-prefix) and instructions (guidance for edge cases)
+
+### Changed
+
+- **Caveman auto-fetch from GitHub**: Updated Caveman to fetch real SKILL.md content and versions from official source instead of hardcoded value
+  - Modified [src/tools/caveman.ts](src/tools/caveman.ts) `latestVersion()` to fetch from GitHub releases API (https://api.github.com/repos/JuliusBrussee/caveman/releases/latest)
+  - Added [src/tools/caveman.ts](src/tools/caveman.ts) `getSkillContent()` to fetch official SKILL.md from https://raw.githubusercontent.com/JuliusBrussee/caveman/main/SKILL.md
+  - Modified [src/agents/claude.ts](src/agents/claude.ts), [src/agents/antigravity.ts](src/agents/antigravity.ts) to use fetched content when wiring Caveman
+  - Updated [src/content/caveman-skill.ts](src/content/caveman-skill.ts) `CAVEMAN_SKILL_VERSION` from "1.0.0" to "1.9.1" to match current official version
+  - Users now get the latest Caveman skill content automatically on install/update
+  - Local template remains as fallback when GitHub fetch fails
+  - Philosophy fulfilled: all tools (RTK, CodeGraph, Context-Mode, Caveman) now fetch latest from official sources
+
 ## [0.5.0] - 2026-07-03
 
 ### Added

@@ -6,9 +6,14 @@ import {
   readJsonFile,
   writeJsonFile,
 } from "../config/json.js";
-import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
 import { CTX_RULES_BLOCK, hasCtxRules } from "../content/ctx-rules.js";
+import {
+  hasRtkRules,
+  RTK_RULES_BLOCK,
+  removeRtkRules as stripRtkRules,
+} from "../content/rtk-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
+import { getSkillContent } from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
 import { findBinaryIn, isOnPath } from "../util/detect.js";
 import * as paths from "../util/paths.js";
@@ -41,7 +46,10 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
     case "caveman":
       return wireCaveman(opts);
     case "rtk":
-      if (!opts.dryRun) allowBashPattern("Bash(rtk *)");
+      if (!opts.dryRun) {
+        allowBashPattern("Bash(rtk *)");
+        wireRtkRules(opts);
+      }
       return true;
   }
 }
@@ -60,6 +68,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
       removeCaveman();
       return true;
     case "rtk":
+      removeRtkRulesFile();
       return true;
   }
 }
@@ -141,7 +150,7 @@ function allowBashPattern(pattern: string): void {
 
 // ─── Caveman wiring ─────────────────────────────────────────
 
-function wireCaveman(opts: RunOpts): boolean {
+async function wireCaveman(opts: RunOpts): Promise<boolean> {
   if (opts.dryRun) return true;
   const p = paths.claudePaths();
   const skillDir = join(p.skillsDir, "caveman");
@@ -149,7 +158,8 @@ function wireCaveman(opts: RunOpts): boolean {
   const skillFile = join(skillDir, "SKILL.md");
   if (!existsSync(skillFile) || opts.upgrade) {
     verbose("Writing Caveman SKILL.md for Claude Code", opts.verbose);
-    paths.writeFile(skillFile, CAVEMAN_SKILL_MD);
+    const skillContent = await getSkillContent();
+    paths.writeFile(skillFile, skillContent);
   }
   return true;
 }
@@ -191,4 +201,21 @@ function removeCtxRules(): void {
 
   const { removeCtxRules: strip } = require("../content/ctx-rules.js");
   paths.writeFile(mdFile, strip(existing));
+}
+
+function wireRtkRules(opts: RunOpts): void {
+  const p = paths.claudePaths();
+  verbose("Injecting RTK rules into Claude Code AGENTS.md", opts.verbose);
+
+  const existing = paths.readFile(p.agentsMd) ?? "";
+  if (hasRtkRules(existing)) return;
+
+  paths.writeFile(p.agentsMd, `${existing}\n${RTK_RULES_BLOCK}`);
+}
+
+function removeRtkRulesFile(): void {
+  const p = paths.claudePaths();
+  const existing = paths.readFile(p.agentsMd);
+  if (!existing) return;
+  paths.writeFile(p.agentsMd, stripRtkRules(existing));
 }

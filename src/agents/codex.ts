@@ -6,7 +6,9 @@ import {
   hasCtxRules,
   removeCtxRules as stripCtxRules,
 } from "../content/ctx-rules.js";
+import { hasRtkRules, RTK_RULES_BLOCK, removeRtkRules } from "../content/rtk-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
+import { getCavemanInstructionBlock } from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
 import { findBinaryIn } from "../util/detect.js";
 import * as paths from "../util/paths.js";
@@ -34,6 +36,7 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
       if (!opts.dryRun) wireCtxRules(opts);
       return true;
     case "rtk":
+      if (!opts.dryRun) wireRtkRules(opts);
       return wireRtkHook(opts);
     case "caveman":
       return wireCaveman(opts);
@@ -52,6 +55,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
       return true;
     case "rtk":
       removeRtkHook();
+      removeRtkRulesFile();
       return true;
     case "caveman":
       removeCavemanRules();
@@ -177,18 +181,7 @@ function hasRtkHook(): boolean {
 
 // ─── Caveman via instructions.md ─────────────────────────────
 
-const CAVEMAN_INSTRUCTIONS_BLOCK = `
-<!-- CAVEMAN_START — managed by toksave, do not edit -->
-## Caveman Mode
-
-Respond terse like smart caveman. All technical substance stay. Only fluff die.
-Drop: articles (a/an/the), filler, pleasantries, hedging. Fragments OK.
-Pattern: [thing] [action] [reason]. [next step].
-Code/commits: write normal. "stop caveman": revert.
-<!-- CAVEMAN_END -->
-`;
-
-function wireCaveman(opts: RunOpts): boolean {
+async function wireCaveman(opts: RunOpts): Promise<boolean> {
   if (opts.dryRun) return true;
   const p = paths.codexPaths();
   paths.ensureDir(p.dir);
@@ -198,7 +191,8 @@ function wireCaveman(opts: RunOpts): boolean {
   const existing = paths.readFile(p.instructions) ?? "";
   if (existing.includes("CAVEMAN_START")) return true;
 
-  paths.writeFile(p.instructions, `${existing}\n${CAVEMAN_INSTRUCTIONS_BLOCK}`);
+  const cavemanBlock = await getCavemanInstructionBlock();
+  paths.writeFile(p.instructions, `${existing}\n${cavemanBlock}`);
   return true;
 }
 
@@ -235,4 +229,21 @@ function removeCtxRulesFile(): void {
   const existing = paths.readFile(p.instructions);
   if (!existing) return;
   paths.writeFile(p.instructions, stripCtxRules(existing));
+}
+
+function wireRtkRules(opts: RunOpts): void {
+  const p = paths.codexPaths();
+  verbose("Injecting RTK rules into Codex instructions.md", opts.verbose);
+
+  const existing = paths.readFile(p.instructions) ?? "";
+  if (hasRtkRules(existing)) return;
+
+  paths.writeFile(p.instructions, `${existing}\n${RTK_RULES_BLOCK}`);
+}
+
+function removeRtkRulesFile(): void {
+  const p = paths.codexPaths();
+  const existing = paths.readFile(p.instructions);
+  if (!existing) return;
+  paths.writeFile(p.instructions, removeRtkRules(existing));
 }

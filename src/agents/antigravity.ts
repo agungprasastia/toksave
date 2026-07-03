@@ -6,13 +6,14 @@ import {
   readJsonFile,
   writeJsonFile,
 } from "../config/json.js";
-import { CAVEMAN_SKILL_MD } from "../content/caveman-skill.js";
 import {
   CTX_RULES_BLOCK,
   hasCtxRules,
   removeCtxRules as stripCtxRules,
 } from "../content/ctx-rules.js";
+import { hasRtkRules, RTK_RULES_BLOCK, removeRtkRules } from "../content/rtk-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
+import { getSkillContent } from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
 import { findBinaryIn } from "../util/detect.js";
 import * as paths from "../util/paths.js";
@@ -47,6 +48,7 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
       if (!opts.dryRun) {
         allowEntry("command(rtk)");
         installRtkHook(opts);
+        wireRtkRules(opts);
       }
       return true;
     case "caveman":
@@ -67,6 +69,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
       return true;
     case "rtk":
       removeRtkHook();
+      removeRtkRulesFile();
       return true;
     case "caveman":
       removeCaveman();
@@ -228,7 +231,7 @@ function removeContextModeHook(): void {
 
 // ─── Caveman ─────────────────────────────────────────────────
 
-function wireCaveman(opts: RunOpts): boolean {
+async function wireCaveman(opts: RunOpts): Promise<boolean> {
   if (opts.dryRun) return true;
   const gemini = paths.antigravityPaths().dir;
   const skillDir = join(gemini, "config", "skills", "caveman");
@@ -236,7 +239,8 @@ function wireCaveman(opts: RunOpts): boolean {
   const skillFile = join(skillDir, "SKILL.md");
   if (!existsSync(skillFile) || opts.upgrade) {
     verbose("Writing Caveman SKILL.md for Antigravity", opts.verbose);
-    paths.writeFile(skillFile, CAVEMAN_SKILL_MD);
+    const skillContent = await getSkillContent();
+    paths.writeFile(skillFile, skillContent);
   }
   return true;
 }
@@ -274,4 +278,21 @@ function removeCtxRulesFile(): void {
   const existing = paths.readFile(mdFile);
   if (!existing) return;
   paths.writeFile(mdFile, stripCtxRules(existing));
+}
+
+function wireRtkRules(opts: RunOpts): void {
+  const p = paths.antigravityPaths();
+  verbose("Injecting RTK rules into Antigravity AGENTS.md", opts.verbose);
+
+  const existing = paths.readFile(p.agentsMd) ?? "";
+  if (hasRtkRules(existing)) return;
+
+  paths.writeFile(p.agentsMd, `${existing}\n${RTK_RULES_BLOCK}`);
+}
+
+function removeRtkRulesFile(): void {
+  const p = paths.antigravityPaths();
+  const existing = paths.readFile(p.agentsMd);
+  if (!existing) return;
+  paths.writeFile(p.agentsMd, removeRtkRules(existing));
 }
