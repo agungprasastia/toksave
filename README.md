@@ -32,17 +32,17 @@
 
 | Agent | MCP | Hooks | Caveman | Context-Mode Rules |
 |-------|:---:|:---:|:---:|:---:|
-| **Claude Code** | ✅ | ✅ RTK bash | ✅ SKILL.md | ✅ AGENTS.md |
-| **OpenCode** | ✅ | — | ✅ AGENTS.md | ✅ AGENTS.md |
-| **Codex** | ✅ (TOML) | ✅ RTK hook | ✅ instructions.md | ✅ instructions.md |
-| **Antigravity** | ✅ (JSON) | ✅ RTK + ctx | ✅ SKILL.md | ✅ AGENTS.md |
+| **Claude Code** | ✅ | RTK instructions | ✅ SKILL.md | ✅ AGENTS.md |
+| **OpenCode** | ✅ | RTK instructions | ✅ AGENTS.md | ✅ AGENTS.md |
+| **Codex** | ✅ (TOML) | RTK hook + instructions | ✅ instructions.md | ✅ instructions.md |
+| **Antigravity** | ✅ (JSON) | RTK hook + instructions | ✅ SKILL.md | ✅ AGENTS.md |
 
 ## 📦 What Gets Installed
 
 | Tool | Method | What It Does |
 |------|--------|-------------|
 | **RTK** | Prebuilt binary | CLI proxy that compresses tool output — **60-90% token savings** |
-| **Caveman** | Markdown file | Communication mode that cuts LLM response tokens **~75%** |
+| **Caveman** | Markdown from GitHub | Communication mode that cuts LLM response tokens **~75%** |
 | **CodeGraph** | `npm install -g` | Pre-indexed code knowledge graph — **fewer tool calls** |
 | **Context-Mode**| `npm install -g` | MCP server that sandboxes tool output — **98% context reduction** |
 

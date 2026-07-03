@@ -39,10 +39,10 @@ CI runs `bun run typecheck`, `bun run lint`, `bun test`, and a `bun build --comp
   - `uninstall` unwires selected agents/tools and cleans TokSave cache on full removal.
   - `self-update`, `runmcp`, `codex-perm-hook`, and `index` are specialized helper commands.
 - [src/agents/](src/agents/) contains per-agent config writers. These modules know each agent's file layout and implement all tool-specific wiring for that agent.
-- [src/tools/](src/tools/) contains tool installation/version logic. RTK downloads platform releases or falls back to installer/cargo; CodeGraph and Context-Mode use global npm installs; Caveman is markdown-only.
+- [src/tools/](src/tools/) contains tool installation/version logic. RTK downloads platform releases or falls back to installer/cargo; CodeGraph and Context-Mode use global npm installs; Caveman fetches SKILL.md from official GitHub repo with local fallback.
 - [src/util/paths.ts](src/util/paths.ts) centralizes cross-platform home/config/cache paths. Prefer it over inline path construction for agent config locations.
 - [src/config/json.ts](src/config/json.ts) and [src/config/toml.ts](src/config/toml.ts) preserve JSONC/TOML config structure while updating agent files.
-- [src/content/](src/content/) stores managed markdown blocks for Caveman and Context-Mode. Keep marker comments stable because tests and uninstall use them.
+- [src/content/](src/content/) stores managed markdown blocks for RTK, Caveman, and Context-Mode. Keep marker comments stable because tests and uninstall use them.
 - [src/util/manifest.ts](src/util/manifest.ts) tracks wires in `TOKSAVE_CACHE_DIR` or `~/.cache/toksave/manifest.json`. Tests override `TOKSAVE_CACHE_DIR`.
 
 ## Error Handling & Health Checks (v0.4.0+)
