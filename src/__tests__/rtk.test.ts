@@ -1,20 +1,18 @@
-import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-mock.module("../util/exec.js", () => ({
-  runStdout: () => "0.1.0",
-  run: () => ({ code: 0, stdout: "", stderr: "" }),
-}));
-
 import * as rtk from "../tools/rtk.js";
 import * as detect from "../util/detect.js";
-import { ensureDir } from "../util/paths.js";
+import * as exec from "../util/exec.js";
+import { ensureDir, localBin } from "../util/paths.js";
 
 let tmp = "";
 let oldHome: string | undefined;
 let oldLocalAppData: string | undefined;
+let runStdoutSpy: any;
+let runSpy: any;
 
 beforeEach(() => {
   oldHome = process.env.HOME;
@@ -23,12 +21,19 @@ beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), "toksave-rtk-test-"));
   process.env.HOME = join(tmp, "home");
   process.env.LOCALAPPDATA = join(tmp, "AppData", "Local");
+
+  // Mock exec methods using spyOn to avoid ESM caching issues on CI
+  runStdoutSpy = spyOn(exec, "runStdout").mockReturnValue("0.1.0");
+  runSpy = spyOn(exec, "run").mockReturnValue({ code: 0, stdout: "", stderr: "" });
 });
 
 afterEach(() => {
   restoreEnv("HOME", oldHome);
   restoreEnv("LOCALAPPDATA", oldLocalAppData);
   rmSync(tmp, { recursive: true, force: true });
+
+  if (runStdoutSpy) runStdoutSpy.mockRestore();
+  if (runSpy) runSpy.mockRestore();
 });
 
 function restoreEnv(key: string, value: string | undefined): void {
@@ -47,7 +52,6 @@ describe("RTK detection", () => {
       return true; // pretend other things are on path if needed
     });
 
-    const { localBin } = require("../util/paths.js");
     const binDir = localBin();
 
     ensureDir(binDir);
