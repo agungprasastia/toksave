@@ -1,3 +1,4 @@
+import { homedir } from "node:os";
 import pc from "picocolors";
 import type { RunOpts } from "../registry.js";
 import {
@@ -12,6 +13,7 @@ import {
 } from "../registry.js";
 import * as colors from "../util/colors.js";
 import type { HealthStatus } from "../util/health.js";
+import { selfHealPath } from "../util/pathfix.js";
 import { isUpToDate } from "../util/version.js";
 
 /** Run the doctor command: health check. */
@@ -85,6 +87,20 @@ export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promis
       colors.warn(`${outdated} update(s) available — run \`toksave update\``);
     } else {
       colors.ok("All up to date.");
+    }
+  }
+
+  // ── PATH auto-fix ────────────────────────────────────────
+  if (fix) {
+    const { added, patched } = selfHealPath();
+    if (added.length > 0 || patched.length > 0) {
+      const parts: string[] = [];
+      if (added.length > 0) parts.push(`process PATH updated (+${added.length})`);
+      if (patched.length > 0) {
+        const short = patched.map((p) => p.replace(homedir(), "~"));
+        parts.push(`persisted to ${short.join(", ")}`);
+      }
+      colors.ok(parts.join(" · "));
     }
   }
 

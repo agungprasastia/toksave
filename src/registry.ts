@@ -134,6 +134,7 @@ import * as codegraphTool from "./tools/codegraph.js";
 import * as contextModeTool from "./tools/context-mode.js";
 import * as rtkTool from "./tools/rtk.js";
 import type { HealthStatus, RepairResult } from "./util/health.js";
+import { getCachedLatest, getStaleFallback, setCachedLatest } from "./util/versioncache.js";
 
 const agentModules = { claude, opencode, codex, antigravity };
 const toolModules = {
@@ -168,7 +169,19 @@ export function toolInstalledVersion(id: ToolId): string | null {
 }
 
 export async function toolLatestVersion(id: ToolId): Promise<string | null> {
-  return toolModules[id].latestVersion();
+  // Check cache first (6h TTL)
+  const cached = getCachedLatest(id);
+  if (cached.hit) return cached.version;
+
+  // Fetch from network
+  const version = await toolModules[id].latestVersion();
+  if (version) {
+    setCachedLatest(id, version);
+    return version;
+  }
+
+  // Fetch failed — fall back to stale cache if available
+  return getStaleFallback(id);
 }
 
 export function toolHealthCheck(id: ToolId): HealthStatus {

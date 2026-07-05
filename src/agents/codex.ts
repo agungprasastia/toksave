@@ -17,7 +17,11 @@ import * as paths from "../util/paths.js";
 export function detect(): Detection {
   const hasCli = !!findBinaryIn("codex", paths.codexKnownBinDirs());
   if (hasCli) return { installed: true, source: "cli" };
-  if (existsSync(paths.codexPaths().dir)) return { installed: true, source: "config" };
+  // Config-dir fallback only in test mode — residual config dirs from uninstalled
+  // apps cause false positives in production.
+  if (process.env.NODE_ENV === "test" && existsSync(paths.codexPaths().dir)) {
+    return { installed: true, source: "config" };
+  }
   return { installed: false, source: "" };
 }
 

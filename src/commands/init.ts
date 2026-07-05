@@ -16,6 +16,7 @@ import {
 import * as colors from "../util/colors.js";
 import { recordWire } from "../util/manifest.js";
 import { checkNode } from "../util/npm.js";
+import { selfHealPath } from "../util/pathfix.js";
 import { Progress } from "../util/progress.js";
 import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 
@@ -59,6 +60,8 @@ export async function run(
       s.stop(`${pc.red(colors.CROSS)} ${tool.label} — ${firstLine(e.message || String(e))}`);
     }
   }
+
+  if (!opts.dryRun) selfHealPath();
 
   // ── Step 3: Detect agents ───────────────────────────────
   const detected: { id: AgentId; source: string }[] = [];

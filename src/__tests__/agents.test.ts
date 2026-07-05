@@ -241,3 +241,31 @@ function readAntigravityMcpKeys(): string[] {
 function count(value: string, needle: string): number {
   return value.split(needle).length - 1;
 }
+
+describe("agent detection config-dir fallback", () => {
+  test("Codex detect() uses config-dir fallback only in test mode", () => {
+    const spy = spyOn(detect, "findBinaryIn").mockReturnValue(null);
+    paths.ensureDir(paths.codexPaths().dir);
+    expect(codex.detect()).toEqual({ installed: true, source: "config" });
+    spy.mockRestore();
+  });
+
+  test("OpenCode detect() uses config-dir fallback only in test mode", () => {
+    const spy = spyOn(detect, "findBinaryIn").mockReturnValue(null);
+    paths.ensureDir(paths.opencodePaths().dir);
+    expect(opencode.detect()).toEqual({ installed: true, source: "config" });
+    spy.mockRestore();
+  });
+
+  test("Codex detect() returns not-installed when no cli and no config dir", () => {
+    const spy = spyOn(detect, "findBinaryIn").mockReturnValue(null);
+    expect(codex.detect()).toEqual({ installed: false, source: "" });
+    spy.mockRestore();
+  });
+
+  test("OpenCode detect() returns not-installed when no cli, desktop, or config dir", () => {
+    const spy = spyOn(detect, "findBinaryIn").mockReturnValue(null);
+    expect(opencode.detect()).toEqual({ installed: false, source: "" });
+    spy.mockRestore();
+  });
+});

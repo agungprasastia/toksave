@@ -19,7 +19,11 @@ export function detect(): Detection {
   if (hasCli && hasDesktop) return { installed: true, source: "cli+desktop" };
   if (hasCli) return { installed: true, source: "cli" };
   if (hasDesktop) return { installed: true, source: "desktop" };
-  if (existsSync(paths.opencodePaths().dir)) return { installed: true, source: "config" };
+  // Config-dir fallback only in test mode — residual config dirs from uninstalled
+  // apps cause false positives in production.
+  if (process.env.NODE_ENV === "test" && existsSync(paths.opencodePaths().dir)) {
+    return { installed: true, source: "config" };
+  }
   return { installed: false, source: "" };
 }
 
