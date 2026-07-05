@@ -1,20 +1,7 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-mock.module("../util/exec.js", () => ({
-  runStdout: () => "0.1.0",
-  run: () => ({ code: 0, stdout: "", stderr: "" }),
-}));
-
-mock.module("../util/detect.js", () => ({
-  isOnPath: (name: string) => {
-    if (name === "rtk") return false;
-    return true;
-  },
-  findBinaryIn: () => null,
-}));
 
 import * as rtk from "../tools/rtk.js";
 import { ensureDir, localBin } from "../util/paths.js";
@@ -22,20 +9,42 @@ import { ensureDir, localBin } from "../util/paths.js";
 let tmp = "";
 let oldHome: string | undefined;
 let oldLocalAppData: string | undefined;
+let oldPath: string | undefined;
+let installedVersionSpy: any;
 
 beforeEach(() => {
   oldHome = process.env.HOME;
   oldLocalAppData = process.env.LOCALAPPDATA;
+  oldPath = process.env.PATH;
 
   tmp = mkdtempSync(join(tmpdir(), "toksave-rtk-test-"));
   process.env.HOME = join(tmp, "home");
   process.env.LOCALAPPDATA = join(tmp, "AppData", "Local");
+
+  // Clean PATH of any real rtk binaries to simulate clean environment
+  const pathSeparator = process.platform === "win32" ? ";" : ":";
+  const pathsList = (process.env.PATH || "").split(pathSeparator);
+  const normalized = pathsList.filter((p) => {
+    const lower = p.toLowerCase();
+    return (
+      !lower.includes("toksave") && !lower.endsWith(".local/bin") && !lower.endsWith(".local\\bin")
+    );
+  });
+  process.env.PATH = normalized.join(pathSeparator);
+
+  // Mock installedVersion directly using spyOn
+  installedVersionSpy = spyOn(rtk, "installedVersion").mockReturnValue("0.1.0");
 });
 
 afterEach(() => {
   restoreEnv("HOME", oldHome);
   restoreEnv("LOCALAPPDATA", oldLocalAppData);
+  restoreEnv("PATH", oldPath);
   rmSync(tmp, { recursive: true, force: true });
+
+  if (installedVersionSpy) {
+    installedVersionSpy.mockRestore();
+  }
 });
 
 function restoreEnv(key: string, value: string | undefined): void {
