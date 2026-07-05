@@ -1,25 +1,26 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-mock.module("../util/exec.js", () => ({
-  runStdout: () => "0.1.0",
-  run: () => ({ code: 0, stdout: "", stderr: "" }),
-}));
-
 import * as rtk from "../tools/rtk.js";
+import * as exec from "../util/exec.js";
 import { ensureDir, localBin } from "../util/paths.js";
 
 let tmp = "";
 let oldHome: string | undefined;
 let oldLocalAppData: string | undefined;
 let oldPath: string | undefined;
+let runStdoutSpy: ReturnType<typeof spyOn>;
+let runSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
   oldHome = process.env.HOME;
   oldLocalAppData = process.env.LOCALAPPDATA;
   oldPath = process.env.PATH;
+
+  runStdoutSpy = spyOn(exec, "runStdout").mockReturnValue("0.1.0");
+  runSpy = spyOn(exec, "run").mockReturnValue({ code: 0, stdout: "", stderr: "" });
 
   tmp = mkdtempSync(join(tmpdir(), "toksave-rtk-test-"));
   process.env.HOME = join(tmp, "home");
@@ -38,6 +39,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  runStdoutSpy.mockRestore();
+  runSpy.mockRestore();
   restoreEnv("HOME", oldHome);
   restoreEnv("LOCALAPPDATA", oldLocalAppData);
   restoreEnv("PATH", oldPath);
