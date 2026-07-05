@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -135,7 +135,7 @@ describe("agent MCP wiring", () => {
     // Phase 1: wire codegraph successfully to create initial state
     await antigravity.wire("codegraph", opts);
     const mcpFiles = paths.antigravityMcpFiles();
-    expect(mcpFiles.length).toBeGreaterThan(0);
+    expect(mcpFiles.length).toBeGreaterThan(1); // Ensure we have at least 2 files to test actual rollback
 
     // Capture initial configs
     const initialConfigs = mcpFiles.map((f) => ({
@@ -143,41 +143,38 @@ describe("agent MCP wiring", () => {
       content: paths.readFile(f) ?? "",
     }));
 
-    // Phase 2: make target directory or file read-only to force write failure
-    const targetFile = mcpFiles[0];
-    if (targetFile) {
-      const { chmodSync } = await import("node:fs");
-      const { dirname } = await import("node:path");
-      const targetDir = dirname(targetFile);
-
-      if (process.platform !== "win32") {
-        chmodSync(targetDir, 0o555); // read-only directory to fail renameSync on POSIX
-      } else {
-        chmodSync(targetFile, 0o444); // read-only file for Windows
+    // Phase 2: mock paths.writeFile to fail on the last file
+    const targetFile = mcpFiles[mcpFiles.length - 1];
+    const writeSpy = spyOn(paths, "writeFile").mockImplementation((p, content) => {
+      if (p === targetFile) {
+        throw new Error("Simulated write failure");
       }
+      // Recreate real writeFile behavior
+      const fs = require("node:fs");
+      const path = require("node:path");
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      const tmp = `${p}.${process.pid}.tmp`;
+      fs.writeFileSync(tmp, content, "utf-8");
+      fs.renameSync(tmp, p);
+    });
 
-      // Phase 3: try to wire context-mode (should fail and rollback)
-      try {
-        await antigravity.wire("context-mode", opts);
-        expect(true).toBe(false); // Should not reach here
-      } catch (err) {
-        expect(err).toBeDefined();
-      }
-
-      // Phase 4: restore permissions for cleanup
-      if (process.platform !== "win32") {
-        chmodSync(targetDir, 0o755);
-      } else {
-        chmodSync(targetFile, 0o644);
-      }
-
-      // Phase 5: verify rollback - codegraph config still intact, context-mode not added
-      for (const { file, content } of initialConfigs) {
-        expect(paths.readFile(file)).toBe(content);
-      }
-      expect(antigravity.verify("codegraph")).toBe(true);
-      expect(antigravity.verify("context-mode")).toBe(false);
+    // Phase 3: try to wire context-mode (should fail and rollback)
+    try {
+      await antigravity.wire("context-mode", opts);
+      expect(true).toBe(false); // Should not reach here
+    } catch (err) {
+      expect(err).toBeDefined();
     }
+
+    // Phase 4: restore mock
+    writeSpy.mockRestore();
+
+    // Phase 5: verify rollback - codegraph config still intact, context-mode not added
+    for (const { file, content } of initialConfigs) {
+      expect(paths.readFile(file)).toBe(content);
+    }
+    expect(antigravity.verify("codegraph")).toBe(true);
+    expect(antigravity.verify("context-mode")).toBe(false);
   });
 });
 
