@@ -52,7 +52,7 @@ src/
 2. Add the agent to `ALL_AGENTS` in `src/registry.ts`.
 3. Add dispatch entries in `agentModules` in `src/registry.ts`.
 4. Add path helpers in `src/util/paths.ts`.
-5. Add tests in `src/agents/__tests__/<name>.test.ts`.
+5. Add/extend agent wiring tests in `src/__tests__/agents.test.ts` using temp home/config directories, never real user config.
 
 ## Adding a New Tool
 
@@ -60,14 +60,14 @@ src/
 2. Add the tool to `ALL_TOOLS` in `src/registry.ts`.
 3. Add dispatch entries in `toolModules` in `src/registry.ts`.
 4. Add `wire()` cases in each agent module.
-5. Add tests in `src/tools/__tests__/<name>.test.ts`.
+5. Add tool tests under `src/__tests__/` and cover `healthCheck()`/`repair()` when installation behavior changes.
 
 ## Pull Request Process
 
 1. Fork the repo and create a branch from `main`.
 2. Make your changes.
 3. Run `bun run typecheck && bun test && bun run lint`.
-4. Update `CHANGELOG.md` under `[Unreleased]`.
+4. Update `CHANGELOG.md` for user-visible fixes/features and keep `package.json` + `src/util/version.ts` in sync for releases.
 5. Open a PR with a clear description.
 
 ## Commit Messages

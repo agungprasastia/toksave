@@ -21,6 +21,7 @@ export interface ParsedCli {
   tools: ToolId[];
   opts: RunOpts;
   offline: boolean;
+  fix: boolean;
 }
 
 export function parseCli(argv: string[]): ParsedCli {
@@ -30,6 +31,7 @@ export function parseCli(argv: string[]): ParsedCli {
     tools: [],
     opts: { dryRun: false, upgrade: false, verbose: false, yes: false },
     offline: false,
+    fix: false,
   };
 
   const program = new Command();
@@ -56,9 +58,11 @@ export function parseCli(argv: string[]): ParsedCli {
     .command("doctor")
     .description("Health check — show what is wired and what is broken")
     .option("--offline", "skip remote version checks", false)
+    .option("--fix", "repair unhealthy tool installations", false)
     .action((options) => {
       result.command = "doctor";
       result.offline = options.offline ?? false;
+      result.fix = options.fix ?? false;
       applyGlobalOpts(result, program.opts());
     });
 

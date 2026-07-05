@@ -16,7 +16,7 @@ async function main(): Promise<void> {
       code = await init.run(cli.agents, cli.tools, cli.opts);
       break;
     case "doctor":
-      code = await doctor.run(cli.offline);
+      code = await doctor.run(cli.offline, cli.fix, cli.opts);
       break;
     case "update":
       code = await update.run(cli.opts);

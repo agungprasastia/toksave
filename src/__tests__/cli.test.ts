@@ -12,6 +12,12 @@ describe("CLI parser", () => {
     expect(cli.command).toBe("doctor");
   });
 
+  test("doctor --fix flag", () => {
+    const cli = parseCli(["node", "toksave", "doctor", "--fix"]);
+    expect(cli.command).toBe("doctor");
+    expect(cli.fix).toBe(true);
+  });
+
   test("update command", () => {
     const cli = parseCli(["node", "toksave", "update"]);
     expect(cli.command).toBe("update");

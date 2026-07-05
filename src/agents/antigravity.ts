@@ -126,7 +126,7 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
 
 function removeMcp(toolId: string): void {
   for (const f of paths.antigravityMcpFiles()) {
-    const cfg = readJsonFile(f) as Record<string, unknown>;
+    const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
     const mcp = cfg.mcpServers as Record<string, unknown> | undefined;
     if (mcp?.[toolId]) {
       delete mcp[toolId];
@@ -137,7 +137,7 @@ function removeMcp(toolId: string): void {
 
 function hasMcp(toolId: string): boolean {
   for (const f of paths.antigravityMcpFiles()) {
-    const cfg = readJsonFile(f) as Record<string, unknown>;
+    const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
     const mcp = cfg.mcpServers as Record<string, unknown> | undefined;
     if (!mcp?.[toolId]) return false;
   }

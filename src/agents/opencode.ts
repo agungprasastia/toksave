@@ -117,7 +117,7 @@ function wireMcp(toolId: string, command: string[], opts: RunOpts): boolean {
 
 function removeMcp(toolId: string): void {
   const p = paths.opencodePaths();
-  const cfg = readJsonFile(p.config) as Record<string, unknown>;
+  const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
   const mcp = cfg.mcp as Record<string, unknown> | undefined;
   if (mcp?.[toolId]) {
     delete mcp[toolId];
@@ -127,7 +127,7 @@ function removeMcp(toolId: string): void {
 
 function hasMcp(toolId: string): boolean {
   const p = paths.opencodePaths();
-  const cfg = readJsonFile(p.config) as Record<string, unknown>;
+  const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
   const mcp = cfg.mcp as Record<string, unknown> | undefined;
   return !!mcp?.[toolId];
 }

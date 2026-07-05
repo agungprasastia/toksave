@@ -1,6 +1,6 @@
 {
   "name": "toksave",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "type": "module",
   "description": "Global token-saver CLI for AI agents",
   "author": "agungprasastia",

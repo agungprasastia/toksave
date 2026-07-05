@@ -14,10 +14,12 @@ Use Bun for local development. Node.js >= 22 is needed for full install flows in
 rtk bun install --frozen-lockfile
 rtk bun run src/index.ts -- --help
 rtk bun run src/index.ts -- doctor --offline
+rtk bun run src/index.ts -- doctor --fix
 rtk bun run typecheck
 rtk bun run lint
 rtk bun run lint:fix
 rtk bun test
+rtk bun test src/__tests__/agents.test.ts
 rtk bun test src/__tests__/cli.test.ts
 rtk bun test src/__tests__/cli.test.ts -t "doctor command"
 rtk bun run build
@@ -34,7 +36,7 @@ CI runs `bun run typecheck`, `bun run lint`, `bun test`, and a `bun build --comp
 - [src/registry.ts](src/registry.ts) is the central agent/tool matrix. Add new agents/tools there and provide matching modules with `detect`, `wire`, `unwire`, `verify`, `install`, and version functions.
 - [src/commands/](src/commands/) contains user-facing command flows:
   - `init` installs selected tools, detects agents, prompts/auto-selects targets, wires tools, then records manifest entries.
-  - `doctor` checks agent wiring and tool versions; `--offline` skips remote latest-version checks.
+  - `doctor` checks agent wiring, tool health, and tool versions; `--offline` skips remote latest-version checks, and `--fix` runs tool repair for unhealthy tools.
   - `update` reinstalls tools with upgrade semantics.
   - `uninstall` unwires selected agents/tools and cleans TokSave cache on full removal.
   - `self-update`, `runmcp`, `codex-perm-hook`, and `index` are specialized helper commands.
@@ -60,5 +62,5 @@ CI runs `bun run typecheck`, `bun run lint`, `bun test`, and a `bun build --comp
 - Version lives in both [package.json](package.json) and [src/util/version.ts](src/util/version.ts); keep them in sync for releases.
 - This is a Bun-only project. `package-lock.json` is not used; `bun.lock` is the active lock file.
 - `runmcp` proxies MCP server execution and handles Node shebang scripts; keep stdout piping behavior intact.
-- Agent wiring edits files under user config directories, not only repo files. Use `--dry-run` flows or temp env/path overrides in tests when possible.
+- Agent wiring edits files under user config directories, not only repo files. Tests for agent wiring must use temp env/path overrides (`HOME`, `USERPROFILE`, `APPDATA`, `LOCALAPPDATA`) like [src/__tests__/agents.test.ts](src/__tests__/agents.test.ts), not real user config.
 - When adding new tools or agents, update the registry first ([src/registry.ts](src/registry.ts)), then add matching modules with all required methods.

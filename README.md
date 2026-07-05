@@ -20,7 +20,7 @@
 ## ✨ Features
 
 - **Zero-config:** Run one command to equip all your agents.
-- **Smart Health Checks:** Built-in diagnostics verify installations and suggest fixes automatically.
+- **Smart Health Checks:** Built-in diagnostics verify installations and `toksave doctor --fix` can repair unhealthy tools.
 - **Actionable Error Messages:** When things fail, get clear explanations and remediation steps.
 - **Download Resilience:** Automatic retry with exponential backoff handles flaky networks.
 - **Idempotent & Safe:** Run multiple times without duplicating configurations.
@@ -78,7 +78,8 @@ toksave
 | Command | Description |
 |---------|-------------|
 | `toksave` | Install + wire all tools into detected agents |
-| `toksave doctor` | Health check with diagnostics and automated repair suggestions |
+| `toksave doctor` | Read-only health check with diagnostics and repair suggestions |
+| `toksave doctor --fix` | Repair unhealthy tool installations, then report health after repair |
 | `toksave update` | Update all tools to latest versions |
 | `toksave uninstall` | Remove toksave wiring from agents |
 | `toksave self-update` | Update the toksave CLI itself |

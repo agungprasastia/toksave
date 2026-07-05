@@ -1,17 +1,21 @@
 import pc from "picocolors";
+import type { RunOpts } from "../registry.js";
 import {
   ALL_AGENTS,
   ALL_TOOLS,
   detectAgent,
+  toolHealthCheck,
   toolInstalledVersion,
   toolLatestVersion,
+  toolRepair,
   verifyTool,
 } from "../registry.js";
 import * as colors from "../util/colors.js";
+import type { HealthStatus } from "../util/health.js";
 import { isUpToDate } from "../util/version.js";
 
 /** Run the doctor command: health check. */
-export async function run(offline: boolean): Promise<number> {
+export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promise<number> {
   colors.banner("toksave doctor", "quick health check");
 
   // ── Per-agent wiring status ─────────────────────────────
@@ -84,6 +88,40 @@ export async function run(offline: boolean): Promise<number> {
     }
   }
 
+  // ── Tool health ─────────────────────────────────────────
+  const unhealthy = ALL_TOOLS.map((tool) => ({ tool, health: toolHealthCheck(tool.id) })).filter(
+    ({ health }) => !health.healthy,
+  );
+
+  if (unhealthy.length > 0) {
+    console.log();
+    for (const { tool, health } of unhealthy) {
+      const label = colors.pad(tool.label, 14);
+      colors.raw(`  ${pc.yellow(colors.WARN)} ${label}${pc.yellow("unhealthy")}`);
+      printHealthIssues(health);
+
+      if (fix) {
+        const result = await toolRepair(tool.id, opts);
+        const icon = result.success ? pc.green(colors.CHECK) : pc.red(colors.CROSS);
+        colors.raw(`  ${icon} ${colors.pad(tool.label, 14)}${result.message}`);
+        if (result.healthAfterRepair) {
+          const status = result.healthAfterRepair.healthy
+            ? pc.green("healthy")
+            : pc.yellow("unhealthy");
+          colors.raw(
+            `  ${pc.dim(colors.BULLET)} ${colors.pad(tool.label, 14)}after repair: ${status}`,
+          );
+          printHealthIssues(result.healthAfterRepair);
+        }
+      }
+    }
+
+    if (!fix) {
+      console.log();
+      colors.info("Run `toksave doctor --fix` to repair unhealthy tools.");
+    }
+  }
+
   // ── Fix suggestion ──────────────────────────────────────
   const broken = ALL_AGENTS.some((a) => {
     const det = detectAgent(a.id);
@@ -97,4 +135,12 @@ export async function run(offline: boolean): Promise<number> {
   }
   console.log();
   return 0;
+}
+
+function printHealthIssues(health: HealthStatus): void {
+  for (const issue of health.issues) {
+    const icon = issue.severity === "error" ? pc.red(colors.CROSS) : pc.yellow(colors.WARN);
+    colors.raw(`    ${icon} ${issue.message}`);
+    if (issue.remediation) colors.raw(`      ${pc.dim(issue.remediation)}`);
+  }
 }
