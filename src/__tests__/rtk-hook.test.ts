@@ -8,6 +8,10 @@ const hookInput = JSON.stringify({
 describe("rtk-hook", () => {
   test("Claude Code output uses hookSpecificOutput.updatedInput", () => {
     const result = runHook("claude");
+    if (result.exitCode !== 0) {
+      console.error("Claude Hook Stderr:", result.stderr.toString());
+      console.error("Claude Hook Stdout:", result.stdout.toString());
+    }
     expect(result.exitCode).toBe(0);
 
     const output = JSON.parse(result.stdout.toString()) as {
@@ -19,6 +23,10 @@ describe("rtk-hook", () => {
 
   test("Codex output keeps modifiedToolInput shape", () => {
     const result = runHook("codex");
+    if (result.exitCode !== 0) {
+      console.error("Codex Hook Stderr:", result.stderr.toString());
+      console.error("Codex Hook Stdout:", result.stdout.toString());
+    }
     expect(result.exitCode).toBe(0);
 
     const output = JSON.parse(result.stdout.toString()) as {

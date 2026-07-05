@@ -1,7 +1,12 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+mock.module("../util/exec.js", () => ({
+  runStdout: () => "0.1.0",
+  run: () => ({ code: 0, stdout: "", stderr: "" }),
+}));
 
 import * as rtk from "../tools/rtk.js";
 import { ensureDir, localBin } from "../util/paths.js";
@@ -10,7 +15,6 @@ let tmp = "";
 let oldHome: string | undefined;
 let oldLocalAppData: string | undefined;
 let oldPath: string | undefined;
-let installedVersionSpy: any;
 
 beforeEach(() => {
   oldHome = process.env.HOME;
@@ -31,9 +35,6 @@ beforeEach(() => {
     );
   });
   process.env.PATH = normalized.join(pathSeparator);
-
-  // Mock installedVersion directly using spyOn
-  installedVersionSpy = spyOn(rtk, "installedVersion").mockReturnValue("0.1.0");
 });
 
 afterEach(() => {
@@ -41,10 +42,6 @@ afterEach(() => {
   restoreEnv("LOCALAPPDATA", oldLocalAppData);
   restoreEnv("PATH", oldPath);
   rmSync(tmp, { recursive: true, force: true });
-
-  if (installedVersionSpy) {
-    installedVersionSpy.mockRestore();
-  }
 });
 
 function restoreEnv(key: string, value: string | undefined): void {
