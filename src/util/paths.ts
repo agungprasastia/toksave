@@ -10,6 +10,9 @@ import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
 function home(): string {
+  if (process.env.NODE_ENV === "test" && process.env.HOME) {
+    return process.env.HOME;
+  }
   return homedir();
 }
 
