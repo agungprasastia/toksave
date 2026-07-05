@@ -76,6 +76,19 @@ describe("agent RTK enforcement", () => {
     expect(paths.readFile(paths.opencodePaths().agentsMd) ?? "").not.toContain("RTK_START");
     expect(opencode.verify("rtk")).toBe(false);
   });
+
+  test("Codex unwire(rtk) handles missing hooks.json without writing null", async () => {
+    expect(existsSync(paths.codexPaths().hooks)).toBe(false);
+
+    await codex.unwire("rtk", opts);
+
+    // If hooks.json gets created by getOrCreateObject logic, it should contain valid JSON `{}`
+    // or simply not exist, but it should NOT contain the literal string "null".
+    if (existsSync(paths.codexPaths().hooks)) {
+      const content = readFileSync(paths.codexPaths().hooks, "utf-8");
+      expect(content).not.toBe("null");
+    }
+  });
 });
 
 describe("agent MCP wiring", () => {

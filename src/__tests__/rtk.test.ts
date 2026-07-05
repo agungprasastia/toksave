@@ -1,0 +1,72 @@
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+mock.module("../util/exec.js", () => ({
+  runStdout: () => "0.1.0",
+  run: () => ({ code: 0, stdout: "", stderr: "" }),
+}));
+
+import * as rtk from "../tools/rtk.js";
+import { ensureDir } from "../util/paths.js";
+
+let tmp = "";
+let oldHome: string | undefined;
+let oldLocalAppData: string | undefined;
+let oldPath: string | undefined;
+
+beforeEach(() => {
+  oldHome = process.env.HOME;
+  oldLocalAppData = process.env.LOCALAPPDATA;
+  oldPath = process.env.PATH;
+
+  tmp = mkdtempSync(join(tmpdir(), "toksave-rtk-test-"));
+  process.env.HOME = join(tmp, "home");
+  process.env.LOCALAPPDATA = join(tmp, "AppData", "Local");
+
+  process.env.PATH = "";
+});
+
+afterEach(() => {
+  restoreEnv("HOME", oldHome);
+  restoreEnv("LOCALAPPDATA", oldLocalAppData);
+  restoreEnv("PATH", oldPath);
+  rmSync(tmp, { recursive: true, force: true });
+});
+
+function restoreEnv(key: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+  process.env[key] = value;
+}
+
+describe("RTK detection", () => {
+  test("isInstalledButUnreachable is true when binary in localBin but not in PATH", () => {
+    let binDir = "";
+    if (process.platform === "win32") {
+      binDir = join(process.env.LOCALAPPDATA!, "Programs", "toksave");
+    } else {
+      binDir = join(process.env.HOME!, ".local", "bin");
+    }
+
+    ensureDir(binDir);
+    const exeName = process.platform === "win32" ? "rtk.exe" : "rtk";
+    writeFileSync(join(binDir, exeName), "fake binary", "utf-8");
+
+    expect(rtk.isInstalledButUnreachable()).toBe(true);
+
+    const health = rtk.healthCheck();
+    expect(health.healthy).toBe(false);
+    expect(health.issues.length).toBeGreaterThan(0);
+    expect(health.issues[0]?.severity).toBe("error");
+    expect(health.issues[0]?.message).toContain("not on your PATH");
+    expect(health.issues[0]?.remediation).toContain("Enforcement hooks will fail");
+  });
+
+  test("isInstalledButUnreachable is false when not installed at all", () => {
+    expect(rtk.isInstalledButUnreachable()).toBe(false);
+  });
+});

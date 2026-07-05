@@ -231,7 +231,7 @@ function installRtkHook(opts: RunOpts): void {
 
 function removeRtkHook(): void {
   const hooksFile = paths.antigravityPaths().hooks;
-  const cfg = readJsonFile(hooksFile) as Record<string, unknown>;
+  const cfg = (readJsonFile(hooksFile) as Record<string, unknown>) ?? {};
   if ((cfg as Record<string, unknown>)?.rtk) {
     (cfg as Record<string, unknown>).rtk = undefined;
     writeJsonFile(hooksFile, cfg);
@@ -240,7 +240,7 @@ function removeRtkHook(): void {
 
 function hasRtkHook(): boolean {
   const hooksFile = paths.antigravityPaths().hooks;
-  const cfg = readJsonFile(hooksFile) as Record<string, unknown>;
+  const cfg = (readJsonFile(hooksFile) as Record<string, unknown>) ?? {};
   return !!(cfg as Record<string, unknown>)?.rtk;
 }
 
@@ -286,7 +286,7 @@ function installContextModeHook(opts: RunOpts): void {
 
 function removeContextModeHook(): void {
   const hooksFile = paths.antigravityPaths().hooks;
-  const cfg = readJsonFile(hooksFile) as Record<string, unknown>;
+  const cfg = (readJsonFile(hooksFile) as Record<string, unknown>) ?? {};
   if ((cfg as Record<string, unknown>)?.ctx) {
     (cfg as Record<string, unknown>).ctx = undefined;
     writeJsonFile(hooksFile, cfg);

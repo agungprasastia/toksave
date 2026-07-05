@@ -23,9 +23,15 @@ function assetName(): string | null {
   return null;
 }
 
+export function isInstalledButUnreachable(): boolean {
+  if (isOnPath("rtk")) return false;
+  const local = join(localBin(), process.platform === "win32" ? "rtk.exe" : "rtk");
+  return existsSync(local);
+}
+
 /** Install RTK (prebuilt binary from GitHub releases). */
 export async function install(opts: RunOpts): Promise<boolean> {
-  if (isOnPath("rtk") && !opts.upgrade) return true;
+  if (installedVersion() && !opts.upgrade) return true;
   if (opts.dryRun) return true;
 
   const asset = assetName();
@@ -166,11 +172,25 @@ export function healthCheck(): HealthStatus {
       issues: [
         {
           severity: "error",
-          message: "RTK is not installed or not in PATH",
+          message: "RTK is not installed",
           remediation: "Run: toksave install rtk",
         },
       ],
     };
+  }
+
+  if (isInstalledButUnreachable()) {
+    const binPath = localBin();
+    const instruct =
+      process.platform === "win32"
+        ? `Add ${binPath} to your system PATH via System Properties or setx PATH "%PATH%;${binPath}"`
+        : `Add 'export PATH="$PATH:${binPath}"' to your shell rc file (e.g. ~/.bashrc or ~/.zshrc) and restart your terminal`;
+
+    issues.push({
+      severity: "error",
+      message: `RTK is installed in ${binPath} but is not on your PATH`,
+      remediation: `Enforcement hooks will fail with 'command not found'. ${instruct}`,
+    });
   }
 
   return {

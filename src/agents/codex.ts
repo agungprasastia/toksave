@@ -172,7 +172,7 @@ function hookGroupHasCommand(group: unknown, command: string): boolean {
 
 function removeRtkHook(): void {
   const p = paths.codexPaths();
-  const cfg = readJsonFile(p.hooks) as Record<string, unknown>;
+  const cfg = (readJsonFile(p.hooks) as Record<string, unknown>) ?? {};
   const hooks = ((cfg as Record<string, unknown>)?.hooks as Record<string, unknown>) ?? {};
   hooks.PreToolUse = removeToksaveHookGroups(hooks.PreToolUse, "rtk-hook codex");
   hooks.PermissionRequest = removeToksaveHookGroups(hooks.PermissionRequest, "codex-perm-hook");
@@ -192,7 +192,7 @@ function hookGroupContainsMarker(group: unknown, marker: string): boolean {
 
 function hasRtkHook(): boolean {
   const p = paths.codexPaths();
-  const cfg = readJsonFile(p.hooks) as Record<string, unknown>;
+  const cfg = (readJsonFile(p.hooks) as Record<string, unknown>) ?? {};
   const arr = ((cfg as Record<string, unknown>)?.hooks as Record<string, unknown>)?.PreToolUse;
   if (!Array.isArray(arr)) return false;
   return arr.some((g: unknown) => {
