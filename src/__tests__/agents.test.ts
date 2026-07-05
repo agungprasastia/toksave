@@ -143,11 +143,18 @@ describe("agent MCP wiring", () => {
       content: paths.readFile(f) ?? "",
     }));
 
-    // Phase 2: make one target file read-only to force write failure
+    // Phase 2: make target directory or file read-only to force write failure
     const targetFile = mcpFiles[0];
     if (targetFile) {
       const { chmodSync } = await import("node:fs");
-      chmodSync(targetFile, 0o444); // read-only
+      const { dirname } = await import("node:path");
+      const targetDir = dirname(targetFile);
+
+      if (process.platform !== "win32") {
+        chmodSync(targetDir, 0o555); // read-only directory to fail renameSync on POSIX
+      } else {
+        chmodSync(targetFile, 0o444); // read-only file for Windows
+      }
 
       // Phase 3: try to wire context-mode (should fail and rollback)
       try {
@@ -158,7 +165,11 @@ describe("agent MCP wiring", () => {
       }
 
       // Phase 4: restore permissions for cleanup
-      chmodSync(targetFile, 0o644);
+      if (process.platform !== "win32") {
+        chmodSync(targetDir, 0o755);
+      } else {
+        chmodSync(targetFile, 0o644);
+      }
 
       // Phase 5: verify rollback - codegraph config still intact, context-mode not added
       for (const { file, content } of initialConfigs) {
