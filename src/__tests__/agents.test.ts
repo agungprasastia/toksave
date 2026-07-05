@@ -41,6 +41,43 @@ afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
+describe("agent RTK enforcement", () => {
+  test("Claude wires RTK through a PreToolUse hook and keeps instruction rules", async () => {
+    await claude.wire("rtk", opts);
+
+    const settings = readJsonFile(paths.claudePaths().settings) as Record<string, unknown>;
+    const hooks = settings.hooks as Record<string, unknown>;
+    const preToolUse = hooks.PreToolUse as { matcher?: string; hooks?: { command?: string }[] }[];
+    expect(preToolUse.some((group) => group.hooks?.[0]?.command?.includes("rtk-hook claude"))).toBe(
+      true,
+    );
+    expect(paths.readFile(paths.claudePaths().agentsMd)).toContain("RTK_START");
+    expect(claude.verify("rtk")).toBe(true);
+  });
+
+  test("OpenCode wires RTK through a plugin file and keeps instruction rules", async () => {
+    await opencode.wire("rtk", opts);
+
+    const plugin = readOpenCodeRtkPlugin();
+    expect(plugin).toContain("tool.execute.before");
+    expect(plugin).toContain('input.tool !== "bash"');
+    expect(plugin).toContain("rtk ");
+    expect(paths.readFile(paths.opencodePaths().agentsMd)).toContain("RTK_START");
+    expect(opencode.verify("rtk")).toBe(true);
+  });
+
+  test("OpenCode RTK plugin wire is idempotent and unwire removes only enforcement", async () => {
+    await opencode.wire("rtk", opts);
+    await opencode.wire("rtk", opts);
+    expect(count(readOpenCodeRtkPlugin(), "tool.execute.before")).toBe(1);
+
+    await opencode.unwire("rtk", opts);
+    expect(existsSync(opencodeRtkPluginPath())).toBe(false);
+    expect(paths.readFile(paths.opencodePaths().agentsMd) ?? "").not.toContain("RTK_START");
+    expect(opencode.verify("rtk")).toBe(false);
+  });
+});
+
 describe("agent MCP wiring", () => {
   test("wire creates missing config and verify sees the MCP entry", async () => {
     expect(configFilesExist()).toEqual({
@@ -80,6 +117,44 @@ describe("agent MCP wiring", () => {
       expect(agent.verify(tool)).toBe(false);
     }
   });
+
+  test("Antigravity atomic write rolls back all files on failure", async () => {
+    // Phase 1: wire codegraph successfully to create initial state
+    await antigravity.wire("codegraph", opts);
+    const mcpFiles = paths.antigravityMcpFiles();
+    expect(mcpFiles.length).toBeGreaterThan(0);
+
+    // Capture initial configs
+    const initialConfigs = mcpFiles.map((f) => ({
+      file: f,
+      content: paths.readFile(f) ?? "",
+    }));
+
+    // Phase 2: make one target file read-only to force write failure
+    const targetFile = mcpFiles[0];
+    if (targetFile) {
+      const { chmodSync } = await import("node:fs");
+      chmodSync(targetFile, 0o444); // read-only
+
+      // Phase 3: try to wire context-mode (should fail and rollback)
+      try {
+        await antigravity.wire("context-mode", opts);
+        expect(true).toBe(false); // Should not reach here
+      } catch (err) {
+        expect(err).toBeDefined();
+      }
+
+      // Phase 4: restore permissions for cleanup
+      chmodSync(targetFile, 0o644);
+
+      // Phase 5: verify rollback - codegraph config still intact, context-mode not added
+      for (const { file, content } of initialConfigs) {
+        expect(paths.readFile(file)).toBe(content);
+      }
+      expect(antigravity.verify("codegraph")).toBe(true);
+      expect(antigravity.verify("context-mode")).toBe(false);
+    }
+  });
 });
 
 function restoreEnv(key: string, value: string | undefined): void {
@@ -107,6 +182,14 @@ function readClaudeMcpKeys(): string[] {
 function readOpenCodeMcpKeys(): string[] {
   const cfg = readJsonFile(paths.opencodePaths().config) as Record<string, unknown>;
   return Object.keys((cfg.mcp as Record<string, unknown>) ?? {});
+}
+
+function opencodeRtkPluginPath(): string {
+  return join(paths.opencodePaths().dir, "plugins", "toksave-rtk.js");
+}
+
+function readOpenCodeRtkPlugin(): string {
+  return readFileSync(opencodeRtkPluginPath(), "utf-8");
 }
 
 function readCodexConfig(): string {

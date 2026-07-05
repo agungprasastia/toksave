@@ -52,6 +52,7 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
     case "rtk":
       if (!opts.dryRun) {
         allowBashPattern("Bash(rtk *)");
+        wireRtkHook(opts);
         wireRtkRules(opts);
       }
       return true;
@@ -72,6 +73,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
       removeCaveman();
       return true;
     case "rtk":
+      removeRtkHook();
       removeRtkRulesFile();
       return true;
   }
@@ -88,7 +90,7 @@ export function verify(tool: ToolId): boolean | null {
       return hasCavemanSkill();
     case "rtk": {
       const rules = paths.readFile(paths.claudePaths().agentsMd);
-      return isOnPath("rtk") && !!rules && hasRtkRules(rules);
+      return isOnPath("rtk") && hasRtkHook() && !!rules && hasRtkRules(rules);
     }
   }
 }
@@ -160,6 +162,65 @@ function allowBashPattern(pattern: string): void {
   if (!Array.isArray(perms.allow)) perms.allow = [];
   addToArrayIfMissing(perms.allow as unknown[], pattern);
   writeJsonFile(p.settings, cfg);
+}
+
+function wireRtkHook(opts: RunOpts): void {
+  const p = paths.claudePaths();
+  const cfg = (readJsonFile(p.settings) as Record<string, unknown>) ?? {};
+  const hooks = getOrCreateObject(cfg, "hooks");
+  const command = `${paths.toksaveAbs()} rtk-hook claude`;
+
+  verbose("Installing RTK hook for Claude Code", opts.verbose);
+
+  addHook(hooks, "PreToolUse", {
+    matcher: "Bash",
+    hooks: [{ type: "command", command, timeout: 10 }],
+  });
+
+  writeJsonFile(p.settings, cfg);
+}
+
+function addHook(
+  hooks: Record<string, unknown>,
+  name: string,
+  hook: Record<string, unknown>,
+): void {
+  if (!Array.isArray(hooks[name])) hooks[name] = [];
+  const arr = hooks[name] as unknown[];
+  const command = (hook.hooks as { command?: string }[] | undefined)?.[0]?.command;
+  if (command && arr.some((item) => hookGroupHasCommand(item, command))) return;
+  arr.push(hook);
+}
+
+function hookGroupHasCommand(group: unknown, command: string): boolean {
+  const hooks = (group as { hooks?: { command?: string }[] })?.hooks;
+  return Array.isArray(hooks) && hooks.some((hook) => hook.command === command);
+}
+
+function removeRtkHook(): void {
+  const p = paths.claudePaths();
+  const cfg = (readJsonFile(p.settings) as Record<string, unknown>) ?? {};
+  const hooks = (cfg.hooks as Record<string, unknown> | undefined) ?? {};
+  hooks.PreToolUse = removeToksaveHookGroups(hooks.PreToolUse, "rtk-hook claude");
+  writeJsonFile(p.settings, cfg);
+}
+
+function removeToksaveHookGroups(groups: unknown, marker: string): unknown[] | undefined {
+  if (!Array.isArray(groups)) return undefined;
+  const remaining = groups.filter((group) => !hookGroupContainsMarker(group, marker));
+  return remaining.length > 0 ? remaining : undefined;
+}
+
+function hookGroupContainsMarker(group: unknown, marker: string): boolean {
+  const hooks = (group as { hooks?: { command?: string }[] })?.hooks;
+  return Array.isArray(hooks) && hooks.some((hook) => hook.command?.includes(marker));
+}
+
+function hasRtkHook(): boolean {
+  const p = paths.claudePaths();
+  const cfg = (readJsonFile(p.settings) as Record<string, unknown>) ?? {};
+  const arr = (cfg.hooks as Record<string, unknown> | undefined)?.PreToolUse;
+  return Array.isArray(arr) && arr.some((group) => hookGroupContainsMarker(group, "rtk-hook claude"));
 }
 
 // ─── Caveman wiring ─────────────────────────────────────────

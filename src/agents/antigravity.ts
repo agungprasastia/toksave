@@ -93,35 +93,31 @@ export function verify(tool: ToolId): boolean | null {
   }
 }
 
-// ─── MCP wiring (multi-surface) ─────────────────────────────
+// ─── MCP wiring (multi-surface, atomic) ─────────────────────
 
 function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts): void {
   if (opts.dryRun) return;
 
   verbose(`Wiring MCP ${toolId} into Antigravity (multi-surface)`, opts.verbose);
 
-  const failures: string[] = [];
-  for (const f of paths.antigravityMcpFiles()) {
-    try {
-      paths.ensureDir(dirname(f));
-      const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
-      const servers = getOrCreateObject(cfg, "mcpServers");
+  // Phase 1: prepare all configs in memory
+  const mcpFiles = paths.antigravityMcpFiles();
+  const prepared: { file: string; cfg: Record<string, unknown> }[] = [];
+  for (const f of mcpFiles) {
+    paths.ensureDir(dirname(f));
+    const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
+    const servers = getOrCreateObject(cfg, "mcpServers");
 
-      const entry: Record<string, unknown> = { command };
-      if (args.length > 0) entry.args = args;
-      entry.trust = true;
+    const entry: Record<string, unknown> = { command };
+    if (args.length > 0) entry.args = args;
+    entry.trust = true;
 
-      (servers as Record<string, unknown>)[toolId] = entry;
-      writeJsonFile(f, cfg);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      failures.push(`${f}: ${msg}`);
-    }
+    (servers as Record<string, unknown>)[toolId] = entry;
+    prepared.push({ file: f, cfg });
   }
 
-  if (failures.length > 0) {
-    throw new Error(`Failed to wire ${toolId} into Antigravity: ${failures.join("; ")}`);
-  }
+  // Phase 2: write all atomically, rollback on failure
+  atomicWriteAll(prepared, `wire MCP ${toolId}`);
 }
 
 function removeMcp(toolId: string): void {
@@ -147,23 +143,65 @@ function hasMcp(toolId: string): boolean {
 // ─── Permissions ─────────────────────────────────────────────
 
 function allowEntry(entry: string): void {
-  const failures: string[] = [];
-  for (const f of paths.antigravitySettingsFiles()) {
+  // Phase 1: prepare all configs in memory
+  const settingsFiles = paths.antigravitySettingsFiles();
+  const prepared: { file: string; cfg: Record<string, unknown> }[] = [];
+  for (const f of settingsFiles) {
+    paths.ensureDir(dirname(f));
+    const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
+    const perms = getOrCreateObject(cfg, "permissions");
+    if (!Array.isArray(perms.allow)) perms.allow = [];
+    addToArrayIfMissing(perms.allow as unknown[], entry);
+    prepared.push({ file: f, cfg });
+  }
+
+  // Phase 2: write all atomically, rollback on failure
+  atomicWriteAll(prepared, `allow ${entry}`);
+}
+
+// ─── Atomic write helper ─────────────────────────────────────
+
+function atomicWriteAll(
+  writes: { file: string; cfg: Record<string, unknown> }[],
+  operation: string,
+): void {
+  // Phase 1: capture originals for rollback
+  const originals = new Map<string, string | null>();
+  for (const { file } of writes) {
     try {
-      paths.ensureDir(dirname(f));
-      const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
-      const perms = getOrCreateObject(cfg, "permissions");
-      if (!Array.isArray(perms.allow)) perms.allow = [];
-      addToArrayIfMissing(perms.allow as unknown[], entry);
-      writeJsonFile(f, cfg);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      failures.push(`${f}: ${msg}`);
+      originals.set(file, paths.readFile(file));
+    } catch {
+      originals.set(file, null); // File doesn't exist yet
     }
   }
 
-  if (failures.length > 0) {
-    throw new Error(`Failed to update Antigravity permissions: ${failures.join("; ")}`);
+  // Phase 2: write all files
+  const written: string[] = [];
+  try {
+    for (const { file, cfg } of writes) {
+      writeJsonFile(file, cfg);
+      written.push(file);
+    }
+  } catch (err) {
+    // Phase 3: rollback on failure
+    for (const file of written) {
+      const original = originals.get(file);
+      if (original === null) {
+        try {
+          rmSync(file, { force: true });
+        } catch {
+          /* ignore */
+        }
+      } else if (original !== undefined) {
+        try {
+          paths.writeFile(file, original);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to ${operation}: ${msg}`);
   }
 }
 

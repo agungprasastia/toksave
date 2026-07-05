@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { getOrCreateObject, hasKey, readJsonFile, writeJsonFile } from "../config/json.js";
 import {
   CTX_RULES_BLOCK,
@@ -39,7 +39,10 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
     case "caveman":
       return wireCaveman(opts);
     case "rtk":
-      if (!opts.dryRun) wireRtkRules(opts);
+      if (!opts.dryRun) {
+        wireRtkPlugin(opts);
+        wireRtkRules(opts);
+      }
       return true;
   }
 }
@@ -58,6 +61,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
       removeCavemanRules();
       return true;
     case "rtk":
+      removeRtkPlugin();
       removeRtkRulesFile();
       return true;
   }
@@ -74,7 +78,7 @@ export function verify(tool: ToolId): boolean | null {
       return hasCavemanRules();
     case "rtk": {
       const rules = paths.readFile(paths.opencodePaths().agentsMd);
-      return isOnPath("rtk") && !!rules && hasRtkRules(rules);
+      return isOnPath("rtk") && hasRtkPlugin() && !!rules && hasRtkRules(rules);
     }
   }
 }
@@ -189,6 +193,38 @@ function removeCtxRulesFile(): void {
   if (!existing) return;
   paths.writeFile(p.agentsMd, stripCtxRules(existing));
 }
+
+function wireRtkPlugin(opts: RunOpts): void {
+  const pluginFile = rtkPluginPath();
+  verbose("Installing RTK plugin for OpenCode", opts.verbose);
+  paths.writeFile(pluginFile, RTK_PLUGIN);
+}
+
+function removeRtkPlugin(): void {
+  try {
+    rmSync(rtkPluginPath(), { force: true });
+  } catch {
+    /* ignore */
+  }
+}
+
+function hasRtkPlugin(): boolean {
+  return existsSync(rtkPluginPath());
+}
+
+function rtkPluginPath(): string {
+  return `${paths.opencodePaths().dir}/plugins/toksave-rtk.js`;
+}
+
+const RTK_PLUGIN = `export const Plugin = async () => ({
+  "tool.execute.before": async (input, output) => {
+    if (input.tool !== "bash") return;
+    const command = String(output.args.command ?? "").trim();
+    if (!command || command === "rtk" || command.startsWith("rtk ")) return;
+    output.args.command = ` + "`rtk ${command}`" + `;
+  },
+});
+`;
 
 function wireRtkRules(opts: RunOpts): void {
   const p = paths.opencodePaths();

@@ -25,10 +25,13 @@ export function runRtkHook(): number {
     if (trimmed.startsWith("rtk ") || trimmed === "rtk") return 0;
 
     // Prefix with rtk
+    const commandPatch = { command: `rtk ${trimmed}` };
     const modified = {
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
-        modifiedToolInput: { command: `rtk ${trimmed}` },
+        ...(targetAgent() === "claude"
+          ? { updatedInput: commandPatch }
+          : { modifiedToolInput: commandPatch }),
       },
     };
 
@@ -37,6 +40,10 @@ export function runRtkHook(): number {
   } catch {
     return 0; // On error, don't block the tool call
   }
+}
+
+function targetAgent(): string {
+  return (process.argv[3] ?? "").toLowerCase();
 }
 
 function isBashTool(name: string): boolean {
