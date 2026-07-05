@@ -29,7 +29,7 @@ describe("rtk-hook", () => {
   });
 });
 
-function runHook(agent: string): Bun.SpawnSyncReturns<Buffer> {
+function runHook(agent: string) {
   return Bun.spawnSync({
     cmd: [process.execPath, "src/index.ts", "rtk-hook", agent],
     stdin: Buffer.from(hookInput),
