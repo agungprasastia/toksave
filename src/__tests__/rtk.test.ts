@@ -45,12 +45,8 @@ function restoreEnv(key: string, value: string | undefined): void {
 
 describe("RTK detection", () => {
   test("isInstalledButUnreachable is true when binary in localBin but not in PATH", () => {
-    let binDir = "";
-    if (process.platform === "win32") {
-      binDir = join(process.env.LOCALAPPDATA!, "Programs", "toksave");
-    } else {
-      binDir = join(process.env.HOME!, ".local", "bin");
-    }
+    const { localBin } = require("../util/paths.js");
+    const binDir = localBin();
 
     ensureDir(binDir);
     const exeName = process.platform === "win32" ? "rtk.exe" : "rtk";
