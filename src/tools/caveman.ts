@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CAVEMAN_SKILL_MD, CAVEMAN_SKILL_VERSION } from "../content/caveman-skill.js";
 import type { RunOpts } from "../registry.js";
-import type { HealthIssue, HealthStatus, RepairResult } from "../util/health.js";
+import type { HealthStatus, RepairResult } from "../util/health.js";
 import * as paths from "../util/paths.js";
 import { userAgent } from "../util/version.js";
 
@@ -115,7 +115,6 @@ ${coreContent}
 
 /** Check if Caveman skill files are installed. */
 export function healthCheck(): HealthStatus {
-  const issues: HealthIssue[] = [];
   const version = installedVersion();
 
   if (!version) {
@@ -132,20 +131,13 @@ export function healthCheck(): HealthStatus {
     };
   }
 
-  // Check if version is outdated
-  const latest = CAVEMAN_SKILL_VERSION;
-  if (version !== latest) {
-    issues.push({
-      severity: "warning",
-      message: `Caveman skill version ${version} is outdated (latest: ${latest})`,
-      remediation: "Run: toksave update caveman",
-    });
-  }
-
+  // ponytail: outdated detection handled by doctor.ts via async latestVersion() + isUpToDate().
+  // Comparing installedVersion() against CAVEMAN_SKILL_VERSION here was a no-op because
+  // installedVersion() falls back to CAVEMAN_SKILL_VERSION when SKILL.md has no version field.
   return {
-    healthy: issues.filter((i) => i.severity === "error").length === 0,
+    healthy: true,
     version,
-    issues,
+    issues: [],
   };
 }
 

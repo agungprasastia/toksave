@@ -5,6 +5,16 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-07-06
+
+### Fixed
+
+- **Caveman outdated detection was a no-op**: `healthCheck()` in [src/tools/caveman.ts](src/tools/caveman.ts) compared `installedVersion()` against the bundled `CAVEMAN_SKILL_VERSION` constant, but `installedVersion()` itself falls back to that same constant when SKILL.md has no version field (which the official one doesn't). Removed the dead comparison — outdated detection is already handled correctly by `doctor.ts` via the async `latestVersion()` GitHub fetch.
+
+### Added
+
+- **Caveman test coverage**: New [src/__tests__/caveman.test.ts](src/__tests__/caveman.test.ts) covering `healthCheck()` (installed vs not-installed) and `latestVersion()` resilience on network failure.
+
 ## [0.7.0] - 2026-07-06
 
 ### Added
