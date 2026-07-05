@@ -220,7 +220,9 @@ function hasRtkHook(): boolean {
   const p = paths.claudePaths();
   const cfg = (readJsonFile(p.settings) as Record<string, unknown>) ?? {};
   const arr = (cfg.hooks as Record<string, unknown> | undefined)?.PreToolUse;
-  return Array.isArray(arr) && arr.some((group) => hookGroupContainsMarker(group, "rtk-hook claude"));
+  return (
+    Array.isArray(arr) && arr.some((group) => hookGroupContainsMarker(group, "rtk-hook claude"))
+  );
 }
 
 // ─── Caveman wiring ─────────────────────────────────────────

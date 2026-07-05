@@ -221,7 +221,7 @@ const RTK_PLUGIN = `export const Plugin = async () => ({
     if (input.tool !== "bash") return;
     const command = String(output.args.command ?? "").trim();
     if (!command || command === "rtk" || command.startsWith("rtk ")) return;
-    output.args.command = ` + "`rtk ${command}`" + `;
+    output.args.command = \`rtk \${command}\`;
   },
 });
 `;
