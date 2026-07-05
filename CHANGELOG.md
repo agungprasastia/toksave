@@ -5,6 +5,24 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-07-06
+
+### Added
+
+- **RTK native hook enforcement for Claude Code and OpenCode**: RTK enforcement upgraded from text-only instructions (AGENTS.md) to native agent mechanisms — Claude Code now uses a `PreToolUse` hook with `updatedInput` to auto-prefix Bash commands, OpenCode now uses a `tool.execute.before` plugin in `~/.config/opencode/plugins/`. This matches the hook-based enforcement Codex and Antigravity already had. AGENTS.md instructions retained as fallback/documentation.
+  - Modified [src/agents/claude.ts](src/agents/claude.ts) to wire RTK via `PreToolUse` hook
+  - Modified [src/agents/opencode.ts](src/agents/opencode.ts) to wire RTK via OpenCode plugin system
+- **RTK unreachable binary detection**: New `isInstalledButUnreachable()` in [src/tools/rtk.ts](src/tools/rtk.ts) detects when RTK binary exists in `localBin()` but is missing from system PATH. `doctor` now shows actionable per-platform instructions (Unix shell rc vs Windows `setx`).
+
+### Changed
+
+- **Atomic multi-file writes in Antigravity wiring**: `wireMcp()` and `allowEntry()` in [src/agents/antigravity.ts](src/agents/antigravity.ts) now roll back all successfully-written files if any write in the batch fails, preventing half-wired states.
+
+### Fixed
+
+- **Null-safety in Codex hook removal**: `removeRtkHook()` in [src/agents/codex.ts](src/agents/codex.ts) now handles `readJsonFile()` returning null with `?? {}` fallback. Audited and applied same pattern across all `src/agents/*.ts` modules.
+- **Test isolation: replaced global mock.module with scoped spyOn**: Removed `mock.module("../util/exec.js")` from [src/__tests__/rtk.test.ts](src/__tests__/rtk.test.ts) and replaced with `spyOn` + `mockRestore()` per-test, matching the pattern already used for `isOnPath` in [src/__tests__/agents.test.ts](src/__tests__/agents.test.ts). Eliminates cross-file mock contamination that caused inconsistent CI failures across OS.
+
 ## [0.6.1] - 2026-07-05
 
 ### Added

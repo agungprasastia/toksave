@@ -39,8 +39,8 @@ CI runs `bun run typecheck`, `bun run lint`, `bun test`, and a `bun build --comp
   - `doctor` checks agent wiring, tool health, and tool versions; `--offline` skips remote latest-version checks, and `--fix` runs tool repair for unhealthy tools.
   - `update` reinstalls tools with upgrade semantics.
   - `uninstall` unwires selected agents/tools and cleans TokSave cache on full removal.
-  - `self-update`, `runmcp`, `codex-perm-hook`, and `index` are specialized helper commands.
-- [src/agents/](src/agents/) contains per-agent config writers. These modules know each agent's file layout and implement all tool-specific wiring for that agent.
+  - `self-update`, `runmcp`, `codex-perm-hook`, `rtk-hook`, `context-mode-hook`, `build-index`, and `index` are specialized helper commands.
+- [src/agents/](src/agents/) contains per-agent config writers. These modules know each agent's file layout and implement all tool-specific wiring for that agent. RTK enforcement uses native agent hooks where available: Claude Code (`PreToolUse` hook with `updatedInput`), OpenCode (`tool.execute.before` plugin), Codex and Antigravity (pre-existing `PreToolUse` hooks). AGENTS.md/instructions.md text instructions are kept as fallback.
 - [src/tools/](src/tools/) contains tool installation/version logic. RTK downloads platform releases or falls back to installer/cargo; CodeGraph and Context-Mode use global npm installs; Caveman fetches SKILL.md from official GitHub repo with local fallback.
 - [src/util/paths.ts](src/util/paths.ts) centralizes cross-platform home/config/cache paths. Prefer it over inline path construction for agent config locations.
 - [src/config/json.ts](src/config/json.ts) and [src/config/toml.ts](src/config/toml.ts) preserve JSONC/TOML config structure while updating agent files.
@@ -64,3 +64,5 @@ CI runs `bun run typecheck`, `bun run lint`, `bun test`, and a `bun build --comp
 - `runmcp` proxies MCP server execution and handles Node shebang scripts; keep stdout piping behavior intact.
 - Agent wiring edits files under user config directories, not only repo files. Tests for agent wiring must use temp env/path overrides (`HOME`, `USERPROFILE`, `APPDATA`, `LOCALAPPDATA`) like [src/__tests__/agents.test.ts](src/__tests__/agents.test.ts), not real user config.
 - When adding new tools or agents, update the registry first ([src/registry.ts](src/registry.ts)), then add matching modules with all required methods.
+- Multi-file writes in agent modules (e.g. Antigravity `wireMcp`, `allowEntry`) must be atomic with rollback — if one file write fails, restore all already-written files in the batch.
+- Tests must use `spyOn` + `mockRestore()` from `bun:test`, never `mock.module()`. `mock.module` is global to the entire Bun test process and contaminates other test files. See [src/__tests__/agents.test.ts](src/__tests__/agents.test.ts) and [src/__tests__/rtk.test.ts](src/__tests__/rtk.test.ts) for the correct pattern.

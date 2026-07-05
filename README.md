@@ -32,8 +32,8 @@
 
 | Agent | MCP | Hooks | Caveman | Context-Mode Rules |
 |-------|:---:|:---:|:---:|:---:|
-| **Claude Code** | ✅ | RTK instructions | ✅ SKILL.md | ✅ AGENTS.md |
-| **OpenCode** | ✅ | RTK instructions | ✅ AGENTS.md | ✅ AGENTS.md |
+| **Claude Code** | ✅ | RTK hook + instructions | ✅ SKILL.md | ✅ AGENTS.md |
+| **OpenCode** | ✅ | RTK plugin + instructions | ✅ AGENTS.md | ✅ AGENTS.md |
 | **Codex** | ✅ (TOML) | RTK hook + instructions | ✅ instructions.md | ✅ instructions.md |
 | **Antigravity** | ✅ (JSON) | RTK hook + instructions | ✅ SKILL.md | ✅ AGENTS.md |
 
