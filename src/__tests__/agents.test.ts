@@ -8,6 +8,7 @@ import * as codex from "../agents/codex.js";
 import * as opencode from "../agents/opencode.js";
 import { readJsonFile } from "../config/json.js";
 import type { RunOpts, ToolId } from "../registry.js";
+import * as detect from "../util/detect.js";
 import * as paths from "../util/paths.js";
 
 const opts: RunOpts = { dryRun: false, upgrade: false, verbose: false, yes: true };
@@ -19,6 +20,7 @@ let oldHome: string | undefined;
 let oldUserProfile: string | undefined;
 let oldAppData: string | undefined;
 let oldLocalAppData: string | undefined;
+let isOnPathSpy: any;
 
 beforeEach(() => {
   oldHome = process.env.HOME;
@@ -31,6 +33,12 @@ beforeEach(() => {
   process.env.USERPROFILE = join(tmp, "home");
   process.env.APPDATA = join(tmp, "AppData", "Roaming");
   process.env.LOCALAPPDATA = join(tmp, "AppData", "Local");
+
+  // Mock isOnPath dynamically so verify("rtk") passes regardless of CI global environment
+  isOnPathSpy = spyOn(detect, "isOnPath").mockImplementation((name) => {
+    if (name === "rtk") return true;
+    return false;
+  });
 });
 
 afterEach(() => {
@@ -39,6 +47,10 @@ afterEach(() => {
   restoreEnv("APPDATA", oldAppData);
   restoreEnv("LOCALAPPDATA", oldLocalAppData);
   rmSync(tmp, { recursive: true, force: true });
+
+  if (isOnPathSpy) {
+    isOnPathSpy.mockRestore();
+  }
 });
 
 describe("agent RTK enforcement", () => {
