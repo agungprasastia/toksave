@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { run } from "./exec.js";
 import { ensureDir } from "./paths.js";
@@ -152,4 +153,17 @@ export function selfHealPath(): { added: string[]; patched: string[] } {
   const added = ensureProcessPath();
   const patched = ensurePersistentPath();
   return { added, patched };
+}
+
+/** Format selfHealPath result as user-facing message. Returns null if nothing changed. */
+export function formatPathFixResult(result: { added: string[]; patched: string[] }): string | null {
+  const { added, patched } = result;
+  if (added.length === 0 && patched.length === 0) return null;
+  const parts: string[] = [];
+  if (added.length > 0) parts.push(`process PATH updated (+${added.length})`);
+  if (patched.length > 0) {
+    const short = patched.map((p) => p.replace(homedir(), "~"));
+    parts.push(`persisted to ${short.join(", ")}`);
+  }
+  return parts.join(" · ");
 }

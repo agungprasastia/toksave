@@ -16,7 +16,7 @@ import {
 import * as colors from "../util/colors.js";
 import { recordWire } from "../util/manifest.js";
 import { checkNode } from "../util/npm.js";
-import { selfHealPath } from "../util/pathfix.js";
+import { formatPathFixResult, selfHealPath } from "../util/pathfix.js";
 import { Progress } from "../util/progress.js";
 import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 
@@ -61,7 +61,10 @@ export async function run(
     }
   }
 
-  if (!opts.dryRun) selfHealPath();
+  if (!opts.dryRun) {
+    const msg = formatPathFixResult(selfHealPath());
+    if (msg) colors.ok(msg);
+  }
 
   // ── Step 3: Detect agents ───────────────────────────────
   const detected: { id: AgentId; source: string }[] = [];

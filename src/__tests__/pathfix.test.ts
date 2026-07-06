@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   ensureProcessPath,
   expectedBinDirs,
+  formatPathFixResult,
   renderUnixBlock,
   upsertShellBlock,
 } from "../util/pathfix.js";
@@ -118,5 +119,28 @@ describe("renderUnixBlock", () => {
     const block = renderUnixBlock(["/home/user/.local/bin", "/opt/bin"], "/home/user");
     expect(block).toContain('"$HOME/.local/bin"');
     expect(block).toContain('"/opt/bin"');
+  });
+});
+
+describe("formatPathFixResult", () => {
+  test("returns null when nothing changed", () => {
+    expect(formatPathFixResult({ added: [], patched: [] })).toBeNull();
+  });
+
+  test("reports added dirs", () => {
+    const msg = formatPathFixResult({ added: ["/a", "/b"], patched: [] });
+    expect(msg).toContain("process PATH updated (+2)");
+  });
+
+  test("reports patched rc files", () => {
+    const msg = formatPathFixResult({ added: [], patched: ["/home/user/.zshrc"] });
+    expect(msg).toContain("persisted to");
+    expect(msg).toContain(".zshrc");
+  });
+
+  test("reports both added and patched", () => {
+    const msg = formatPathFixResult({ added: ["/a"], patched: ["/home/user/.bashrc"] });
+    expect(msg).toContain("process PATH updated (+1)");
+    expect(msg).toContain("persisted to");
   });
 });
