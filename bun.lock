@@ -9,7 +9,7 @@
         "boxen": "^8.0.1",
         "cli-table3": "^0.6.5",
         "commander": "15.0.0",
-        "comment-json": "^4.2.3",
+        "comment-json": "^5.0.0",
         "picocolors": "^1.1.1",
         "semver": "^7.8.5",
         "smol-toml": "^1.7.0",
@@ -19,7 +19,7 @@
       "devDependencies": {
         "@biomejs/biome": "2.5.1",
         "@types/adm-zip": "^0.5.8",
-        "@types/bun": "latest",
+        "@types/bun": "1.3.14",
         "@types/semver": "^7.7.1",
         "@types/tar": "7.0.87",
         "@types/which": "^3.0.4",
@@ -88,7 +88,7 @@
 
     "commander": ["commander@15.0.0", "", {}, ""],
 
-    "comment-json": ["comment-json@4.6.2", "", { "dependencies": { "array-timsort": "^1.0.3", "esprima": "^4.0.1" } }, "sha512-R2rze/hDX30uul4NZoIZ76ImSJLFxn/1/ZxtKC1L77y2X1k+yYu1joKbAtMA2Fg3hZrTOiw0I5mwVMo0cf250w=="],
+    "comment-json": ["comment-json@5.0.0", "", { "dependencies": { "array-timsort": "^1.0.3", "esprima": "^4.0.1" } }, "sha512-uiqLcOiVDJtBP8WGkZHEP+FZIhTzP1dxvn59EfoYUi9gqupjrBWVQkO2atDrbnKPwLeotFYDsuNb26uBMqB+hw=="],
 
     "emoji-regex": ["emoji-regex@10.6.0", "", {}, "sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A=="],
 
@@ -130,13 +130,9 @@
 
     "yallist": ["yallist@5.0.0", "", {}, ""],
 
-    "@isaacs/fs-minipass/minipass": ["minipass@7.1.3", "", {}, ""],
-
     "ansi-align/string-width": ["string-width@4.2.3", "", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g=="],
 
     "cli-table3/string-width": ["string-width@4.2.3", "", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g=="],
-
-    "minizlib/minipass": ["minipass@7.1.3", "", {}, ""],
 
     "ansi-align/string-width/emoji-regex": ["emoji-regex@8.0.0", "", {}, "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A=="],
 
