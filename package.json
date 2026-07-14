@@ -25,7 +25,7 @@
     "format": "biome format --write ./src"
   },
   "dependencies": {
-    "adm-zip": "^0.5.18",
+    "adm-zip": "^0.6.0",
     "boxen": "^8.0.1",
     "cli-table3": "^0.6.5",
     "commander": "15.0.0",
