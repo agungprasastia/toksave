@@ -69,7 +69,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
     case "codegraph":
       removeMcp("codegraph");
       removeOwner("claude", "codegraph");
-      removeClaudeAutoIndexHook();
+      if (!_opts.dryRun) removeClaudeAutoIndexHook();
       return true;
     case "context-mode":
       removeMcp("context-mode");
@@ -367,8 +367,8 @@ function installClaudeAutoIndexHook(): void {
   const cp = paths.claudePaths();
   const cfg = (readJsonFile(cp.settings) as Record<string, unknown>) ?? {};
   const hooks = getOrCreateObject(cfg, "hooks") as Record<string, unknown>;
-  const ss = (hooks.SessionStart as unknown[]) ?? [];
   const cmd = "toksave index --auto";
+  const ss = Array.isArray(hooks.SessionStart) ? hooks.SessionStart : [];
   if (ss.some((g) => typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd)) return;
   const entry = {
     hooks: [{ type: "command", command: cmd, timeout: 120000 }],
@@ -381,10 +381,11 @@ function installClaudeAutoIndexHook(): void {
 function removeClaudeAutoIndexHook(): void {
   const cp = paths.claudePaths();
   const cfg = (readJsonFile(cp.settings) as Record<string, unknown>) ?? {};
-  const hooks = cfg.hooks as Record<string, unknown> | undefined;
-  if (!hooks?.SessionStart) return;
+  const hooks = (cfg.hooks as Record<string, unknown> | undefined) ?? {};
+  const ss = hooks.SessionStart;
+  if (!Array.isArray(ss)) return;
   const cmd = "toksave index --auto";
-  const kept = (hooks.SessionStart as unknown[]).filter(
+  const kept = ss.filter(
     (g) => !(typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd),
   );
   if (kept.length === 0) delete hooks.SessionStart;
@@ -396,9 +397,10 @@ function hasClaudeAutoIndexHook(): boolean {
   const cp = paths.claudePaths();
   const cfg = (readJsonFile(cp.settings) as Record<string, unknown>) ?? {};
   const hooks = cfg.hooks as Record<string, unknown> | undefined;
-  if (!hooks?.SessionStart) return false;
+  const ss = hooks?.SessionStart;
+  if (!Array.isArray(ss)) return false;
   const cmd = "toksave index --auto";
-  return (hooks.SessionStart as unknown[]).some(
+  return ss.some(
     (g) => typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd,
   );
 }
