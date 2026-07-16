@@ -410,4 +410,15 @@ describe("OpenCode auto-index plugin", () => {
     const pluginPath = `${paths.opencodePaths().dir}/plugins/toksave-autoindex.js`;
     expect(existsSync(pluginPath)).toBe(false);
   });
+
+  test("OpenCode codegraph wire installs auto-index plugin", async () => {
+    await opencode.wire("codegraph", opts);
+    expect(opencode.hasOpencodeAutoIndexPlugin()).toBe(true);
+  });
+
+  test("OpenCode codegraph unwire removes auto-index plugin", async () => {
+    await opencode.wire("codegraph", opts);
+    await opencode.unwire("codegraph", opts);
+    expect(opencode.hasOpencodeAutoIndexPlugin()).toBe(false);
+  });
 });
