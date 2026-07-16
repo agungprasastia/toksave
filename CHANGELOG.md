@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Auto-index on agent startup**: CodeGraph index builds automatically when agents start, not just on install.
+  - **Claude Code**: SessionStart hook in `~/.claude/settings.json` runs `toksave index --auto` on each session start.
+  - **OpenCode**: `plugins/toksave-autoindex.js` fires on first `tool.execute.before` call.
+  - Both agents install/remove/verify the auto-index through `wire("codegraph")` / `unwire("codegraph")` / `verify("codegraph")`.
+
 - **New agents: Copilot and Droid**: Full agent manifest, detection, wire/unwire/verify for all 6 tools (RTK, Caveman, CodeGraph, Context-Mode, Ponytail, Principles). Added to registry, agent index, and matrix test.
   - [src/agents/copilot.ts](src/agents/copilot.ts) — GitHub Copilot agent with MCP + IDE MCP wiring, RTK hook, CodeGraph index hook, Context-Mode hook, copilot-instructions.md sync.
   - [src/agents/droid.ts](src/agents/droid.ts) — Droid agent with MCP + AGENTS.md wiring, PreToolUse hook removal for context-mode.

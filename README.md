@@ -27,6 +27,7 @@
 - **Clean Uninstall:** Tracks what it installed so it can cleanly revert changes.
 - **Cross-platform:** Ships as a standalone binary for macOS, Linux, and Windows.
 - **Preview Changes:** Use `--dry-run` to see what will happen before committing.
+- **Auto-index on startup:** CodeGraph index builds automatically when agents start (Claude SessionStart hook, OpenCode plugin).
 - **Progress Tree:** Real-time `runStatus()` spinner with dynamic sections for multi-step operations.
 - **Caveman Skills CLI:** Install skills from marketplace URLs, list installed skills, skill discovery via opencode plugin.
 
@@ -115,7 +116,7 @@ bun install
 # Development tasks
 bun run src/index.ts      # Run CLI in dev mode
 bun run typecheck         # Run TypeScript checks
-bun test                  # Run unit tests (143 tests) 
+bun test                  # Run unit tests (151 tests) 
 bun run lint              # Lint with Biome
 bun run build             # Build local binary
 
