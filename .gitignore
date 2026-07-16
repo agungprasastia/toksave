@@ -24,3 +24,5 @@ Thumbs.db
 
 # toksave cache
 .cache/
+
+.superpowers/
