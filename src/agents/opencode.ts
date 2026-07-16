@@ -33,6 +33,7 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
       if (!opts.dryRun) {
         writeOwner("opencode", "codegraph");
         unwireAutoIndexOpenCode();
+        installOpencodeAutoIndexPlugin();
       }
       return true;
     case "context-mode":
@@ -70,6 +71,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
     case "codegraph":
       removeMcp("codegraph");
       removeOwner("opencode", "codegraph");
+      removeOpencodeAutoIndexPlugin();
       return true;
     case "context-mode":
       removeContextModePlugin();
@@ -99,7 +101,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
 export function verify(tool: ToolId): boolean | null {
   switch (tool) {
     case "codegraph":
-      return hasMcp("codegraph");
+      return hasMcp("codegraph") && hasOpencodeAutoIndexPlugin();
     case "context-mode":
       return hasContextModePlugin();
     case "caveman":

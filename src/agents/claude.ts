@@ -96,7 +96,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
 export function verify(tool: ToolId): boolean | null {
   switch (tool) {
     case "codegraph":
-      return hasMcp("codegraph");
+      return hasMcp("codegraph") && hasClaudeAutoIndexHook();
     case "context-mode":
       return hasMcp("context-mode");
     case "caveman":
