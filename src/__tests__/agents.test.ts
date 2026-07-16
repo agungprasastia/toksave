@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, type Mock, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,10 +9,17 @@ import * as copilot from "../agents/copilot.js";
 import * as droid from "../agents/droid.js";
 import * as opencode from "../agents/opencode.js";
 import { readJsonFile } from "../config/json.js";
-import type { RunOpts, ToolId } from "../registry.js";
+import type { Detection, RunOpts, ToolId } from "../registry.js";
 import * as detect from "../util/detect.js";
 import * as paths from "../util/paths.js";
 import { hasOwner } from "../util/unified-block.js";
+
+interface AgentModule {
+  wire(tool: ToolId, opts: RunOpts): Promise<boolean>;
+  unwire(tool: ToolId, opts: RunOpts): Promise<boolean>;
+  verify(tool: ToolId): boolean | null;
+  detect(): Detection;
+}
 
 const opts: RunOpts = { dryRun: false, upgrade: false, verbose: false, yes: true };
 const tool: ToolId = "codegraph";
@@ -22,7 +29,7 @@ let oldHome: string | undefined;
 let oldUserProfile: string | undefined;
 let oldAppData: string | undefined;
 let oldLocalAppData: string | undefined;
-let isOnPathSpy: any;
+let isOnPathSpy: Mock<typeof detect.isOnPath>;
 
 beforeEach(() => {
   oldHome = process.env.HOME;
@@ -112,8 +119,8 @@ describe("agent MCP wiring", () => {
     });
 
     for (const agent of [claude, opencode, codex, antigravity, copilot, droid]) {
-      await (agent as any).wire(tool, opts);
-      expect((agent as any).verify(tool)).toBe(true);
+      await (agent as AgentModule).wire(tool, opts);
+      expect((agent as AgentModule).verify(tool)).toBe(true);
     }
 
     expect(readClaudeMcpKeys()).toEqual(["codegraph"]);
@@ -124,9 +131,9 @@ describe("agent MCP wiring", () => {
 
   test("wire is idempotent when called twice", async () => {
     for (const agent of [claude, opencode, codex, antigravity]) {
-      await (agent as any).wire(tool, opts);
-      await (agent as any).wire(tool, opts);
-      expect((agent as any).verify(tool)).toBe(true);
+      await (agent as AgentModule).wire(tool, opts);
+      await (agent as AgentModule).wire(tool, opts);
+      expect((agent as AgentModule).verify(tool)).toBe(true);
     }
 
     expect(readClaudeMcpKeys()).toEqual(["codegraph"]);
@@ -137,8 +144,38 @@ describe("agent MCP wiring", () => {
 
   test("unwire before wire does not crash and verify stays false", async () => {
     for (const agent of [claude, opencode, codex, antigravity, copilot, droid]) {
-      await (agent as any).unwire(tool, opts);
-      expect((agent as any).verify(tool)).toBe(false);
+      await (agent as AgentModule).unwire(tool, opts);
+      expect((agent as AgentModule).verify(tool)).toBe(false);
+    }
+  });
+
+  test("Claude auto-index SessionStart hook is installed on wire", async () => {
+    await claude.wire("codegraph", opts);
+    const cfg = readJsonFile(paths.claudePaths().settings) as Record<string, unknown>;
+    const hooks = cfg?.hooks as Record<string, unknown> | undefined;
+    expect(hooks?.SessionStart).toBeDefined();
+    const entry = (hooks?.SessionStart as unknown[])[0] as Record<string, unknown>;
+    expect((entry?.hooks as unknown[])[0]).toMatchObject({ command: "toksave index --auto", timeout: 120000 });
+  });
+
+  test("Claude auto-index hook is idempotent", async () => {
+    await claude.wire("codegraph", opts);
+    await claude.wire("codegraph", opts);
+    const cfg = readJsonFile(paths.claudePaths().settings) as Record<string, unknown>;
+    const hooks = cfg?.hooks as Record<string, unknown> | undefined;
+    expect((hooks?.SessionStart as unknown[]).length).toBe(1);
+  });
+
+  test("Claude auto-index hook is removed on unwire", async () => {
+    await claude.wire("codegraph", opts);
+    await claude.unwire("codegraph", opts);
+    const cfg = readJsonFile(paths.claudePaths().settings) as Record<string, unknown>;
+    const hooks = cfg?.hooks as Record<string, unknown> | undefined;
+    if (hooks?.SessionStart) {
+      const remaining = (hooks.SessionStart as unknown[]).filter(
+        (g) => (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === "toksave index --auto",
+      );
+      expect(remaining.length).toBe(0);
     }
   });
 
@@ -296,7 +333,7 @@ function count(value: string, needle: string): number {
 }
 
 describe("agent × tool wiring matrix (all 36 combos)", () => {
-  const agentMap: Record<string, any> = {
+  const agentMap: Record<string, AgentModule> = {
     claude,
     opencode,
     codex,

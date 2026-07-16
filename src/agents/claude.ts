@@ -33,6 +33,7 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
         writeOwner("claude", "codegraph");
         // Clean legacy auto-index SessionStart hooks (tokless/toksave index --auto)
         unwireAutoIndexClaude();
+        installClaudeAutoIndexHook();
       }
       return true;
     case "context-mode":
@@ -68,6 +69,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
     case "codegraph":
       removeMcp("codegraph");
       removeOwner("claude", "codegraph");
+      removeClaudeAutoIndexHook();
       return true;
     case "context-mode":
       removeMcp("context-mode");
@@ -357,6 +359,48 @@ function unwireAutoIndexClaude(): void {
       writeJsonFile(p.settings, cfg);
     }
   } catch {}
+}
+
+// ─── Auto-index SessionStart hook ────────────────────────────
+
+function installClaudeAutoIndexHook(): void {
+  const cp = paths.claudePaths();
+  const cfg = (readJsonFile(cp.settings) as Record<string, unknown>) ?? {};
+  const hooks = getOrCreateObject(cfg, "hooks") as Record<string, unknown>;
+  const ss = (hooks.SessionStart as unknown[]) ?? [];
+  const cmd = "toksave index --auto";
+  if (ss.some((g) => typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd)) return;
+  const entry = {
+    hooks: [{ type: "command", command: cmd, timeout: 120000 }],
+  };
+  ss.push(entry);
+  hooks.SessionStart = ss as never;
+  writeJsonFile(cp.settings, cfg);
+}
+
+function removeClaudeAutoIndexHook(): void {
+  const cp = paths.claudePaths();
+  const cfg = (readJsonFile(cp.settings) as Record<string, unknown>) ?? {};
+  const hooks = cfg.hooks as Record<string, unknown> | undefined;
+  if (!hooks?.SessionStart) return;
+  const cmd = "toksave index --auto";
+  const kept = (hooks.SessionStart as unknown[]).filter(
+    (g) => !(typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd),
+  );
+  if (kept.length === 0) delete hooks.SessionStart;
+  else hooks.SessionStart = kept as never;
+  writeJsonFile(cp.settings, cfg);
+}
+
+function hasClaudeAutoIndexHook(): boolean {
+  const cp = paths.claudePaths();
+  const cfg = (readJsonFile(cp.settings) as Record<string, unknown>) ?? {};
+  const hooks = cfg.hooks as Record<string, unknown> | undefined;
+  if (!hooks?.SessionStart) return false;
+  const cmd = "toksave index --auto";
+  return (hooks.SessionStart as unknown[]).some(
+    (g) => typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd,
+  );
 }
 
 // ─── Caveman wiring ─────────────────────────────────────────
