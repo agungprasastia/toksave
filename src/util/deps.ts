@@ -14,7 +14,7 @@ export function ensureDeps(needNode?: boolean, needGit?: boolean, minNode?: numb
     const out = runStdout("node", ["--version"]);
     nodeVersion = out?.replace(/^v/, "").trim() ?? null;
     if (nodeVersion && minNode !== undefined) {
-      const major = Number.parseInt(nodeVersion.split(".")[0], 10);
+      const major = Number.parseInt(nodeVersion, 10);
       if (!Number.isNaN(major) && major < minNode) {
         console.warn(
           `Node.js ${nodeVersion} detected but >= v${minNode}.x required. ` +

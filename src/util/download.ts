@@ -237,7 +237,7 @@ export async function downloadZip(
 }
 
 /** Fetch JSON from a URL. */
-export async function fetchJson(url: string): Promise<any> {
+export async function fetchJson(url: string): Promise<unknown> {
   const resp = await fetchWithRetry(url, { timeout: 10_000 });
   if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${url}`);
   return resp.json();

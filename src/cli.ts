@@ -25,6 +25,7 @@ export interface ParsedCli {
   opts: RunOpts;
   offline: boolean;
   fix: boolean;
+  auto?: boolean;
 }
 
 export function parseCli(argv: string[]): ParsedCli {
@@ -150,7 +151,7 @@ export function parseCli(argv: string[]): ParsedCli {
     .option("--auto", "internal: auto-index mode (silent, only if project detected)", false)
     .action((options: { auto?: boolean }) => {
       result.command = "index";
-      (result as any).auto = options.auto ?? false;
+      result.auto = options.auto ?? false;
       applyGlobalOpts(result, program.opts());
     });
 

@@ -1,4 +1,5 @@
 import { existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { getOrCreateObject, hasKey, readJsonFile, writeJsonFile } from "../config/json.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
 import {
@@ -329,4 +330,33 @@ function removePonytailArtifacts(): void {
   try {
     rmSync(`${dir}/.ponytail-active`, { force: true });
   } catch {}
+}
+
+// ─── Auto-index plugin ───────────────────────────────────────
+
+const AUTO_INDEX_PLUGIN = `let indexed = false;
+export const Plugin = async () => ({
+  "tool.execute.before": async () => {
+    if (indexed) return;
+    indexed = true;
+    const { execSync } = require("node:child_process");
+    try { execSync("toksave index --auto", { timeout: 120000 }); } catch {}
+  },
+});
+`;
+
+function autoIndexPluginPath(): string {
+  return join(paths.opencodePaths().dir, "plugins", "toksave-autoindex.js");
+}
+
+export function installOpencodeAutoIndexPlugin(): void {
+  paths.writeFile(autoIndexPluginPath(), AUTO_INDEX_PLUGIN);
+}
+
+export function removeOpencodeAutoIndexPlugin(): void {
+  try { rmSync(autoIndexPluginPath(), { force: true }); } catch {}
+}
+
+export function hasOpencodeAutoIndexPlugin(): boolean {
+  return existsSync(autoIndexPluginPath());
 }

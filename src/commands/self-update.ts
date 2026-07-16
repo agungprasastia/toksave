@@ -16,8 +16,10 @@ export async function run(): Promise<number> {
 
   let latest: string;
   try {
-    const json = await fetchJson(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`);
-    latest = (json?.tag_name ?? "").replace(/^v/, "");
+    const json = (await fetchJson(
+      `https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`,
+    )) as { tag_name?: string };
+    latest = (json.tag_name ?? "").replace(/^v/, "");
     if (!latest) throw new Error("No tag_name");
   } catch {
     colors.err("Could not reach GitHub Releases. Try again later.");

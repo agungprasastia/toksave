@@ -11,7 +11,7 @@
   [![CI](https://github.com/agungprasastia/toksave/actions/workflows/ci.yml/badge.svg)](https://github.com/agungprasastia/toksave/actions)
 
   <p align="center">
-    Install and wire <a href="https://github.com/rtk-ai/rtk">RTK</a>, <a href="https://github.com/JuliusBrussee/caveman">Caveman</a>, <a href="https://github.com/colbymchenry/codegraph">CodeGraph</a>, and <a href="https://github.com/mksglu/context-mode">Context-Mode</a> into your AI agents — without hand-editing configs.
+    Install and wire <a href="https://github.com/rtk-ai/rtk">RTK</a>, <a href="https://github.com/JuliusBrussee/caveman">Caveman</a>, <a href="https://github.com/colbymchenry/codegraph">CodeGraph</a>, <a href="https://github.com/mksglu/context-mode">Context-Mode</a>, and <a href="https://github.com/dietrichgebert/ponytail">Ponytail</a> into your AI agents — without hand-editing configs.
   </p>
 </div>
 
@@ -27,6 +27,8 @@
 - **Clean Uninstall:** Tracks what it installed so it can cleanly revert changes.
 - **Cross-platform:** Ships as a standalone binary for macOS, Linux, and Windows.
 - **Preview Changes:** Use `--dry-run` to see what will happen before committing.
+- **Progress Tree:** Real-time `runStatus()` spinner with dynamic sections for multi-step operations.
+- **Caveman Skills CLI:** Install skills from marketplace URLs, list installed skills, skill discovery via opencode plugin.
 
 ## 🤖 Supported Agents & Tooling
 
@@ -36,6 +38,8 @@
 | **OpenCode** | ✅ | RTK plugin + instructions | ✅ AGENTS.md | ✅ AGENTS.md |
 | **Codex** | ✅ (TOML) | RTK hook + instructions | ✅ instructions.md | ✅ instructions.md |
 | **Antigravity** | ✅ (JSON) | RTK hook + instructions | ✅ SKILL.md | ✅ AGENTS.md |
+| **GitHub Copilot** | ✅ | RTK + CodeGraph + ctx hooks | ✅ instructions.md | ✅ instructions.md |
+| **Droid** | ✅ | PreToolUse cleanup | ✅ AGENTS.md | ✅ AGENTS.md |
 
 ## 📦 What Gets Installed
 
@@ -45,6 +49,8 @@
 | **Caveman** | Markdown from GitHub | Communication mode that cuts LLM response tokens **~75%** |
 | **CodeGraph** | `npm install -g` | Pre-indexed code knowledge graph — **fewer tool calls** |
 | **Context-Mode**| `npm install -g` | MCP server that sandboxes tool output — **98% context reduction** |
+| **Ponytail** | `npm install -g` | Forces laziest working solution — YAGNI, stdlib first, delete over add |
+| **Principles** | Bundled | Agent coding standards — think before code, simplicity, surgical edits |
 
 ## 🚀 Getting Started
 
@@ -82,6 +88,8 @@ toksave
 | `toksave doctor --fix` | Repair unhealthy tool installations, then report health after repair |
 | `toksave update` | Update all tools to latest versions |
 | `toksave uninstall` | Remove toksave wiring from agents |
+| `toksave disable` | Remove all wire/unwire + owner entries for all agents |
+| `toksave index` | Pre-build CodeGraph index in current directory |
 | `toksave self-update` | Update the toksave CLI itself |
 
 ### Helpful Flags
@@ -107,7 +115,7 @@ bun install
 # Development tasks
 bun run src/index.ts      # Run CLI in dev mode
 bun run typecheck         # Run TypeScript checks
-bun test                  # Run unit tests
+bun test                  # Run unit tests (143 tests) 
 bun run lint              # Lint with Biome
 bun run build             # Build local binary
 

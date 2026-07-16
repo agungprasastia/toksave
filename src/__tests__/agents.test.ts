@@ -387,3 +387,27 @@ describe("agent detection config-dir fallback", () => {
     spy.mockRestore();
   });
 });
+
+describe("OpenCode auto-index plugin", () => {
+  test("plugin file is created on install", () => {
+    opencode.installOpencodeAutoIndexPlugin();
+    const pluginPath = `${paths.opencodePaths().dir}/plugins/toksave-autoindex.js`;
+    expect(existsSync(pluginPath)).toBe(true);
+    const content = readFileSync(pluginPath, "utf-8");
+    expect(content).toContain("toksave index --auto");
+  });
+
+  test("plugin install is idempotent", () => {
+    opencode.installOpencodeAutoIndexPlugin();
+    opencode.installOpencodeAutoIndexPlugin();
+    const pluginPath = `${paths.opencodePaths().dir}/plugins/toksave-autoindex.js`;
+    expect(existsSync(pluginPath)).toBe(true);
+  });
+
+  test("plugin is removed on remove", () => {
+    opencode.installOpencodeAutoIndexPlugin();
+    opencode.removeOpencodeAutoIndexPlugin();
+    const pluginPath = `${paths.opencodePaths().dir}/plugins/toksave-autoindex.js`;
+    expect(existsSync(pluginPath)).toBe(false);
+  });
+});

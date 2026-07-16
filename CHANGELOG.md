@@ -5,6 +5,59 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-07-17
+
+### Added
+
+- **New agents: Copilot and Droid**: Full agent manifest, detection, wire/unwire/verify for all 6 tools (RTK, Caveman, CodeGraph, Context-Mode, Ponytail, Principles). Added to registry, agent index, and matrix test.
+  - [src/agents/copilot.ts](src/agents/copilot.ts) — GitHub Copilot agent with MCP + IDE MCP wiring, RTK hook, CodeGraph index hook, Context-Mode hook, copilot-instructions.md sync.
+  - [src/agents/droid.ts](src/agents/droid.ts) — Droid agent with MCP + AGENTS.md wiring, PreToolUse hook removal for context-mode.
+
+- **New tools: Ponytail and Principles**:
+  - [src/tools/ponytail.ts](src/tools/ponytail.ts) — Ponytail npm package, version detection, install/uninstall.
+  - [src/tools/principles.ts](src/tools/principles.ts) — Principles tool with owner-based verify.
+
+- **Unified-block content system**: Replaced per-agent ctx-rules/rtk-rules with a shared `unified-block.ts` content system using marker-based blocks. All agents now share a single `agent-instructions.ts` for standard content blocks.
+  - [src/util/unified-block.ts](src/util/unified-block.ts) — `writeOwner()`, `removeOwner()`, `hasOwner()`, `writeBlock()`, `removeBlock()` helpers.
+  - [src/util/separators.ts](src/util/separators.ts) — Standard marker separators.
+  - [src/content/agent-instructions.ts](src/content/agent-instructions.ts) — Unified content templates.
+  - Migrated Claude Code, OpenCode, Codex, Antigravity from ctx-rules/rtk-rules blocks.
+
+- **Caveman marketplace & skills CLI**: Caveman now supports installing skills from marketplace URLs, has a `skills` subcommand, and an OpenCode plugin for skill discovery.
+  - [src/tools/caveman.ts](src/tools/caveman.ts) — `installCavemanSkill()`, `resolveCavemanBin()`, `registerCavemanOpencode()`, `installedSkills()`, `opencodePluginInstalled()`, marketplace URL support.
+
+- **Progress tree & runStatus**: New [src/util/progress.ts](src/util/progress.ts) with `SectionProgress`, `RootSectionProgress`, `runStatus()` spinner with dynamic sections.
+
+- **Version utils & health**: New [src/util/version.ts](src/util/version.ts) with `gatherVersions()`, `semverCompare()`, `semverGte()`, `countOutdated()`. New [src/util/deps.ts](src/util/deps.ts) with `ensureDeps()`. New [src/util/mcpspawn.ts](src/util/mcpspawn.ts) with `pickMcpSpawn()`, `wrapAutoIndex()`.
+
+- **Enhanced colors**: [src/util/colors.ts](src/util/colors.ts) now exports `C` (Cyan, Bold, etc), `L` logger with `.sub()` / `.ok()`, `StdoutIsTTY`.
+
+- **CodeGraph real install**: [src/tools/codegraph.ts](src/tools/codegraph.ts) now has `realInstall()` with progress bars, background auto-index via `codegraphIndexBg()`, and `indexProject()` that discovers and indexes directories.
+
+- **Context-Mode for Copilot + Droid**: Added context-mode wiring for the two new agents in [src/tools/caveman.ts](src/tools/caveman.ts) (codex handler cleanup) and [src/agents/copilot.ts](src/agents/copilot.ts) / [src/agents/droid.ts](src/agents/droid.ts).
+
+- **RTK hook override + stripRtkRef**: [src/agents/claude.ts](src/agents/claude.ts) now includes `overrideClaudeRtkHook()` to replace existing RTK hooks, and `stripRtkRefFromMd()` to clean up old references.
+
+- **Matrix test (36 combos)**: New parametrized test in [src/__tests__/agents.test.ts](src/__tests__/agents.test.ts) covering all 6 agents × 6 tools wire→verify→unwire→verify cycles.
+
+### Changed
+
+- **Agent wiring migration**: Claude Code, OpenCode, Codex, Antigravity wiring moved from ctx-rules/rtk-rules content system to unified-block content system. Antigravity GEMINI.md rules cleaned up. Codex context-mode hook cleanup.
+
+- **Paths extended**: [src/util/paths.ts](src/util/paths.ts) added `toksaveAbs()`, `copilotPaths()`, `droidPaths()`, `opencodeKnownBinDirs()`, `opencodeDesktopPaths()`.
+
+- **Registry expanded**: [src/registry.ts](src/registry.ts) now includes Copilot, Droid, Ponytail, Principles agents and tools. Added `ALL_AGENTS` export with full agent manifest data.
+
+- **CLI updated**: [src/cli.ts](src/cli.ts) and [src/index.ts](src/index.ts) register new commands, dry-run flag support, colorized output.
+
+- **Commands enhanced**: `doctor` now shows `--offline` status cleaner. `update` handles Copilot/Droid. `uninstall` handles new agents/tools. `runmcp` now supports `--agent` flag, `disable` command added. `build-index` updated for codegraph changes.
+
+### Fixed
+
+- **Opencode context-mode verify**: `verify("context-mode")` was checking `mcp.context-mode` which gets deleted during wire (plugin entry used instead). Changed to check plugin array. Also fixed `unwire` to remove the plugin entry instead of the missing MCP entry.
+
+- **Caveman SKILL.md version fallback**: `cavemanInstalled()` now checks for the version field in SKILL.md, falling back to the constant only when absent.
+
 ## [0.7.1] - 2026-07-06
 
 ### Fixed
