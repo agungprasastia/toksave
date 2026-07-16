@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import pc from "picocolors";
 import {
@@ -13,9 +14,10 @@ import {
 } from "../registry.js";
 import * as colors from "../util/colors.js";
 import { removeWire } from "../util/manifest.js";
+import * as paths from "../util/paths.js";
 import { cacheDir } from "../util/paths.js";
 import { Progress } from "../util/progress.js";
-import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
+import { confirm, isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
 
 /** Run the uninstall command: unwire tools from agents. */
 export async function run(
@@ -77,16 +79,15 @@ export async function run(
     s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
   }
 
-  // ── Cleanup cache if full removal ───────────────────────
+  // ── Cleanup cache + purge binaries if full removal ──────
   if (!opts.dryRun && tools.length === ALL_TOOLS.length && agentIds.length === detected.length) {
     const cache = cacheDir();
     if (existsSync(cache)) {
       try {
         rmSync(cache, { recursive: true, force: true });
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     }
+    await purgeBinariesIfConfirmed(opts);
   }
 
   // ── Summary ─────────────────────────────────────────────
@@ -96,4 +97,35 @@ export async function run(
   colors.ok(`Uninstalled ${toolLabels.join(", ")} from ${agentLabels.join(", ")}.`);
   console.log();
   return 0;
+}
+
+async function purgeBinariesIfConfirmed(opts: RunOpts): Promise<void> {
+  if (opts.dryRun || process.env.TOKSAVE_TEST === "1") return;
+  let doPurge = opts.yes;
+  if (!doPurge && isInteractive()) {
+    doPurge = await confirm(
+      "Also remove binaries/packages toksave installed (rtk, npm globals)?",
+      false,
+    );
+  }
+  if (!doPurge) return;
+
+  // rtk
+  try {
+    const localBin = paths.localBin();
+    const rtkPath = process.platform === "win32" ? `${localBin}/rtk.exe` : `${localBin}/rtk`;
+    if (existsSync(rtkPath)) {
+      spawnSync(rtkPath, ["init", "--uninstall"], { timeout: 5000 });
+      try {
+        rmSync(rtkPath, { force: true });
+      } catch {}
+    }
+  } catch {}
+
+  // npm globals
+  for (const pkg of ["context-mode", "@colbymchenry/codegraph", "@dietrichgebert/ponytail"]) {
+    try {
+      spawnSync("npm", ["uninstall", "-g", pkg], { timeout: 10000 });
+    } catch {}
+  }
 }

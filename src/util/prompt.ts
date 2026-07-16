@@ -14,6 +14,41 @@ export function isInteractive(): boolean {
   return process.stdout.isTTY === true;
 }
 
+export async function confirm(message: string, defaultValue = false): Promise<boolean> {
+  if (!isInteractive()) return defaultValue;
+  return new Promise((resolve) => {
+    const { stdin, stdout } = process;
+    const hint = defaultValue ? "(Y/n)" : "(y/N)";
+    stdout.write(`${pc.cyan("?")} ${message} ${pc.dim(hint)} `);
+    readline.emitKeypressEvents(stdin);
+    if (stdin.isTTY) stdin.setRawMode(true);
+    stdin.resume();
+    const onKey = (str: string) => {
+      const lower = str.toLowerCase();
+      if (lower === "y") {
+        cleanup();
+        resolve(true);
+      } else if (lower === "n") {
+        cleanup();
+        resolve(false);
+      } else if (str === "\r" || str === "\n") {
+        cleanup();
+        resolve(defaultValue);
+      } else if (str === "\u0003") {
+        cleanup();
+        process.exit(1);
+      }
+    };
+    function cleanup() {
+      stdout.write("\n");
+      if (stdin.isTTY) stdin.setRawMode(false);
+      stdin.removeListener("data", onKey);
+      stdin.pause();
+    }
+    stdin.on("data", onKey);
+  });
+}
+
 export async function multiSelect(title: string, options: SelectOption[]): Promise<string[]> {
   if (!isInteractive()) {
     return options.filter((o) => o.selected && !o.disabled).map((o) => o.value);

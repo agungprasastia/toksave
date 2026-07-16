@@ -9,12 +9,16 @@ import {
 } from "../registry.js";
 
 describe("Registry", () => {
-  test("ALL_AGENTS has 4 entries", () => {
-    expect(ALL_AGENTS).toHaveLength(4);
+  test("ALL_AGENTS has 6 entries (including copilot, droid)", () => {
+    expect(ALL_AGENTS).toHaveLength(6);
+    expect(ALL_AGENTS.map((a) => a.id)).toContain("copilot");
+    expect(ALL_AGENTS.map((a) => a.id)).toContain("droid");
   });
 
-  test("ALL_TOOLS has 4 entries", () => {
-    expect(ALL_TOOLS).toHaveLength(4);
+  test("ALL_TOOLS has 6 entries (including ponytail, principles)", () => {
+    expect(ALL_TOOLS).toHaveLength(6);
+    expect(ALL_TOOLS.map((t) => t.id)).toContain("ponytail");
+    expect(ALL_TOOLS.map((t) => t.id)).toContain("principles");
   });
 
   test("agentInfo returns correct data", () => {
@@ -34,6 +38,8 @@ describe("Registry", () => {
     expect(parseAgentId("OPENCODE")).toBe("opencode");
     expect(parseAgentId("Codex")).toBe("codex");
     expect(parseAgentId("antigravity")).toBe("antigravity");
+    expect(parseAgentId("copilot")).toBe("copilot");
+    expect(parseAgentId("droid")).toBe("droid");
   });
 
   test("parseAgentId invalid", () => {
@@ -47,6 +53,10 @@ describe("Registry", () => {
     expect(parseToolId("codegraph")).toBe("codegraph");
     expect(parseToolId("context-mode")).toBe("context-mode");
     expect(parseToolId("contextmode")).toBe("context-mode");
+    expect(parseToolId("ponytail")).toBe("ponytail");
+    expect(parseToolId("principles")).toBe("principles");
+    expect(parseToolId("karpathy-skills")).toBe("principles");
+    expect(parseToolId("karpathy")).toBe("principles");
   });
 
   test("parseToolId invalid", () => {

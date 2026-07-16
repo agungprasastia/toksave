@@ -140,8 +140,22 @@ export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promis
     console.log();
     colors.info("Run `toksave` to fix.");
   }
+
+  printRepoFooter();
   console.log();
   return 0;
+}
+
+function printRepoFooter(): void {
+  if (process.env.TOKSAVE_TEST === "1") return;
+  const repoURL = "https://github.com/agungprasastia/toksave";
+  const issuesURL = `${repoURL}/issues`;
+  console.log();
+  console.log(`  ${pc.dim("─".repeat(52))}`);
+  console.log(`  ${pc.dim("If toksave helps, please star it here: ")}${pc.cyan(repoURL)}`);
+  console.log(
+    `  ${pc.dim("If you hit any issue or have ideas, please raise it here: ")}${pc.cyan(issuesURL)}`,
+  );
 }
 
 function printHealthIssues(health: HealthStatus): void {

@@ -56,22 +56,49 @@ export function runIndex(auto = false): number {
     console.log("");
   }
 
-  const installed = codegraphInstalled();
-  if (!installed) {
+  if (process.env.TOKSAVE_TEST !== "1") {
+    const installed = codegraphInstalled();
+    if (!installed) {
+      if (!auto) {
+        console.log(
+          `  \x1b[90m• \x1b[0mCodeGraph  \x1b[90mnot installed — run toksave first\x1b[0m`,
+        );
+      }
+      return 1;
+    }
+  }
+
+  try {
+    const result = indexProject(
+      dir,
+      auto
+        ? undefined
+        : {
+            verbose: false,
+            onProgress: (m) => {
+              if (!auto) console.log(`  ${m}`);
+            },
+          },
+    );
+    const ok = result.success;
     if (!auto) {
-      console.log(`  \x1b[90m• \x1b[0mCodeGraph  \x1b[90mnot installed — run toksave first\x1b[0m`);
+      if (ok) {
+        console.log(`  \x1b[32m✔ \x1b[0mCodeGraph  \x1b[90mindexed\x1b[0m`);
+      } else {
+        console.log(`  \x1b[31m✖ \x1b[0mCodeGraph  \x1b[90mfailed to index\x1b[0m`);
+      }
+      console.log("");
+      if (ok) {
+        console.log(`  \x1b[32m✔ Project indexed.\x1b[0m`);
+      }
+      console.log("");
+    }
+    return ok ? 0 : 1;
+  } catch (err) {
+    if (!auto) {
+      console.log(`  \x1b[31m✖ \x1b[0mCodeGraph  \x1b[90m${(err as Error).message}\x1b[0m`);
+      console.log("");
     }
     return 1;
   }
-
-  const ok = indexProject(dir);
-  if (!auto) {
-    if (ok) {
-      console.log(`  \x1b[32m✔ \x1b[0mCodeGraph  \x1b[90mindexed\x1b[0m`);
-    } else {
-      console.log(`  \x1b[31m✖ \x1b[0mCodeGraph  \x1b[90mfailed to index\x1b[0m`);
-    }
-  }
-
-  return ok ? 0 : 1;
 }

@@ -1,16 +1,15 @@
 import { existsSync, rmSync } from "node:fs";
 import { getOrCreateObject, hasKey, readJsonFile, writeJsonFile } from "../config/json.js";
-import {
-  CTX_RULES_BLOCK,
-  hasCtxRules,
-  removeCtxRules as stripCtxRules,
-} from "../content/ctx-rules.js";
-import { hasRtkRules, RTK_RULES_BLOCK, removeRtkRules } from "../content/rtk-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
-import { getCavemanInstructionBlock } from "../tools/caveman.js";
+import {
+  opencodePluginInstalled,
+  registerCavemanOpencode,
+  unregisterCavemanOpencode,
+} from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
 import { findBinaryIn, isOnPath } from "../util/detect.js";
 import * as paths from "../util/paths.js";
+import { hasOwner, removeOwner, writeOwner } from "../util/unified-block.js";
 
 /** Detect if OpenCode is installed. */
 export function detect(): Detection {
@@ -19,8 +18,6 @@ export function detect(): Detection {
   if (hasCli && hasDesktop) return { installed: true, source: "cli+desktop" };
   if (hasCli) return { installed: true, source: "cli" };
   if (hasDesktop) return { installed: true, source: "desktop" };
-  // Config-dir fallback only in test mode — residual config dirs from uninstalled
-  // apps cause false positives in production.
   if (process.env.NODE_ENV === "test" && existsSync(paths.opencodePaths().dir)) {
     return { installed: true, source: "config" };
   }
@@ -31,23 +28,38 @@ export function detect(): Detection {
 export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
-      return wireMcp(
-        "codegraph",
-        [paths.toksaveAbs(), "runmcp", "codegraph", "serve", "--mcp"],
-        opts,
-      );
+      wireMcp("codegraph", [paths.toksaveAbs(), "runmcp", "codegraph", "serve", "--mcp"], opts);
+      if (!opts.dryRun) {
+        writeOwner("opencode", "codegraph");
+        unwireAutoIndexOpenCode();
+      }
+      return true;
     case "context-mode":
-      wireMcp("context-mode", [paths.toksaveAbs(), "runmcp", "context-mode"], opts);
-      if (!opts.dryRun) wireCtxRules(opts);
+      wireMcpContextMode(opts);
+      if (!opts.dryRun) writeOwner("opencode", "context-mode");
       return true;
     case "caveman":
-      return wireCaveman(opts);
+      if (!opts.dryRun) {
+        registerCavemanOpencode();
+        writeOwner("opencode", "caveman");
+      }
+      return true;
     case "rtk":
       if (!opts.dryRun) {
         wireRtkPlugin(opts);
-        wireRtkRules(opts);
       }
       return true;
+    case "ponytail":
+      if (!opts.dryRun) {
+        registerPonytailPlugin();
+        writeOwner("opencode", "ponytail");
+      }
+      return true;
+    case "principles":
+      if (!opts.dryRun) writeOwner("opencode", "principles");
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -56,18 +68,29 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
       removeMcp("codegraph");
+      removeOwner("opencode", "codegraph");
       return true;
     case "context-mode":
-      removeMcp("context-mode");
-      removeCtxRulesFile();
+      removeContextModePlugin();
+      removeOwner("opencode", "context-mode");
       return true;
     case "caveman":
-      removeCavemanRules();
+      unregisterCavemanOpencode();
+      removeOwner("opencode", "caveman");
       return true;
     case "rtk":
       removeRtkPlugin();
-      removeRtkRulesFile();
       return true;
+    case "ponytail":
+      unregisterPonytailPlugin();
+      removeOwner("opencode", "ponytail");
+      removePonytailArtifacts();
+      return true;
+    case "principles":
+      removeOwner("opencode", "principles");
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -77,13 +100,17 @@ export function verify(tool: ToolId): boolean | null {
     case "codegraph":
       return hasMcp("codegraph");
     case "context-mode":
-      return hasMcp("context-mode");
+      return hasContextModePlugin();
     case "caveman":
-      return hasCavemanRules();
-    case "rtk": {
-      const rules = paths.readFile(paths.opencodePaths().agentsMd);
-      return isOnPath("rtk") && hasRtkPlugin() && !!rules && hasRtkRules(rules);
-    }
+      return opencodePluginInstalled() || hasOwner("opencode", "caveman");
+    case "rtk":
+      return isOnPath("rtk") && hasRtkPlugin();
+    case "ponytail":
+      return hasOwner("opencode", "ponytail") || ponytailPluginInstalled();
+    case "principles":
+      return hasOwner("opencode", "principles");
+    default:
+      return null;
   }
 }
 
@@ -97,7 +124,6 @@ function wireMcp(toolId: string, command: string[], opts: RunOpts): boolean {
   const p = paths.opencodePaths();
   const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
 
-  // Ensure $schema
   if (!hasKey(cfg, "$schema")) {
     cfg.$schema = "https://opencode.ai/config.json";
   }
@@ -123,6 +149,41 @@ function wireMcp(toolId: string, command: string[], opts: RunOpts): boolean {
   return true;
 }
 
+function wireMcpContextMode(opts: RunOpts): boolean {
+  if (opts.dryRun) return true;
+  const p = paths.opencodePaths();
+  paths.ensureDir(p.dir);
+  const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
+  if (!hasKey(cfg, "$schema")) cfg.$schema = "https://opencode.ai/config.json";
+  // Ensure bare context-mode plugin entry, remove versioned
+  setContextModePluginBare(cfg);
+  // Also ensure mcp entry for context-mode via local runmcp (if using plugin bare, mcp comes from plugin)
+  // For safety, ensure mcp entry not duplicated as old style
+  const mcp = getOrCreateObject(cfg, "mcp");
+  if (mcp["context-mode"]) {
+    delete mcp["context-mode"];
+  }
+  writeJsonFile(p.config, cfg);
+  return true;
+}
+
+function setContextModePluginBare(cfg: Record<string, unknown>): void {
+  const plugins = (cfg.plugin as unknown[]) ?? [];
+  const kept: unknown[] = [];
+  for (const p of plugins) {
+    if (typeof p === "string" && (p === "context-mode" || p.startsWith("context-mode@"))) continue;
+    kept.push(p);
+  }
+  kept.push("context-mode");
+  cfg.plugin = kept;
+  // Remove old mcp.context-mode if exists
+  const mcp = (cfg.mcp as Record<string, unknown>) ?? {};
+  if (mcp["context-mode"]) {
+    delete mcp["context-mode"];
+    if (Object.keys(mcp).length === 0) delete (cfg as Record<string, unknown>).mcp;
+  }
+}
+
 function removeMcp(toolId: string): void {
   const p = paths.opencodePaths();
   const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
@@ -140,63 +201,37 @@ function hasMcp(toolId: string): boolean {
   return !!mcp?.[toolId];
 }
 
-// ─── Caveman via AGENTS.md ──────────────────────────────────
-
-async function wireCaveman(opts: RunOpts): Promise<boolean> {
-  if (opts.dryRun) return true;
+function hasContextModePlugin(): boolean {
   const p = paths.opencodePaths();
-  paths.ensureDir(p.dir);
-
-  verbose("Writing Caveman rules into OpenCode AGENTS.md", opts.verbose);
-
-  const existing = paths.readFile(p.agentsMd) ?? "";
-  if (existing.includes("CAVEMAN_START") && !opts.upgrade) return true;
-
-  const cavemanBlock = await getCavemanInstructionBlock();
-  const stripped = existing.replace(
-    /\r?\n?<!--\s*CAVEMAN_START[\s\S]*?CAVEMAN_END\s*-->\r?\n?/g,
-    "\n",
+  const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
+  const plugins = cfg.plugin as unknown[] | undefined;
+  if (!Array.isArray(plugins)) return false;
+  return plugins.some(
+    (pl) => typeof pl === "string" && (pl === "context-mode" || pl.startsWith("context-mode@")),
   );
-  paths.writeFile(p.agentsMd, `${stripped}\n${cavemanBlock}`);
-  return true;
 }
 
-function removeCavemanRules(): void {
+function removeContextModePlugin(): void {
   const p = paths.opencodePaths();
-  const existing = paths.readFile(p.agentsMd);
-  if (!existing) return;
-  const stripped = existing
-    .replace(/\r?\n?<!--\s*CAVEMAN_START[\s\S]*?CAVEMAN_END\s*-->\r?\n?/g, "")
-    .trim();
-  paths.writeFile(p.agentsMd, stripped);
+  const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
+  const plugins = cfg.plugin as unknown[] | undefined;
+  if (!Array.isArray(plugins)) return;
+  const kept = plugins.filter(
+    (pl) => !(typeof pl === "string" && (pl === "context-mode" || pl.startsWith("context-mode@"))),
+  );
+  cfg.plugin = kept;
+  writeJsonFile(p.config, cfg);
 }
 
-function hasCavemanRules(): boolean {
-  const p = paths.opencodePaths();
-  const existing = paths.readFile(p.agentsMd);
-  return !!existing?.includes("CAVEMAN_START");
+// Legacy auto-index cleanup (opencode/plugins/tokless-codegraph-init.js)
+function unwireAutoIndexOpenCode(): void {
+  const legacyPath = `${paths.opencodePaths().dir}/plugins/tokless-codegraph-init.js`;
+  try {
+    rmSync(legacyPath, { force: true });
+  } catch {}
 }
 
-// ─── Context-Mode rules ─────────────────────────────────────
-
-function wireCtxRules(opts: RunOpts): void {
-  const p = paths.opencodePaths();
-  paths.ensureDir(p.dir);
-
-  verbose("Injecting Context-Mode rules into OpenCode AGENTS.md", opts.verbose);
-
-  const existing = paths.readFile(p.agentsMd) ?? "";
-  if (hasCtxRules(existing)) return;
-
-  paths.writeFile(p.agentsMd, `${existing}\n${CTX_RULES_BLOCK}`);
-}
-
-function removeCtxRulesFile(): void {
-  const p = paths.opencodePaths();
-  const existing = paths.readFile(p.agentsMd);
-  if (!existing) return;
-  paths.writeFile(p.agentsMd, stripCtxRules(existing));
-}
+// ─── RTK plugin ──────────────────────────────────────────────
 
 function wireRtkPlugin(opts: RunOpts): void {
   const pluginFile = rtkPluginPath();
@@ -207,9 +242,7 @@ function wireRtkPlugin(opts: RunOpts): void {
 function removeRtkPlugin(): void {
   try {
     rmSync(rtkPluginPath(), { force: true });
-  } catch {
-    /* ignore */
-  }
+  } catch {}
 }
 
 function hasRtkPlugin(): boolean {
@@ -230,19 +263,70 @@ const RTK_PLUGIN = `export const Plugin = async () => ({
 });
 `;
 
-function wireRtkRules(opts: RunOpts): void {
+// ─── Ponytail plugin ─────────────────────────────────────────
+
+const PONYTAIL_PKG = "@dietrichgebert/ponytail";
+
+function registerPonytailPlugin(): void {
   const p = paths.opencodePaths();
-  verbose("Injecting RTK rules into OpenCode AGENTS.md", opts.verbose);
-
-  const existing = paths.readFile(p.agentsMd) ?? "";
-  if (hasRtkRules(existing) && !opts.upgrade) return;
-
-  paths.writeFile(p.agentsMd, `${removeRtkRules(existing)}\n${RTK_RULES_BLOCK}`);
+  const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
+  if (!hasKey(cfg, "$schema")) cfg.$schema = "https://opencode.ai/config.json";
+  const plugins = (cfg.plugin as unknown[]) ?? [];
+  // Check already present
+  if (
+    plugins.some((pl) => typeof pl === "string" && pl.toLowerCase() === PONYTAIL_PKG.toLowerCase())
+  ) {
+    return;
+  }
+  // Insert before context-mode if present
+  let inserted = false;
+  const out: unknown[] = [];
+  for (const pl of plugins) {
+    if (
+      !inserted &&
+      typeof pl === "string" &&
+      (pl === "context-mode" || pl.startsWith("context-mode@"))
+    ) {
+      out.push(PONYTAIL_PKG);
+      inserted = true;
+    }
+    out.push(pl);
+  }
+  if (!inserted) out.push(PONYTAIL_PKG);
+  cfg.plugin = out;
+  writeJsonFile(p.config, cfg);
 }
 
-function removeRtkRulesFile(): void {
+function unregisterPonytailPlugin(): void {
   const p = paths.opencodePaths();
-  const existing = paths.readFile(p.agentsMd);
-  if (!existing) return;
-  paths.writeFile(p.agentsMd, removeRtkRules(existing));
+  const cfg = readJsonFile(p.config) as Record<string, unknown> | null;
+  if (!cfg) return;
+  const plugins = cfg.plugin as unknown[] | undefined;
+  if (!Array.isArray(plugins)) return;
+  const kept = plugins.filter(
+    (pl) => !(typeof pl === "string" && pl.toLowerCase() === PONYTAIL_PKG.toLowerCase()),
+  );
+  cfg.plugin = kept;
+  writeJsonFile(p.config, cfg);
+}
+
+function ponytailPluginInstalled(): boolean {
+  const p = paths.opencodePaths();
+  const cfg = readJsonFile(p.config) as Record<string, unknown> | null;
+  if (!cfg) return false;
+  const plugins = cfg.plugin as unknown[] | undefined;
+  if (!Array.isArray(plugins)) return false;
+  return plugins.some(
+    (pl) => typeof pl === "string" && pl.toLowerCase() === PONYTAIL_PKG.toLowerCase(),
+  );
+}
+
+function removePonytailArtifacts(): void {
+  const dir = paths.opencodePaths().dir;
+  try {
+    rmSync(`${dir}/plugins/ponytail`, { recursive: true, force: true });
+  } catch {}
+  try {
+    rmSync(`${dir}/.ponytail-active`, { force: true });
+  } catch {}
 }

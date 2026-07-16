@@ -1,9 +1,19 @@
 import { readFileSync } from "node:fs";
 
 /**
- * RTK hook for Codex and Antigravity PreToolUse.
+ * RTK hook for Codex, Antigravity, Claude, Copilot, Droid PreToolUse.
  * Receives tool invocation JSON on stdin, prefixes Bash commands with `rtk`.
+ * For tokless parity: supports variants agy, codex, claude, copilot, droid.
  */
+
+export function runRtkHookVariant(agent: string): number {
+  // Set argv[3] for targetAgent() detection if called via early dispatch
+  if (agent && !process.argv[3]) {
+    process.argv[3] = agent;
+  }
+  return runRtkHook();
+}
+
 export function runRtkHook(): number {
   try {
     const input = readFileSync(0, "utf-8");

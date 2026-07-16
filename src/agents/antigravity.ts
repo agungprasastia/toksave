@@ -6,17 +6,12 @@ import {
   readJsonFile,
   writeJsonFile,
 } from "../config/json.js";
-import {
-  CTX_RULES_BLOCK,
-  hasCtxRules,
-  removeCtxRules as stripCtxRules,
-} from "../content/ctx-rules.js";
-import { hasRtkRules, RTK_RULES_BLOCK, removeRtkRules } from "../content/rtk-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
 import { getSkillContent } from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
 import { findBinaryIn } from "../util/detect.js";
 import * as paths from "../util/paths.js";
+import { hasOwner, removeOwner, writeOwner } from "../util/unified-block.js";
 
 /** Detect if Antigravity is installed. */
 export function detect(): Detection {
@@ -33,26 +28,47 @@ export function detect(): Detection {
 export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
-      wireMcp("codegraph", paths.toksaveAbs(), ["runmcp", "codegraph", "serve", "--mcp"], opts);
-      if (!opts.dryRun) allowEntry("mcp(codegraph/*)");
+      wireMcp(
+        "codegraph",
+        paths.toksaveAbs(),
+        ["runmcp", "--agent", "antigravity", "codegraph", "serve", "--mcp"],
+        opts,
+      );
+      if (!opts.dryRun) {
+        allowEntry("mcp(codegraph/*)");
+        writeOwner("antigravity", "codegraph");
+        installCodegraphIndexHook();
+      }
       return true;
     case "context-mode":
-      wireMcp("context-mode", paths.toksaveAbs(), ["runmcp", "context-mode"], opts);
+      wireMcp(
+        "context-mode",
+        paths.toksaveAbs(),
+        ["runmcp", "--agent", "antigravity", "context-mode"],
+        opts,
+      );
       if (!opts.dryRun) {
         allowEntry("mcp(context-mode/*)");
         installContextModeHook(opts);
-        wireCtxRules(opts);
+        writeOwner("antigravity", "context-mode");
       }
       return true;
     case "rtk":
       if (!opts.dryRun) {
         allowEntry("command(rtk)");
         installRtkHook(opts);
-        wireRtkRules(opts);
       }
       return true;
     case "caveman":
       return wireCaveman(opts);
+    case "ponytail":
+      if (!opts.dryRun) writeOwner("antigravity", "ponytail");
+      return true;
+    case "principles":
+      if (!opts.dryRun) writeOwner("antigravity", "principles");
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -61,19 +77,28 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
       removeMcp("codegraph");
+      removeOwner("antigravity", "codegraph");
+      removeCodegraphIndexHook();
       return true;
     case "context-mode":
       removeMcp("context-mode");
       removeContextModeHook();
-      removeCtxRulesFile();
+      removeOwner("antigravity", "context-mode");
       return true;
     case "rtk":
       removeRtkHook();
-      removeRtkRulesFile();
       return true;
     case "caveman":
       removeCaveman();
       return true;
+    case "ponytail":
+      removeOwner("antigravity", "ponytail");
+      return true;
+    case "principles":
+      removeOwner("antigravity", "principles");
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -84,12 +109,16 @@ export function verify(tool: ToolId): boolean | null {
       return hasMcp("codegraph");
     case "context-mode":
       return hasMcp("context-mode");
-    case "rtk": {
-      const rules = paths.readFile(paths.antigravityPaths().agentsMd);
-      return hasRtkHook() && !!rules && hasRtkRules(rules);
-    }
+    case "rtk":
+      return hasRtkHook();
     case "caveman":
-      return hasCavemanSkill();
+      return hasCavemanSkill() || hasOwner("antigravity", "caveman");
+    case "ponytail":
+      return hasOwner("antigravity", "ponytail");
+    case "principles":
+      return hasOwner("antigravity", "principles");
+    default:
+      return null;
   }
 }
 
@@ -100,7 +129,6 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
 
   verbose(`Wiring MCP ${toolId} into Antigravity (multi-surface)`, opts.verbose);
 
-  // Phase 1: prepare all configs in memory
   const mcpFiles = paths.antigravityMcpFiles();
   const prepared: { file: string; cfg: Record<string, unknown> }[] = [];
   for (const f of mcpFiles) {
@@ -116,7 +144,6 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
     prepared.push({ file: f, cfg });
   }
 
-  // Phase 2: write all atomically, rollback on failure
   atomicWriteAll(prepared, `wire MCP ${toolId}`);
 }
 
@@ -143,7 +170,6 @@ function hasMcp(toolId: string): boolean {
 // ─── Permissions ─────────────────────────────────────────────
 
 function allowEntry(entry: string): void {
-  // Phase 1: prepare all configs in memory
   const settingsFiles = paths.antigravitySettingsFiles();
   const prepared: { file: string; cfg: Record<string, unknown> }[] = [];
   for (const f of settingsFiles) {
@@ -155,27 +181,22 @@ function allowEntry(entry: string): void {
     prepared.push({ file: f, cfg });
   }
 
-  // Phase 2: write all atomically, rollback on failure
   atomicWriteAll(prepared, `allow ${entry}`);
 }
-
-// ─── Atomic write helper ─────────────────────────────────────
 
 function atomicWriteAll(
   writes: { file: string; cfg: Record<string, unknown> }[],
   operation: string,
 ): void {
-  // Phase 1: capture originals for rollback
   const originals = new Map<string, string | null>();
   for (const { file } of writes) {
     try {
       originals.set(file, paths.readFile(file));
     } catch {
-      originals.set(file, null); // File doesn't exist yet
+      originals.set(file, null);
     }
   }
 
-  // Phase 2: write all files
   const written: string[] = [];
   try {
     for (const { file, cfg } of writes) {
@@ -183,21 +204,16 @@ function atomicWriteAll(
       written.push(file);
     }
   } catch (err) {
-    // Phase 3: rollback on failure
     for (const file of written) {
       const original = originals.get(file);
       if (original === null) {
         try {
           rmSync(file, { force: true });
-        } catch {
-          /* ignore */
-        }
+        } catch {}
       } else if (original !== undefined) {
         try {
           paths.writeFile(file, original);
-        } catch {
-          /* ignore */
-        }
+        } catch {}
       }
     }
     const msg = err instanceof Error ? err.message : String(err);
@@ -293,10 +309,60 @@ function removeContextModeHook(): void {
   }
 }
 
+// ─── Codegraph index hook ───────────────────────────────────
+
+function installCodegraphIndexHook(): void {
+  const hooksFile = paths.antigravityPaths().hooks;
+  paths.ensureDir(dirname(hooksFile));
+  const cfg = (readJsonFile(hooksFile) as Record<string, unknown>) ?? {};
+  const existing = (cfg as Record<string, unknown>).codegraphIndex as
+    | Record<string, unknown>
+    | undefined;
+  if (existing) return;
+  // Use generic hooks.json SessionStart style similar to tokless
+  const hooks = getOrCreateObject(cfg, "hooks");
+  const ss = (hooks.SessionStart as unknown[]) ?? [];
+  const command = `${paths.toksaveAbs()} agy-hook codegraph-index`;
+  if (!ss.some((g) => JSON.stringify(g).includes("codegraph-index"))) {
+    ss.push({
+      matcher: ".*",
+      hooks: [{ type: "command", command, timeout: 10 }],
+    });
+    hooks.SessionStart = ss as never;
+    writeJsonFile(hooksFile, cfg);
+  }
+}
+
+function removeCodegraphIndexHook(): void {
+  const hooksFile = paths.antigravityPaths().hooks;
+  const cfg = readJsonFile(hooksFile) as Record<string, unknown> | null;
+  if (!cfg) return;
+  const hooks = (cfg as Record<string, unknown>)?.hooks as Record<string, unknown> | undefined;
+  if (!hooks?.SessionStart) {
+    // Also check top-level codegraphIndex
+    if ((cfg as Record<string, unknown>).codegraphIndex) {
+      delete (cfg as Record<string, unknown>).codegraphIndex;
+      writeJsonFile(hooksFile, cfg);
+    }
+    return;
+  }
+  const ss = hooks.SessionStart as unknown[] | undefined;
+  if (!Array.isArray(ss)) return;
+  const filtered = ss.filter((g) => !JSON.stringify(g).includes("codegraph-index"));
+  if (filtered.length !== ss.length) {
+    if (filtered.length === 0) delete hooks.SessionStart;
+    else hooks.SessionStart = filtered as never;
+    writeJsonFile(hooksFile, cfg);
+  }
+}
+
 // ─── Caveman ─────────────────────────────────────────────────
 
 async function wireCaveman(opts: RunOpts): Promise<boolean> {
-  if (opts.dryRun) return true;
+  if (opts.dryRun) {
+    writeOwner("antigravity", "caveman");
+    return true;
+  }
   const gemini = paths.antigravityPaths().dir;
   const skillDir = join(gemini, "config", "skills", "caveman");
   paths.ensureDir(skillDir);
@@ -306,6 +372,7 @@ async function wireCaveman(opts: RunOpts): Promise<boolean> {
     const skillContent = await getSkillContent();
     paths.writeFile(skillFile, skillContent);
   }
+  writeOwner("antigravity", "caveman");
   return true;
 }
 
@@ -314,49 +381,11 @@ function removeCaveman(): void {
   const skillDir = join(gemini, "config", "skills", "caveman");
   try {
     rmSync(skillDir, { recursive: true, force: true });
-  } catch {
-    /* ignore */
-  }
+  } catch {}
+  removeOwner("antigravity", "caveman");
 }
 
 function hasCavemanSkill(): boolean {
   const gemini = paths.antigravityPaths().dir;
   return existsSync(join(gemini, "config", "skills", "caveman", "SKILL.md"));
-}
-
-// ─── Context-Mode rules ─────────────────────────────────────
-
-function wireCtxRules(opts: RunOpts): void {
-  const mdFile = paths.antigravityPaths().agentsMd;
-
-  verbose("Injecting Context-Mode rules into Antigravity AGENTS.md", opts.verbose);
-
-  const existing = paths.readFile(mdFile) ?? "";
-  if (hasCtxRules(existing)) return;
-
-  paths.writeFile(mdFile, `${existing}\n${CTX_RULES_BLOCK}`);
-}
-
-function removeCtxRulesFile(): void {
-  const mdFile = paths.antigravityPaths().agentsMd;
-  const existing = paths.readFile(mdFile);
-  if (!existing) return;
-  paths.writeFile(mdFile, stripCtxRules(existing));
-}
-
-function wireRtkRules(opts: RunOpts): void {
-  const p = paths.antigravityPaths();
-  verbose("Injecting RTK rules into Antigravity AGENTS.md", opts.verbose);
-
-  const existing = paths.readFile(p.agentsMd) ?? "";
-  if (hasRtkRules(existing) && !opts.upgrade) return;
-
-  paths.writeFile(p.agentsMd, `${removeRtkRules(existing)}\n${RTK_RULES_BLOCK}`);
-}
-
-function removeRtkRulesFile(): void {
-  const p = paths.antigravityPaths();
-  const existing = paths.readFile(p.agentsMd);
-  if (!existing) return;
-  paths.writeFile(p.agentsMd, removeRtkRules(existing));
 }

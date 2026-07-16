@@ -6,21 +6,12 @@ import {
   readJsonFile,
   writeJsonFile,
 } from "../config/json.js";
-import {
-  CTX_RULES_BLOCK,
-  hasCtxRules,
-  removeCtxRules as stripCtxRules,
-} from "../content/ctx-rules.js";
-import {
-  hasRtkRules,
-  RTK_RULES_BLOCK,
-  removeRtkRules as stripRtkRules,
-} from "../content/rtk-rules.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
-import { getSkillContent } from "../tools/caveman.js";
+import { cavemanExec, getSkillContent } from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
-import { findBinaryIn, isOnPath } from "../util/detect.js";
+import { findBinary, findBinaryIn, isOnPath } from "../util/detect.js";
 import * as paths from "../util/paths.js";
+import { hasOwner, removeOwner, writeOwner } from "../util/unified-block.js";
 
 /** Detect if Claude Code is installed. */
 export function detect(): Detection {
@@ -37,15 +28,18 @@ export function detect(): Detection {
 export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
-      return wireMcp(
-        "codegraph",
-        paths.toksaveAbs(),
-        ["runmcp", "codegraph", "serve", "--mcp"],
-        opts,
-      );
+      wireMcp("codegraph", paths.toksaveAbs(), ["runmcp", "codegraph", "serve", "--mcp"], opts);
+      if (!opts.dryRun) {
+        writeOwner("claude", "codegraph");
+        // Clean legacy auto-index SessionStart hooks (tokless/toksave index --auto)
+        unwireAutoIndexClaude();
+      }
+      return true;
     case "context-mode":
       wireMcp("context-mode", paths.toksaveAbs(), ["runmcp", "context-mode"], opts);
-      if (!opts.dryRun) wireCtxRules(opts);
+      if (!opts.dryRun) {
+        writeOwner("claude", "context-mode");
+      }
       return true;
     case "caveman":
       return wireCaveman(opts);
@@ -53,9 +47,18 @@ export async function wire(tool: ToolId, opts: RunOpts): Promise<boolean> {
       if (!opts.dryRun) {
         allowBashPattern("Bash(rtk *)");
         wireRtkHook(opts);
-        wireRtkRules(opts);
+        // Override rtk's own hook if present, strip @RTK.md ref
+        overrideClaudeRtkHook();
       }
       return true;
+    case "ponytail":
+      if (!opts.dryRun) writeOwner("claude", "ponytail");
+      return true;
+    case "principles":
+      if (!opts.dryRun) writeOwner("claude", "principles");
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -64,18 +67,26 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
   switch (tool) {
     case "codegraph":
       removeMcp("codegraph");
+      removeOwner("claude", "codegraph");
       return true;
     case "context-mode":
       removeMcp("context-mode");
-      removeCtxRules();
+      removeOwner("claude", "context-mode");
       return true;
     case "caveman":
       removeCaveman();
       return true;
     case "rtk":
       removeRtkHook();
-      removeRtkRulesFile();
       return true;
+    case "ponytail":
+      removeOwner("claude", "ponytail");
+      return true;
+    case "principles":
+      removeOwner("claude", "principles");
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -87,11 +98,15 @@ export function verify(tool: ToolId): boolean | null {
     case "context-mode":
       return hasMcp("context-mode");
     case "caveman":
-      return hasCavemanSkill();
-    case "rtk": {
-      const rules = paths.readFile(paths.claudePaths().agentsMd);
-      return isOnPath("rtk") && hasRtkHook() && !!rules && hasRtkRules(rules);
-    }
+      return hasCavemanSkill() || hasOwner("claude", "caveman");
+    case "rtk":
+      return isOnPath("rtk") && hasRtkHook();
+    case "ponytail":
+      return hasOwner("claude", "ponytail");
+    case "principles":
+      return hasOwner("claude", "principles");
+    default:
+      return null;
   }
 }
 
@@ -103,7 +118,6 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
 
   verbose(`Wiring MCP ${toolId} into Claude Code`, opts.verbose);
 
-  // Auto-approve MCP tools
   allowMcpTool(toolId);
 
   const cfg = (readJsonFile(p.globalJson) as Record<string, unknown>) ?? {};
@@ -111,7 +125,6 @@ function wireMcp(toolId: string, command: string, args: string[], opts: RunOpts)
 
   const entry: Record<string, unknown> = { type: "stdio", command, args };
 
-  // Check if already identical
   const srv = servers as Record<string, unknown>;
   const existing = srv[toolId] as { type?: unknown; command?: unknown; args?: unknown } | undefined;
   if (
@@ -225,10 +238,149 @@ function hasRtkHook(): boolean {
   );
 }
 
+// ─── RTK override — replace rtk's own "rtk hook claude" with toksave wrapper ─
+
+function overrideClaudeRtkHook(): void {
+  const p = paths.claudePaths();
+  const tok = paths.toksaveAbs();
+  const newCmd = `${tok} rtk-hook claude`;
+  const raw = paths.readFile(p.settings);
+  if (!raw) return;
+  try {
+    const cfg = JSON.parse(raw) as Record<string, unknown>;
+    const hooks = cfg.hooks as Record<string, unknown> | undefined;
+    if (!hooks) return;
+    const pre = hooks.PreToolUse as unknown[] | undefined;
+    if (!Array.isArray(pre)) return;
+    let changed = false;
+    for (const g of pre) {
+      const gm = g as Record<string, unknown>;
+      const inner = gm.hooks as unknown[] | undefined;
+      if (!Array.isArray(inner)) continue;
+      for (const h of inner) {
+        const hm = h as Record<string, unknown>;
+        const cmd = hm.command as string | undefined;
+        if (cmd?.includes("rtk hook claude") && !cmd.includes("rtk-hook claude")) {
+          hm.command = newCmd;
+          changed = true;
+        }
+      }
+    }
+    // Deduplicate groups with same command
+    if (pre.length > 1) {
+      const seen = new Set<string>();
+      const dedup: unknown[] = [];
+      for (const g of pre) {
+        const first = firstHookCommand(g);
+        if (!seen.has(first)) {
+          seen.add(first);
+          dedup.push(g);
+        } else {
+          changed = true;
+        }
+      }
+      if (changed) hooks.PreToolUse = dedup as never;
+    }
+    if (changed) {
+      const ordered = readJsonFile(p.settings) as Record<string, unknown>;
+      // Preserve order using existing config parser
+      const hooksMap = getOrCreateObject(ordered, "hooks");
+      hooksMap.PreToolUse = hooks.PreToolUse;
+      writeJsonFile(p.settings, ordered);
+    }
+  } catch {
+    /* ignore */
+  }
+  allowBashPattern("Bash(rtk *)");
+  // Remove RTK.md + strip @RTK.md ref
+  try {
+    const rtkMd = join(p.dir, "RTK.md");
+    rmSync(rtkMd, { force: true });
+  } catch {}
+  stripRtkRefFromMd(p.agentsMd);
+}
+
+function firstHookCommand(g: unknown): string {
+  const gm = g as Record<string, unknown> | undefined;
+  const arr = gm?.hooks as unknown[] | undefined;
+  if (!Array.isArray(arr) || arr.length === 0) return "";
+  const first = arr[0] as Record<string, unknown> | undefined;
+  return (first?.command as string) ?? "";
+}
+
+function stripRtkRefFromMd(filePath: string): void {
+  const raw = paths.readFile(filePath);
+  if (!raw) return;
+  const lines = raw.split("\n");
+  const kept = lines.filter((l) => {
+    const t = l.trim();
+    return !(t.startsWith("@") && t.endsWith("RTK.md"));
+  });
+  const result = kept.join("\n").trim();
+  if (!result) {
+    try {
+      rmSync(filePath, { force: true });
+    } catch {}
+    return;
+  }
+  if (result !== raw.trim()) {
+    paths.writeFile(filePath, `${result}\n`);
+  }
+}
+
+// Remove legacy auto-index SessionStart hooks (tokless index --auto)
+function unwireAutoIndexClaude(): void {
+  const p = paths.claudePaths();
+  if (!existsSync(p.settings)) return;
+  try {
+    const cfg = readJsonFile(p.settings) as Record<string, unknown>;
+    const hooks = (cfg?.hooks as Record<string, unknown>) ?? {};
+    const ss = hooks.SessionStart as unknown[] | undefined;
+    if (!Array.isArray(ss)) return;
+    const filtered = ss.filter((g) => {
+      const inner = (g as Record<string, unknown>)?.hooks as unknown[] | undefined;
+      if (!Array.isArray(inner)) return true;
+      return !inner.some((h) => {
+        const cmd = (h as Record<string, unknown>)?.command as string | undefined;
+        return cmd?.includes("index --auto");
+      });
+    });
+    if (filtered.length !== ss.length) {
+      if (filtered.length === 0) {
+        delete hooks.SessionStart;
+      } else {
+        hooks.SessionStart = filtered as never;
+      }
+      if (Object.keys(hooks).length === 0) {
+        delete (cfg as Record<string, unknown>).hooks;
+      }
+      writeJsonFile(p.settings, cfg);
+    }
+  } catch {}
+}
+
 // ─── Caveman wiring ─────────────────────────────────────────
 
 async function wireCaveman(opts: RunOpts): Promise<boolean> {
-  if (opts.dryRun) return true;
+  if (opts.dryRun) {
+    writeOwner("claude", "caveman");
+    return true;
+  }
+
+  if (process.env.NODE_ENV !== "test" && findBinary("claude")) {
+    const ok = cavemanExec(
+      "claude",
+      ["plugin", "marketplace", "add", "JuliusBrussee/caveman"],
+      opts,
+      "claude plugin marketplace add JuliusBrussee/caveman && claude plugin install caveman@caveman",
+    );
+    if (ok) {
+      cavemanExec("claude", ["plugin", "install", "caveman@caveman"], opts, "");
+    }
+    writeOwner("claude", "caveman");
+    return ok;
+  }
+
   const p = paths.claudePaths();
   const skillDir = join(p.skillsDir, "caveman");
   paths.ensureDir(skillDir);
@@ -238,6 +390,7 @@ async function wireCaveman(opts: RunOpts): Promise<boolean> {
     const skillContent = await getSkillContent();
     paths.writeFile(skillFile, skillContent);
   }
+  writeOwner("claude", "caveman");
   return true;
 }
 
@@ -246,52 +399,13 @@ function removeCaveman(): void {
   const skillDir = join(p.skillsDir, "caveman");
   try {
     rmSync(skillDir, { recursive: true, force: true });
-  } catch {
-    /* ignore */
-  }
+  } catch {}
+  removeOwner("claude", "caveman");
 }
 
 function hasCavemanSkill(): boolean {
   const p = paths.claudePaths();
-  return existsSync(join(p.skillsDir, "caveman", "SKILL.md"));
-}
-
-// ─── Context-Mode rules wiring ──────────────────────────────
-
-function wireCtxRules(opts: RunOpts): void {
-  const p = paths.claudePaths();
-  const mdFile = p.agentsMd;
-
-  verbose("Injecting Context-Mode rules into Claude AGENTS.md", opts.verbose);
-
-  const existing = paths.readFile(mdFile) ?? "";
-  if (hasCtxRules(existing)) return; // Already present
-
-  paths.writeFile(mdFile, `${existing}\n${CTX_RULES_BLOCK}`);
-}
-
-function removeCtxRules(): void {
-  const p = paths.claudePaths();
-  const mdFile = p.agentsMd;
-  const existing = paths.readFile(mdFile);
-  if (!existing) return;
-
-  paths.writeFile(mdFile, stripCtxRules(existing));
-}
-
-function wireRtkRules(opts: RunOpts): void {
-  const p = paths.claudePaths();
-  verbose("Injecting RTK rules into Claude Code AGENTS.md", opts.verbose);
-
-  const existing = paths.readFile(p.agentsMd) ?? "";
-  if (hasRtkRules(existing) && !opts.upgrade) return;
-
-  paths.writeFile(p.agentsMd, `${stripRtkRules(existing)}\n${RTK_RULES_BLOCK}`);
-}
-
-function removeRtkRulesFile(): void {
-  const p = paths.claudePaths();
-  const existing = paths.readFile(p.agentsMd);
-  if (!existing) return;
-  paths.writeFile(p.agentsMd, stripRtkRules(existing));
+  if (existsSync(join(p.skillsDir, "caveman", "SKILL.md"))) return true;
+  // Check unified owner
+  return hasOwner("claude", "caveman");
 }

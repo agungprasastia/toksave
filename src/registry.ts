@@ -1,7 +1,7 @@
 // ─── Enums ───────────────────────────────────────────────────
 
-export type AgentId = "claude" | "opencode" | "codex" | "antigravity";
-export type ToolId = "rtk" | "caveman" | "codegraph" | "context-mode";
+export type AgentId = "claude" | "opencode" | "codex" | "antigravity" | "copilot" | "droid";
+export type ToolId = "rtk" | "caveman" | "codegraph" | "context-mode" | "ponytail" | "principles";
 export type Channel = "github" | "npm" | "skill";
 
 // ─── Info types ──────────────────────────────────────────────
@@ -19,6 +19,8 @@ export interface ToolInfo {
   homepage: string;
   channel: Channel;
   minNodeMajor: number;
+  notTrackable?: boolean;
+  instructionOnly?: boolean;
 }
 
 export interface Detection {
@@ -60,6 +62,18 @@ export const ALL_AGENTS: AgentInfo[] = [
     homepage: "https://antigravity.google",
     cliBin: "agy",
   },
+  {
+    id: "copilot",
+    label: "GitHub Copilot",
+    homepage: "https://github.com/github/copilot-cli",
+    cliBin: "copilot",
+  },
+  {
+    id: "droid",
+    label: "Factory Droid",
+    homepage: "https://factory.ai",
+    cliBin: "droid",
+  },
 ];
 
 export const ALL_TOOLS: ToolInfo[] = [
@@ -91,6 +105,22 @@ export const ALL_TOOLS: ToolInfo[] = [
     channel: "npm",
     minNodeMajor: 22,
   },
+  {
+    id: "ponytail",
+    label: "Ponytail",
+    homepage: "https://github.com/DietrichGebert/ponytail",
+    channel: "npm",
+    minNodeMajor: 0,
+  },
+  {
+    id: "principles",
+    label: "Principles",
+    homepage: "https://github.com/multica-ai/andrej-karpathy-skills",
+    channel: "skill",
+    minNodeMajor: 0,
+    notTrackable: true,
+    instructionOnly: true,
+  },
 ];
 
 // ─── Lookups ─────────────────────────────────────────────────
@@ -105,7 +135,7 @@ export function toolInfo(id: ToolId): ToolInfo {
 
 export function parseAgentId(s: string): AgentId | null {
   const lower = s.toLowerCase().trim();
-  if (["claude", "opencode", "codex", "antigravity"].includes(lower)) {
+  if (["claude", "opencode", "codex", "antigravity", "copilot", "droid"].includes(lower)) {
     return lower as AgentId;
   }
   return null;
@@ -119,6 +149,11 @@ export function parseToolId(s: string): ToolId | null {
     codegraph: "codegraph",
     "context-mode": "context-mode",
     contextmode: "context-mode",
+    ponytail: "ponytail",
+    principles: "principles",
+    "karpathy-skills": "principles",
+    karpathy: "principles",
+    karpathyskills: "principles",
   };
   return map[lower] ?? null;
 }
@@ -128,21 +163,27 @@ export function parseToolId(s: string): ToolId | null {
 import * as antigravity from "./agents/antigravity.js";
 import * as claude from "./agents/claude.js";
 import * as codex from "./agents/codex.js";
+import * as copilot from "./agents/copilot.js";
+import * as droid from "./agents/droid.js";
 import * as opencode from "./agents/opencode.js";
 import * as cavemanTool from "./tools/caveman.js";
 import * as codegraphTool from "./tools/codegraph.js";
 import * as contextModeTool from "./tools/context-mode.js";
+import * as ponytailTool from "./tools/ponytail.js";
+import * as principlesTool from "./tools/principles.js";
 import * as rtkTool from "./tools/rtk.js";
 import type { HealthStatus, RepairResult } from "./util/health.js";
 import { getCachedLatest, getStaleFallback, setCachedLatest } from "./util/versioncache.js";
 
-const agentModules = { claude, opencode, codex, antigravity };
+const agentModules = { claude, opencode, codex, antigravity, copilot, droid };
 const toolModules = {
   rtk: rtkTool,
   caveman: cavemanTool,
   codegraph: codegraphTool,
   "context-mode": contextModeTool,
-};
+  ponytail: ponytailTool,
+  principles: principlesTool,
+} as const;
 
 export function detectAgent(id: AgentId): Detection {
   return agentModules[id].detect();

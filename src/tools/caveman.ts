@@ -1,22 +1,49 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, dirname, join } from "node:path";
+import { readJsonFile, writeJsonFile } from "../config/json.js";
 import { CAVEMAN_SKILL_MD, CAVEMAN_SKILL_VERSION } from "../content/caveman-skill.js";
 import type { RunOpts } from "../registry.js";
+import { isOnPath } from "../util/detect.js";
 import type { HealthStatus, RepairResult } from "../util/health.js";
 import * as paths from "../util/paths.js";
 import { userAgent } from "../util/version.js";
 
-// Caveman is a "skill" — pure markdown files, no binary to install.
-// The actual wiring is done per-agent in agents/*.ts.
+export const CAVEMAN_SKILL_NAMES = [
+  "caveman",
+  "caveman-commit",
+  "caveman-compress",
+  "caveman-help",
+  "caveman-review",
+  "caveman-stats",
+  "cavecrew",
+];
 
-/** Install caveman (no-op — skill files are written during wire step). */
-export async function install(_opts: RunOpts): Promise<boolean> {
-  return true;
+const CAVEMAN_OPENCODE_PLUGIN_REL = "./plugins/caveman/plugin.js";
+
+/** Install caveman: try npm global install from github, fallback no-op. */
+export async function install(opts: RunOpts): Promise<boolean> {
+  if (!opts.dryRun && process.env.NODE_ENV !== "test" && !opts.upgrade && isOnPath("caveman")) {
+    return true;
+  }
+  if (opts.dryRun || process.env.NODE_ENV === "test") return true;
+
+  if (!isOnPath("npm")) return false;
+
+  try {
+    const result = spawnSync("npm", ["install", "-g", "github:JuliusBrussee/caveman"], {
+      stdio: "pipe",
+      timeout: 15 * 60 * 1000,
+    });
+    return result.status === 0 || isOnPath("caveman");
+  } catch {
+    return isOnPath("caveman");
+  }
 }
 
 /** Get installed Caveman skill version by reading skill file. */
 export function installedVersion(): string | null {
-  // Check all agents that use SKILL.md files (Claude Code, Antigravity)
   const instructionFiles = [paths.opencodePaths().agentsMd, paths.codexPaths().instructions];
   for (const instructionFile of instructionFiles) {
     const content = paths.readFile(instructionFile);
@@ -36,8 +63,6 @@ export function installedVersion(): string | null {
       const versionMatch = content.match(/^version:\s*(.+)$/m);
       if (versionMatch?.[1]) return versionMatch[1].trim();
 
-      // If SKILL.md exists but no version field, return current constant
-      // (official Caveman SKILL.md doesn't have version field in frontmatter)
       return CAVEMAN_SKILL_VERSION;
     } catch {}
   }
@@ -83,11 +108,10 @@ export async function getSkillContent(): Promise<string> {
   return official ?? CAVEMAN_SKILL_MD;
 }
 
-/** Get Caveman instruction block for AGENTS.md/instructions.md - fetches from GitHub, extracts core content. */
+/** Get Caveman instruction block for AGENTS.md/instructions.md - fetches from GitHub. */
 export async function getCavemanInstructionBlock(): Promise<string> {
   const skillContent = await getSkillContent();
 
-  // Extract content between frontmatter and main content (skip --- blocks and extract core instructions)
   const lines = skillContent.split("\n");
   let inFrontmatter = false;
   const contentLines: string[] = [];
@@ -102,8 +126,6 @@ export async function getCavemanInstructionBlock(): Promise<string> {
     }
   }
 
-  // Take first ~20 lines (increased buffer for content structure changes)
-  // Enough to capture: summary line + Persistence section + initial Rules
   const coreContent = contentLines.slice(0, 20).join("\n");
 
   return `
@@ -112,6 +134,185 @@ ${coreContent}
 <!-- CAVEMAN_END -->
 `.trim();
 }
+
+// ─── Helpers for tokless parity ────────────────────────────────
+
+export function skillsAgentID(agent: string): string {
+  if (agent === "copilot") return "github-copilot";
+  return agent;
+}
+
+export function resolveCavemanBin(
+  agent: string,
+  upgrade: boolean,
+): { bin: string; args: string[] } {
+  const useNpx = !isOnPath("caveman");
+  const bin = useNpx ? "npx" : "caveman";
+  const args = useNpx
+    ? ["-y", "github:JuliusBrussee/caveman", "--", "--only", agent, "--no-mcp-shrink"]
+    : ["--only", agent, "--no-mcp-shrink"];
+  if (upgrade) args.push("--force");
+  return { bin, args };
+}
+
+export function resolveSkillsBin(npxArgs: string[]): { bin: string; args: string[] } {
+  if (isOnPath("skills")) {
+    return { bin: "skills", args: npxArgs.slice(2) };
+  }
+  return { bin: "npx", args: npxArgs };
+}
+
+export function cavemanSkillsAddArgs(agent: string): string[] {
+  return [
+    "-y",
+    "skills",
+    "add",
+    "JuliusBrussee/caveman",
+    "-a",
+    skillsAgentID(agent),
+    "-s",
+    "*",
+    "--yes",
+    "-g",
+  ];
+}
+
+export function cavemanSkillsRemoveArgs(agent: string): string[] {
+  return ["-y", "skills", "remove", ...CAVEMAN_SKILL_NAMES, "-a", skillsAgentID(agent), "-y", "-g"];
+}
+
+export function cavemanExec(bin: string, args: string[], opts: RunOpts, _dryHint: string): boolean {
+  if (opts.dryRun) return true;
+  if (process.env.NODE_ENV === "test") return true;
+  try {
+    const result = spawnSync(bin, args, { stdio: "pipe", timeout: 15 * 60 * 1000 });
+    return result.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+export function cavemanOpencodeInstallEnv(): Record<string, string> | undefined {
+  const dir = paths.opencodePaths().dir;
+  if (basename(dir) !== "opencode") return undefined;
+  return { XDG_CONFIG_HOME: dirname(dir) };
+}
+
+// ─── OpenCode plugin registration ─────────────────────────────
+
+export function registerCavemanOpencode(): void {
+  const p = paths.opencodePaths();
+  paths.ensureDir(p.dir);
+  const cfg = (readJsonFile(p.config) as Record<string, unknown>) ?? {};
+  if (!cfg.$schema) cfg.$schema = "https://opencode.ai/config.json";
+
+  const mcp = cfg.mcp as Record<string, unknown> | undefined;
+  if (mcp?.["caveman-shrink"]) {
+    delete mcp["caveman-shrink"];
+    if (Object.keys(mcp).length === 0) delete cfg.mcp;
+  }
+
+  const plugins = (cfg.plugin as unknown[]) ?? [];
+  if (!plugins.some((pl) => typeof pl === "string" && pl.toLowerCase().includes("caveman"))) {
+    plugins.push(CAVEMAN_OPENCODE_PLUGIN_REL);
+  }
+  cfg.plugin = plugins;
+  writeJsonFile(p.config, cfg);
+}
+
+export function unregisterCavemanOpencode(): void {
+  const p = paths.opencodePaths();
+  const cfg = readJsonFile(p.config) as Record<string, unknown> | null;
+  if (!cfg) return;
+
+  const plugins = cfg.plugin as unknown[] | undefined;
+  if (Array.isArray(plugins)) {
+    cfg.plugin = plugins.filter(
+      (pl) => !(typeof pl === "string" && pl === CAVEMAN_OPENCODE_PLUGIN_REL),
+    );
+  }
+
+  const mcp = cfg.mcp as Record<string, unknown> | undefined;
+  if (mcp?.["caveman-shrink"]) {
+    delete mcp["caveman-shrink"];
+    if (Object.keys(mcp).length === 0) delete cfg.mcp;
+  }
+  writeJsonFile(p.config, cfg);
+}
+
+export function opencodePluginInstalled(): boolean {
+  const p = paths.opencodePaths();
+  const cfg = readJsonFile(p.config) as Record<string, unknown> | null;
+  if (!cfg) return false;
+  const plugins = cfg.plugin as unknown[] | undefined;
+  if (!Array.isArray(plugins)) return false;
+  return plugins.some((pl) => typeof pl === "string" && pl.toLowerCase().includes("caveman"));
+}
+
+export function opencodePluginFilesPresent(): boolean {
+  return existsSync(join(paths.opencodePaths().dir, "plugins", "caveman", "plugin.js"));
+}
+
+// ─── Per-agent verification helpers ───────────────────────────
+
+export function claudeCavemanInstalled(): boolean {
+  const p = paths.claudePaths();
+  if (existsSync(join(p.dir, ".caveman-active"))) return true;
+  const settings = paths.readFile(p.settings);
+  return !!settings?.toLowerCase().includes("caveman");
+}
+
+export function codexCavemanInstalled(): boolean {
+  const p = paths.codexPaths();
+  if (existsSync(join(p.dir, "skills", "caveman"))) return true;
+  return existsSync(join(homedir(), ".agents", "skills", "caveman"));
+}
+
+export function antigravityCavemanInstalled(): boolean {
+  const gemini = paths.antigravityPaths().dir;
+  return (
+    existsSync(join(gemini, "config", "skills", "caveman")) ||
+    existsSync(join(gemini, "antigravity", "skills", "caveman"))
+  );
+}
+
+export function copilotCavemanInstalled(): boolean {
+  const p = paths.copilotPaths();
+  return (
+    existsSync(join(p.skillsDir, "caveman")) ||
+    existsSync(join(homedir(), ".agents", "skills", "caveman"))
+  );
+}
+
+// ─── Skill relocation ──────────────────────────────────────────
+
+export function relocateCavemanSkills(dstDir: string): void {
+  const src = join(homedir(), ".agents", "skills");
+  for (const name of CAVEMAN_SKILL_NAMES) {
+    const s = join(src, name);
+    if (!existsSync(s)) continue;
+    const d = join(dstDir, name);
+    paths.ensureDir(d);
+    try {
+      const files = readdirSync(s);
+      for (const f of files) {
+        const content = readFileSync(join(s, f), "utf-8");
+        paths.writeFile(join(d, f), content);
+      }
+      rmSync(s, { recursive: true, force: true });
+    } catch {}
+  }
+}
+
+export function removeCavemanSkillCopies(dir: string): void {
+  for (const name of CAVEMAN_SKILL_NAMES) {
+    try {
+      rmSync(join(dir, name), { recursive: true, force: true });
+    } catch {}
+  }
+}
+
+// ─── Health & Repair ───────────────────────────────────────────
 
 /** Check if Caveman skill files are installed. */
 export function healthCheck(): HealthStatus {
@@ -131,9 +332,6 @@ export function healthCheck(): HealthStatus {
     };
   }
 
-  // ponytail: outdated detection handled by doctor.ts via async latestVersion() + isUpToDate().
-  // Comparing installedVersion() against CAVEMAN_SKILL_VERSION here was a no-op because
-  // installedVersion() falls back to CAVEMAN_SKILL_VERSION when SKILL.md has no version field.
   return {
     healthy: true,
     version,
@@ -153,7 +351,6 @@ export async function repair(_opts: RunOpts): Promise<RepairResult> {
     };
   }
 
-  // Caveman repair requires re-wiring to agents, which is handled by the wire command
   return {
     success: false,
     message: "Caveman repair requires running: toksave init caveman",

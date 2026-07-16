@@ -203,6 +203,88 @@ export function antigravityDesktopPaths(): string[] {
   return ["/opt/antigravity", "/opt/antigravity-ide"];
 }
 
+// ─── Copilot (GitHub) ────────────────────────────────────────
+
+export interface CopilotPaths {
+  dir: string;
+  mcpConfig: string;
+  settings: string;
+  hooksDir: string;
+  skillsDir: string;
+  instructions: string;
+}
+
+export function copilotPaths(): CopilotPaths {
+  let dir: string;
+  const envCopilot = process.env.COPILOT_HOME;
+  if (envCopilot) {
+    dir = envCopilot;
+  } else if (process.env.XDG_CONFIG_HOME) {
+    // tokless checks XDG_CONFIG_HOME/copilot as fallback
+    const xdg = process.env.XDG_CONFIG_HOME;
+    const candidate = join(xdg, "copilot");
+    // Use env-agnostic: check existence? Simplify to ~/.copilot as primary, XDG as secondary if exists.
+    // For parity, if XDG exists and contains copilot dir, use it; otherwise ~/.copilot.
+    // We keep simple: ~/.copilot primary unless COPILOT_HOME set, but also support XDG.
+    // To match tokless exactly: if XDG_CONFIG_HOME set, dir = join(xdg,"copilot"), else ~/.copilot.
+    // Implement tokless behavior: if XDG_CONFIG_HOME set, use it; else ~/.copilot.
+    // However tokless internal/util/paths.go: if COPILOT_HOME set use it, else if XDG_CONFIG_HOME set use join(xdg,"copilot"), else ~/.copilot
+    dir = candidate;
+    // If candidate doesn't exist and HOME exists fallback will still work via existsSync checks in caller; but keep candidate.
+  } else {
+    dir = join(home(), ".copilot");
+  }
+  return {
+    dir,
+    mcpConfig: join(dir, "mcp-config.json"),
+    settings: join(dir, "settings.json"),
+    hooksDir: join(dir, "hooks"),
+    skillsDir: join(dir, "skills"),
+    instructions: join(dir, "copilot-instructions.md"),
+  };
+}
+
+export function copilotKnownBinDirs(): string[] {
+  return [join(home(), ".local", "bin")];
+}
+
+export function copilotDesktopPaths(): string[] {
+  return [];
+}
+
+// ─── Droid (Factory) ─────────────────────────────────────────
+
+export interface DroidPaths {
+  dir: string;
+  hooksFile: string;
+  mcpConfig: string;
+  settingsFile: string;
+  instructions: string;
+  skillsDir: string;
+  rulesDir: string;
+}
+
+export function droidPaths(): DroidPaths {
+  const dir = join(home(), ".factory");
+  return {
+    dir,
+    hooksFile: join(dir, "hooks.json"),
+    mcpConfig: join(dir, "mcp.json"),
+    settingsFile: join(dir, "settings.json"),
+    instructions: join(dir, "AGENTS.md"),
+    skillsDir: join(dir, "skills"),
+    rulesDir: join(dir, "rules"),
+  };
+}
+
+export function droidKnownBinDirs(): string[] {
+  return [join(home(), ".local", "bin"), join(home(), ".factory", "bin")];
+}
+
+export function droidDesktopPaths(): string[] {
+  return [];
+}
+
 // ─── Shared ──────────────────────────────────────────────────
 
 /** Local bin directory for tool installs. */

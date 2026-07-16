@@ -14,6 +14,7 @@ import {
 } from "../registry.js";
 import * as colors from "../util/colors.js";
 import { Progress } from "../util/progress.js";
+import { configureInstructionConflicts } from "../util/unified-block.js";
 import { isUpToDate } from "../util/version.js";
 
 /** Run the update command: check for tool updates and upgrade. */
@@ -82,16 +83,20 @@ export async function run(opts: RunOpts): Promise<number> {
     }
   }
 
-  // ── Re-sync wiring ──────────────────────────────────────
+  // ── Re-sync wiring (only where already wired) ──────────
+  configureInstructionConflicts(true);
   for (const toolId of upgraded) {
     for (const agent of ALL_AGENTS) {
       const det = detectAgent(agent.id);
       if (!det.installed) continue;
       if (verifyTool(agent.id, toolId) === true) {
-        await wireTool(agent.id, toolId, upgradeOpts);
+        try {
+          await wireTool(agent.id, toolId, upgradeOpts);
+        } catch {}
       }
     }
   }
+  configureInstructionConflicts(false);
 
   console.log();
   const names = [...upgraded].map((id) => toolInfo(id).label);

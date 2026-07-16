@@ -5,15 +5,17 @@ import { join } from "node:path";
 import * as antigravity from "../agents/antigravity.js";
 import * as claude from "../agents/claude.js";
 import * as codex from "../agents/codex.js";
+import * as copilot from "../agents/copilot.js";
+import * as droid from "../agents/droid.js";
 import * as opencode from "../agents/opencode.js";
 import { readJsonFile } from "../config/json.js";
 import type { RunOpts, ToolId } from "../registry.js";
 import * as detect from "../util/detect.js";
 import * as paths from "../util/paths.js";
+import { hasOwner } from "../util/unified-block.js";
 
 const opts: RunOpts = { dryRun: false, upgrade: false, verbose: false, yes: true };
 const tool: ToolId = "codegraph";
-const agents = [claude, opencode, codex, antigravity] as const;
 
 let tmp = "";
 let oldHome: string | undefined;
@@ -34,11 +36,12 @@ beforeEach(() => {
   process.env.APPDATA = join(tmp, "AppData", "Roaming");
   process.env.LOCALAPPDATA = join(tmp, "AppData", "Local");
 
-  // Mock isOnPath dynamically so verify("rtk") passes regardless of CI global environment
   isOnPathSpy = spyOn(detect, "isOnPath").mockImplementation((name) => {
     if (name === "rtk") return true;
     return false;
   });
+  // Ensure copilot IDE root stays inside temp
+  copilot.setIdeProjectRoot(join(tmp, "proj"));
 });
 
 afterEach(() => {
@@ -51,10 +54,11 @@ afterEach(() => {
   if (isOnPathSpy) {
     isOnPathSpy.mockRestore();
   }
+  copilot.setIdeProjectRoot("");
 });
 
 describe("agent RTK enforcement", () => {
-  test("Claude wires RTK through a PreToolUse hook and keeps instruction rules", async () => {
+  test("Claude wires RTK through a PreToolUse hook", async () => {
     await claude.wire("rtk", opts);
 
     const settings = readJsonFile(paths.claudePaths().settings) as Record<string, unknown>;
@@ -63,18 +67,16 @@ describe("agent RTK enforcement", () => {
     expect(preToolUse.some((group) => group.hooks?.[0]?.command?.includes("rtk-hook claude"))).toBe(
       true,
     );
-    expect(paths.readFile(paths.claudePaths().agentsMd)).toContain("RTK_START");
     expect(claude.verify("rtk")).toBe(true);
   });
 
-  test("OpenCode wires RTK through a plugin file and keeps instruction rules", async () => {
+  test("OpenCode wires RTK through a plugin file", async () => {
     await opencode.wire("rtk", opts);
 
     const plugin = readOpenCodeRtkPlugin();
     expect(plugin).toContain("tool.execute.before");
     expect(plugin).toContain('input.tool !== "bash"');
     expect(plugin).toContain("rtk ");
-    expect(paths.readFile(paths.opencodePaths().agentsMd)).toContain("RTK_START");
     expect(opencode.verify("rtk")).toBe(true);
   });
 
@@ -85,7 +87,6 @@ describe("agent RTK enforcement", () => {
 
     await opencode.unwire("rtk", opts);
     expect(existsSync(opencodeRtkPluginPath())).toBe(false);
-    expect(paths.readFile(paths.opencodePaths().agentsMd) ?? "").not.toContain("RTK_START");
     expect(opencode.verify("rtk")).toBe(false);
   });
 
@@ -94,8 +95,6 @@ describe("agent RTK enforcement", () => {
 
     await codex.unwire("rtk", opts);
 
-    // If hooks.json gets created by getOrCreateObject logic, it should contain valid JSON `{}`
-    // or simply not exist, but it should NOT contain the literal string "null".
     if (existsSync(paths.codexPaths().hooks)) {
       const content = readFileSync(paths.codexPaths().hooks, "utf-8");
       expect(content).not.toBe("null");
@@ -112,9 +111,9 @@ describe("agent MCP wiring", () => {
       antigravity: false,
     });
 
-    for (const agent of agents) {
-      await agent.wire(tool, opts);
-      expect(agent.verify(tool)).toBe(true);
+    for (const agent of [claude, opencode, codex, antigravity, copilot, droid]) {
+      await (agent as any).wire(tool, opts);
+      expect((agent as any).verify(tool)).toBe(true);
     }
 
     expect(readClaudeMcpKeys()).toEqual(["codegraph"]);
@@ -124,10 +123,10 @@ describe("agent MCP wiring", () => {
   });
 
   test("wire is idempotent when called twice", async () => {
-    for (const agent of agents) {
-      await agent.wire(tool, opts);
-      await agent.wire(tool, opts);
-      expect(agent.verify(tool)).toBe(true);
+    for (const agent of [claude, opencode, codex, antigravity]) {
+      await (agent as any).wire(tool, opts);
+      await (agent as any).wire(tool, opts);
+      expect((agent as any).verify(tool)).toBe(true);
     }
 
     expect(readClaudeMcpKeys()).toEqual(["codegraph"]);
@@ -137,56 +136,110 @@ describe("agent MCP wiring", () => {
   });
 
   test("unwire before wire does not crash and verify stays false", async () => {
-    for (const agent of agents) {
-      await agent.unwire(tool, opts);
-      expect(agent.verify(tool)).toBe(false);
+    for (const agent of [claude, opencode, codex, antigravity, copilot, droid]) {
+      await (agent as any).unwire(tool, opts);
+      expect((agent as any).verify(tool)).toBe(false);
     }
   });
 
   test("Antigravity atomic write rolls back all files on failure", async () => {
-    // Phase 1: wire codegraph successfully to create initial state
     await antigravity.wire("codegraph", opts);
     const mcpFiles = paths.antigravityMcpFiles();
-    expect(mcpFiles.length).toBeGreaterThan(1); // Ensure we have at least 2 files to test actual rollback
+    expect(mcpFiles.length).toBeGreaterThan(1);
 
-    // Capture initial configs
     const initialConfigs = mcpFiles.map((f) => ({
       file: f,
       content: paths.readFile(f) ?? "",
     }));
 
-    // Phase 2: mock paths.writeFile to fail on the last file
-    const targetFile = mcpFiles[mcpFiles.length - 1];
+    const targetFile = mcpFiles[mcpFiles.length - 1]!;
     const writeSpy = spyOn(paths, "writeFile").mockImplementation((p, content) => {
       if (p === targetFile) {
         throw new Error("Simulated write failure");
       }
-      // Recreate real writeFile behavior
       const fs = require("node:fs");
       const path = require("node:path");
       fs.mkdirSync(path.dirname(p), { recursive: true });
-      const tmp = `${p}.${process.pid}.tmp`;
-      fs.writeFileSync(tmp, content, "utf-8");
-      fs.renameSync(tmp, p);
+      const tmpf = `${p}.${process.pid}.tmp`;
+      fs.writeFileSync(tmpf, content, "utf-8");
+      fs.renameSync(tmpf, p);
     });
 
-    // Phase 3: try to wire context-mode (should fail and rollback)
     try {
       await antigravity.wire("context-mode", opts);
-      expect(true).toBe(false); // Should not reach here
+      expect(true).toBe(false);
     } catch (err) {
       expect(err).toBeDefined();
     }
 
-    // Phase 4: restore mock
     writeSpy.mockRestore();
 
-    // Phase 5: verify rollback - codegraph config still intact, context-mode not added
     for (const { file, content } of initialConfigs) {
       expect(paths.readFile(file)).toBe(content);
     }
     expect(antigravity.verify("codegraph")).toBe(true);
     expect(antigravity.verify("context-mode")).toBe(false);
+  });
+});
+
+describe("agent unified block wiring", () => {
+  test("caveman via unified block creates Principles + caveman section", async () => {
+    await claude.wire("caveman", opts);
+    const md = paths.readFile(paths.claudePaths().agentsMd) ?? "";
+    expect(md).toContain("## Response Style (caveman)");
+    expect(md).toContain("## Principles");
+    expect(hasOwner("claude", "caveman")).toBe(true);
+    expect(claude.verify("caveman")).toBe(true);
+  });
+
+  test("codegraph + caveman share file with index section when >=2 owners", async () => {
+    await claude.wire("caveman", opts);
+    await claude.wire("codegraph", opts);
+    const md = paths.readFile(paths.claudePaths().agentsMd) ?? "";
+    expect(md).toContain("## Response Style (caveman)");
+    expect(md).toContain("## Code Index (codegraph)");
+    expect(md).toContain("# Agent Instructions"); // index section when >=2
+    expect(hasOwner("claude", "caveman")).toBe(true);
+    expect(hasOwner("claude", "codegraph")).toBe(true);
+  });
+
+  test("remove caveman leaves codegraph", async () => {
+    await claude.wire("caveman", opts);
+    await claude.wire("codegraph", opts);
+    await claude.unwire("caveman", opts);
+    const md = paths.readFile(paths.claudePaths().agentsMd) ?? "";
+    expect(md).not.toContain("## Response Style (caveman)");
+    expect(md).toContain("## Code Index (codegraph)");
+  });
+
+  test("principles and ponytail wiring via unified block", async () => {
+    await claude.wire("principles", opts);
+    expect(hasOwner("claude", "principles")).toBe(true);
+    await claude.wire("ponytail", opts);
+    expect(hasOwner("claude", "ponytail")).toBe(true);
+    const md = paths.readFile(paths.claudePaths().agentsMd) ?? "";
+    expect(md).toContain("## Principles");
+    expect(md).toContain("## Build Discipline (ponytail)");
+  });
+
+  test("legacy fence stripped on writeOwner", async () => {
+    const p = paths.claudePaths().agentsMd;
+    paths.ensureDir(paths.claudePaths().dir);
+    paths.writeFile(p, "<!-- CAVEMAN_START -->\nold block\n<!-- CAVEMAN_END -->\n");
+    await claude.wire("caveman", opts);
+    const md = paths.readFile(p) ?? "";
+    expect(md).not.toContain("CAVEMAN_START");
+    expect(md).toContain("## Response Style (caveman)");
+  });
+
+  test("copilot and droid wiring via unified block", async () => {
+    await copilot.wire("caveman", opts);
+    expect(hasOwner("copilot", "caveman")).toBe(true);
+    expect(copilot.verify("caveman")).toBe(true);
+
+    await droid.wire("caveman", opts);
+    expect(hasOwner("droid", "caveman")).toBe(true);
+    expect(droid.verify("caveman")).toBe(true);
   });
 });
 
@@ -241,6 +294,34 @@ function readAntigravityMcpKeys(): string[] {
 function count(value: string, needle: string): number {
   return value.split(needle).length - 1;
 }
+
+describe("agent × tool wiring matrix (all 36 combos)", () => {
+  const agentMap: Record<string, any> = {
+    claude,
+    opencode,
+    codex,
+    antigravity,
+    copilot,
+    droid,
+  };
+  const tools: ToolId[] = ["rtk", "caveman", "codegraph", "context-mode", "ponytail", "principles"];
+
+  for (const [aname, agent] of Object.entries(agentMap)) {
+    for (const tl of tools) {
+      test(`${aname} × ${tl} wire/unwire cycle`, async () => {
+        const res1 = await agent.wire(tl, opts);
+        expect(res1).toBe(true);
+        const v1 = agent.verify(tl);
+        expect(v1).toBe(true);
+
+        const res2 = await agent.unwire(tl, opts);
+        expect(res2).toBe(true);
+        const v2 = agent.verify(tl);
+        expect(v2).toBe(false);
+      });
+    }
+  }
+});
 
 describe("agent detection config-dir fallback", () => {
   test("Codex detect() uses config-dir fallback only in test mode", () => {

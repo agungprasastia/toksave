@@ -8,12 +8,15 @@ export type CommandType =
   | "doctor"
   | "update"
   | "uninstall"
+  | "disable"
   | "self-update"
   | "codex-perm-hook"
   | "rtk-hook"
   | "context-mode-hook"
   | "runmcp"
-  | "index";
+  | "index"
+  | "agy-hook"
+  | "copilot-hook";
 
 export interface ParsedCli {
   command: CommandType;
@@ -41,11 +44,17 @@ export function parseCli(argv: string[]): ParsedCli {
     .version(toksaveVersion(), "-V, --version")
     .description(
       "Zero-config token-saver for AI coding agents.\n\n" +
-        "Installs and wires RTK, Caveman, CodeGraph, and Context-Mode\n" +
-        "into Claude Code, OpenCode, Codex, and Antigravity.",
+        "Installs and wires RTK, Caveman, CodeGraph, Context-Mode, Ponytail, and Principles\n" +
+        "into Claude Code, OpenCode, Codex, Antigravity, GitHub Copilot, and Factory Droid.",
     )
-    .option("-a, --agents <ids...>", "target specific agents (claude,opencode,codex,antigravity)")
-    .option("-t, --tools <ids...>", "target specific tools (rtk,caveman,codegraph,context-mode)")
+    .option(
+      "-a, --agents <ids...>",
+      "target specific agents (claude,opencode,codex,antigravity,copilot,droid)",
+    )
+    .option(
+      "-t, --tools <ids...>",
+      "target specific tools (rtk,caveman,codegraph,context-mode,ponytail,principles)",
+    )
     .option("-n, --dry-run", "show what would happen without making changes", false)
     .option("-v, --verbose", "print detailed output", false)
     .option("-y, --yes", "skip interactive prompts, auto-select detected agents", false)
@@ -79,6 +88,14 @@ export function parseCli(argv: string[]): ParsedCli {
     .description("Remove toksave wiring from agents")
     .action(() => {
       result.command = "uninstall";
+      applyGlobalOpts(result, program.opts());
+    });
+
+  program
+    .command("disable")
+    .description("Disable one or more agents/tools (surgical uninstall)")
+    .action(() => {
+      result.command = "disable";
       applyGlobalOpts(result, program.opts());
     });
 
@@ -130,8 +147,30 @@ export function parseCli(argv: string[]): ParsedCli {
   program
     .command("index")
     .description("Build per-project indexes (codegraph) in the current dir")
-    .action(() => {
+    .option("--auto", "internal: auto-index mode (silent, only if project detected)", false)
+    .action((options: { auto?: boolean }) => {
       result.command = "index";
+      (result as any).auto = options.auto ?? false;
+      applyGlobalOpts(result, program.opts());
+    });
+
+  program
+    .command("agy-hook")
+    .description("Internal: Antigravity codegraph index hook")
+    .argument("[args...]")
+    .allowUnknownOption()
+    .action(() => {
+      result.command = "agy-hook";
+      applyGlobalOpts(result, program.opts());
+    });
+
+  program
+    .command("copilot-hook")
+    .description("Internal: Copilot codegraph index hook")
+    .argument("[args...]")
+    .allowUnknownOption()
+    .action(() => {
+      result.command = "copilot-hook";
       applyGlobalOpts(result, program.opts());
     });
 
