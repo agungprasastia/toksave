@@ -356,7 +356,9 @@ export function installOpencodeAutoIndexPlugin(): void {
 }
 
 export function removeOpencodeAutoIndexPlugin(): void {
-  try { rmSync(autoIndexPluginPath(), { force: true }); } catch {}
+  try {
+    rmSync(autoIndexPluginPath(), { force: true });
+  } catch {}
 }
 
 export function hasOpencodeAutoIndexPlugin(): boolean {

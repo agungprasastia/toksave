@@ -369,7 +369,15 @@ function installClaudeAutoIndexHook(): void {
   const hooks = getOrCreateObject(cfg, "hooks") as Record<string, unknown>;
   const cmd = "toksave index --auto";
   const ss = Array.isArray(hooks.SessionStart) ? hooks.SessionStart : [];
-  if (ss.some((g) => typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd)) return;
+  if (
+    ss.some(
+      (g) =>
+        typeof g === "object" &&
+        g !== null &&
+        (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd,
+    )
+  )
+    return;
   const entry = {
     hooks: [{ type: "command", command: cmd, timeout: 120000 }],
   };
@@ -386,7 +394,12 @@ function removeClaudeAutoIndexHook(): void {
   if (!Array.isArray(ss)) return;
   const cmd = "toksave index --auto";
   const kept = ss.filter(
-    (g) => !(typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd),
+    (g) =>
+      !(
+        typeof g === "object" &&
+        g !== null &&
+        (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd
+      ),
   );
   if (kept.length === 0) delete hooks.SessionStart;
   else hooks.SessionStart = kept as never;
@@ -401,7 +414,10 @@ function hasClaudeAutoIndexHook(): boolean {
   if (!Array.isArray(ss)) return false;
   const cmd = "toksave index --auto";
   return ss.some(
-    (g) => typeof g === "object" && g !== null && (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd,
+    (g) =>
+      typeof g === "object" &&
+      g !== null &&
+      (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === cmd,
   );
 }
 

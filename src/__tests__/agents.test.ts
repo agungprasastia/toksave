@@ -155,7 +155,10 @@ describe("agent MCP wiring", () => {
     const hooks = cfg?.hooks as Record<string, unknown> | undefined;
     expect(hooks?.SessionStart).toBeDefined();
     const entry = (hooks?.SessionStart as unknown[])[0] as Record<string, unknown>;
-    expect((entry?.hooks as unknown[])[0]).toMatchObject({ command: "toksave index --auto", timeout: 120000 });
+    expect((entry?.hooks as unknown[])[0]).toMatchObject({
+      command: "toksave index --auto",
+      timeout: 120000,
+    });
   });
 
   test("Claude auto-index hook is idempotent", async () => {
@@ -173,7 +176,8 @@ describe("agent MCP wiring", () => {
     const hooks = cfg?.hooks as Record<string, unknown> | undefined;
     if (hooks?.SessionStart) {
       const remaining = (hooks.SessionStart as unknown[]).filter(
-        (g) => (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === "toksave index --auto",
+        (g) =>
+          (g as { hooks?: { command?: string }[] })?.hooks?.[0]?.command === "toksave index --auto",
       );
       expect(remaining.length).toBe(0);
     }
