@@ -74,7 +74,7 @@ toksave --agents claude,opencode,antigravity # or any combination
 | **CodeGraph** | ![](https://img.shields.io/github/stars/colbymchenry/codegraph?style=flat-square&label=) | Pre-indexed code knowledge graph — **fewer MCP calls** |
 | **Context-Mode** | ![](https://img.shields.io/github/stars/mksglu/context-mode?style=flat-square&label=) | MCP sandbox with session memory — **98% context compression** |
 | **Ponytail** | ![](https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&label=) | Lazy-coding discipline — YAGNI, stdlib first, delete over add |
-| **Principles** | ![](https://img.shields.io/github/stars/agungprasastia/toksave?style=flat-square&label=) | Coding standards — think, simplify, edit surgically |
+| **Principles** | ![](https://img.shields.io/github/stars/multica-ai/andrej-karpathy-skills?style=flat-square&label=) | Coding standards — think, simplify, edit surgically |
 
 ### Wiring Matrix
 
