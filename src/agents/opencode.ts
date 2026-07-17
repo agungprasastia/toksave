@@ -8,7 +8,7 @@ import {
   unregisterCavemanOpencode,
 } from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
-import { findBinaryIn, isOnPath } from "../util/detect.js";
+import { findBinaryIn } from "../util/detect.js";
 import * as paths from "../util/paths.js";
 import { hasOwner, removeOwner, writeOwner } from "../util/unified-block.js";
 
@@ -107,7 +107,7 @@ export function verify(tool: ToolId): boolean | null {
     case "caveman":
       return opencodePluginInstalled() || hasOwner("opencode", "caveman");
     case "rtk":
-      return isOnPath("rtk") && hasRtkPlugin();
+      return hasRtkPlugin();
     case "ponytail":
       return hasOwner("opencode", "ponytail") || ponytailPluginInstalled();
     case "principles":

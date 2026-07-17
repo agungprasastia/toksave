@@ -126,11 +126,11 @@ export async function run(
         const ok = await wireTool(agentId, tool.id, opts);
         await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
         if (ok && !opts.dryRun) {
-          recordWire(agentId, tool.id, toolInstalledVersion(tool.id) ?? undefined);
           if (verifyTool(agentId, tool.id) === false) {
             failedTools.push(tool.label);
             continue;
           }
+          recordWire(agentId, tool.id, toolInstalledVersion(tool.id) ?? undefined);
         }
         if (!ok) failedTools.push(tool.label);
       } catch {

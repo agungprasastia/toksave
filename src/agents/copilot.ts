@@ -117,6 +117,7 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
       removeCopilotCodegraphIndexHook();
       removeCopilotIdeCodegraphIndexHook();
       removeOwner("copilot", "codegraph");
+      syncCopilotIdeInstructions();
       return true;
     case "context-mode":
       removeCopilotMcp("context-mode");
@@ -124,15 +125,19 @@ export async function unwire(tool: ToolId, _opts: RunOpts): Promise<boolean> {
       removeCopilotContextModeHook();
       removeCopilotIdeContextModeHook();
       removeOwner("copilot", "context-mode");
+      syncCopilotIdeInstructions();
       return true;
     case "caveman":
       removeOwner("copilot", "caveman");
+      syncCopilotIdeInstructions();
       return true;
     case "ponytail":
       removeOwner("copilot", "ponytail");
+      syncCopilotIdeInstructions();
       return true;
     case "principles":
       removeOwner("copilot", "principles");
+      syncCopilotIdeInstructions();
       return true;
     default:
       return false;
@@ -404,8 +409,13 @@ function removeCopilotIdeMcp(toolId: string): void {
 function syncCopilotIdeInstructions(): void {
   const cliPath = paths.copilotPaths().instructions;
   const body = paths.readFile(cliPath);
-  if (!body?.trim()) return;
   const ideFile = copilotIdeInstructionsFile();
+  if (!body?.trim()) {
+    try {
+      rmSync(ideFile, { force: true });
+    } catch {}
+    return;
+  }
   paths.ensureDir(join(ideRoot(), ".github"));
   paths.writeFile(ideFile, `${body.trimEnd()}\n`);
 }

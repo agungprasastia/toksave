@@ -9,7 +9,7 @@ import {
 import type { Detection, RunOpts, ToolId } from "../registry.js";
 import { cavemanExec, getSkillContent } from "../tools/caveman.js";
 import { verbose } from "../util/colors.js";
-import { findBinary, findBinaryIn, isOnPath } from "../util/detect.js";
+import { findBinary, findBinaryIn } from "../util/detect.js";
 import * as paths from "../util/paths.js";
 import { hasOwner, removeOwner, writeOwner } from "../util/unified-block.js";
 
@@ -104,7 +104,7 @@ export function verify(tool: ToolId): boolean | null {
     case "caveman":
       return hasCavemanSkill() || hasOwner("claude", "caveman");
     case "rtk":
-      return isOnPath("rtk") && hasRtkHook();
+      return hasRtkHook();
     case "ponytail":
       return hasOwner("claude", "ponytail");
     case "principles":
