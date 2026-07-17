@@ -1,57 +1,100 @@
 <div align="center">
   <img src="assets/Logo.png" alt="toksave logo" width="300" />
-
-  # toksave
-
-  **Zero-config token-saver for AI coding agents.**
-
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Built with Bun](https://img.shields.io/badge/Built%20with-Bun-black?logo=bun)](https://bun.sh)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![CI](https://github.com/agungprasastia/toksave/actions/workflows/ci.yml/badge.svg)](https://github.com/agungprasastia/toksave/actions)
-
-  <p align="center">
-    Install and wire <a href="https://github.com/rtk-ai/rtk">RTK</a>, <a href="https://github.com/JuliusBrussee/caveman">Caveman</a>, <a href="https://github.com/colbymchenry/codegraph">CodeGraph</a>, <a href="https://github.com/mksglu/context-mode">Context-Mode</a>, and <a href="https://github.com/dietrichgebert/ponytail">Ponytail</a> into your AI agents — without hand-editing configs.
-  </p>
 </div>
 
-<hr />
+## toksave
 
-## ✨ Features
+**A unified pipeline for efficient and effective coding agents.**
 
-- **Zero-config:** Run one command to equip all your agents.
-- **Smart Health Checks:** Built-in diagnostics verify installations and `toksave doctor --fix` can repair unhealthy tools.
-- **Actionable Error Messages:** When things fail, get clear explanations and remediation steps.
-- **Download Resilience:** Automatic retry with exponential backoff handles flaky networks.
-- **Idempotent & Safe:** Run multiple times without duplicating configurations.
-- **Clean Uninstall:** Tracks what it installed so it can cleanly revert changes.
-- **Cross-platform:** Ships as a standalone binary for macOS, Linux, and Windows.
-- **Preview Changes:** Use `--dry-run` to see what will happen before committing.
-- **Auto-index on startup:** CodeGraph index builds automatically when agents start (Claude SessionStart hook, OpenCode plugin).
-- **Progress Tree:** Real-time `runStatus()` spinner with dynamic sections for multi-step operations.
-- **Caveman Skills CLI:** Install skills from marketplace URLs, list installed skills, skill discovery via opencode plugin.
+One tool, no config — works the moment it lands.
 
-## 🤖 Supported Agents & Tooling
+[![version](https://img.shields.io/github/v/release/agungprasastia/toksave?label=version)](https://github.com/agungprasastia/toksave/releases)
+[![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue)](https://github.com/agungprasastia/toksave)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/agungprasastia/toksave/actions/workflows/ci.yml/badge.svg)](https://github.com/agungprasastia/toksave/actions)
 
-| Agent | MCP | Hooks | Caveman | Context-Mode Rules |
-|-------|:---:|:---:|:---:|:---:|
-| **Claude Code** | ✅ | RTK hook + instructions | ✅ SKILL.md | ✅ AGENTS.md |
-| **OpenCode** | ✅ | RTK plugin + instructions | ✅ AGENTS.md | ✅ AGENTS.md |
-| **Codex** | ✅ (TOML) | RTK hook + instructions | ✅ instructions.md | ✅ instructions.md |
-| **Antigravity** | ✅ (JSON) | RTK hook + instructions | ✅ SKILL.md | ✅ AGENTS.md |
-| **GitHub Copilot** | ✅ | RTK + CodeGraph + ctx hooks | ✅ instructions.md | ✅ instructions.md |
-| **Droid** | ✅ | PreToolUse cleanup | ✅ AGENTS.md | ✅ AGENTS.md |
+> *Many great packages make coding agents more **effective and efficient** — but discovering, installing, updating, and unifying them is painful. The best tools exist; the **wiring is the real cost**.*
+
+**toksave** — the lazy one-command solution.
+
+<table>
+<tr><td>✔️</td><td><b>Best packages, unified</b> — picks the most effective, efficient tools and wires them without conflicts</td></tr>
+<tr><td>✔️</td><td><b>One command, done</b> — pick your agent, restart, go</td></tr>
+<tr><td>✔️</td><td><b>All platforms</b> — macOS, Linux, Windows</td></tr>
+<tr><td>✔️</td><td><b>Zero config</b> — everything wired, no manual edits</td></tr>
+<tr><td>✔️</td><td><b>Simple updates</b> — <code>toksave update</code> upgrades everything in one shot</td></tr>
+<tr><td>✔️</td><td><b>Non-tech friendly</b> — under 30 seconds, anyone can do it</td></tr>
+</table>
+
+## 🤖 Supported Agents
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="140">
+        <img src="assets/agents/claude.jpg" width="56" alt="Claude Code" /><br/>
+        <b>Claude Code</b><br/>
+        <sub><b style="color:#3fb950">✓ Done</b></sub>
+      </td>
+      <td align="center" width="140">
+        <img src="assets/agents/opencode.png" width="56" alt="OpenCode" /><br/>
+        <b>OpenCode</b><br/>
+        <sub><b style="color:#3fb950">✓ Done</b></sub>
+      </td>
+      <td align="center" width="140">
+        <img src="assets/agents/codex.jpg" width="56" alt="Codex" /><br/>
+        <b>Codex</b><br/>
+        <sub><b style="color:#3fb950">✓ Done</b></sub>
+      </td>
+      <td align="center" width="140">
+        <img src="assets/agents/antigravity.png" width="56" alt="Antigravity" /><br/>
+        <b>Antigravity</b><br/>
+        <sub><b style="color:#3fb950">✓ Done</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" width="140">
+        <img src="assets/agents/copilot.jpg" width="56" alt="GitHub Copilot" /><br/>
+        <b>GitHub Copilot</b><br/>
+        <sub><b style="color:#3fb950">✓ Done</b></sub>
+      </td>
+      <td align="center" width="140">
+        <img src="assets/agents/droid.png" width="56" alt="Droid" /><br/>
+        <b>Droid</b><br/>
+        <sub><b style="color:#3fb950">✓ Done</b></sub>
+      </td>
+    </tr>
+  </table>
+</div>
+
+Pick one, some, or all:
+
+```bash
+toksave                              # interactive: pick agents
+toksave --agents claude,opencode     # wire just these
+toksave --agents claude,opencode,codex,antigravity,copilot,droid  # all
+```
 
 ## 📦 What Gets Installed
 
-| Tool | Method | What It Does |
-|------|--------|-------------|
-| **RTK** | Prebuilt binary | CLI proxy that compresses tool output — **60-90% token savings** |
-| **Caveman** | Markdown from GitHub | Communication mode that cuts LLM response tokens **~75%** |
-| **CodeGraph** | `npm install -g` | Pre-indexed code knowledge graph — **fewer tool calls** |
-| **Context-Mode**| `npm install -g` | MCP server that sandboxes tool output — **98% context reduction** |
-| **Ponytail** | `npm install -g` | Forces laziest working solution — YAGNI, stdlib first, delete over add |
-| **Principles** | Bundled | Agent coding standards — think before code, simplicity, surgical edits |
+| Tool | ⭐ | What It Does |
+| :--- | :---: | :--- |
+| **RTK** | ![](https://img.shields.io/github/stars/rtk-ai/rtk?style=flat-square&label=) | CLI proxy that compresses tool output — **60-90% token savings** |
+| **Caveman** | ![](https://img.shields.io/github/stars/JuliusBrussee/caveman?style=flat-square&label=) | Communication mode that cuts LLM response tokens **~75%** |
+| **CodeGraph** | ![](https://img.shields.io/github/stars/colbymchenry/codegraph?style=flat-square&label=) | Pre-indexed code knowledge graph — **fewer tool calls** |
+| **Context-Mode**| ![](https://img.shields.io/github/stars/mksglu/context-mode?style=flat-square&label=) | MCP server that sandboxes tool output — **98% context reduction** |
+| **Ponytail** | ![](https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&label=) | Forces laziest working solution — YAGNI, stdlib first, delete over add |
+| **Principles** | ![](https://img.shields.io/github/stars/agungprasastia/toksave?style=flat-square&label=) | Agent coding standards — think before code, simplicity, surgical edits |
+
+### Wiring
+
+| Tool | Claude | OpenCode | Codex | Antigravity | Copilot | Droid |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **RTK** | Hook + Allow | Plugin | Hook | Hook + Allow | Hook + Allow | Hook |
+| **Caveman** | Plugin + Instruction | Plugin + Instruction | Skill + Instruction | Skill + Instruction | Skill + Instruction | Skill + Instruction |
+| **Ponytail** | Plugin + Instruction | Plugin + Instruction | Plugin + Instruction | Plugin + Instruction | Skill + Instruction | Skill + Instruction |
+| **CodeGraph** | MCP + Allow + Instruction | MCP + Instruction + Auto-index | MCP + Instruction | MCP + Instruction + Hook | MCP + Instruction + Hook | MCP + Instruction + Hook |
+| **Context-Mode** | MCP + Allow + Instruction | Plugin + Instruction | MCP + Instruction + Hook | MCP + Instruction | MCP + Hook + Instruction | MCP + Instruction |
 
 ## 🚀 Getting Started
 
@@ -74,34 +117,30 @@ irm https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts/instal
 
 ## 💻 Usage
 
-### Quick Start
-```bash
-# Interactive setup — detect agents, install tools, wire everything
-toksave
+```
+toksave              Install + wire everything (default; safe to re-run)
+toksave doctor       Check health of all wired tools
+toksave doctor --fix Repair unhealthy tool installations
+toksave update       Update all tools to latest versions
+toksave uninstall    Remove everything toksave touched
+toksave disable      Remove all wire/unwire + owner entries for all agents
+toksave index        Pre-build CodeGraph index in current directory
+toksave self-update  Update the toksave CLI itself
+toksave --version    Print toksave version
+toksave --help       Show all commands and flags
 ```
 
-### Advanced Commands
+Flags:
 
-| Command | Description |
-|---------|-------------|
-| `toksave` | Install + wire all tools into detected agents |
-| `toksave doctor` | Read-only health check with diagnostics and repair suggestions |
-| `toksave doctor --fix` | Repair unhealthy tool installations, then report health after repair |
-| `toksave update` | Update all tools to latest versions |
-| `toksave uninstall` | Remove toksave wiring from agents |
-| `toksave disable` | Remove all wire/unwire + owner entries for all agents |
-| `toksave index` | Pre-build CodeGraph index in current directory |
-| `toksave self-update` | Update the toksave CLI itself |
+```
+--agents <list>   Subset: claude,opencode,codex,antigravity,copilot,droid
+--tools <list>    Subset: rtk,caveman,ponytail,codegraph,context-mode
+--dry-run         Preview, no writes
+--verbose         Every step
+--yes             Skip confirmations
+```
 
-### Helpful Flags
-
-| Flag | Description |
-|------|-------------|
-| `-a, --agents <ids>` | Target specific agents (e.g., `claude,antigravity`) |
-| `-t, --tools <ids>`  | Target specific tools (e.g., `rtk,caveman`) |
-| `-n, --dry-run`      | Preview changes without modifying anything |
-| `-y, --yes`          | Skip prompts, auto-select detected agents (CI-friendly) |
-| `-v, --verbose`      | Show detailed output |
+Restart agents after install so they pick up new config.
 
 ## 🛠️ Development
 
