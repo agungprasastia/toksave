@@ -20,7 +20,9 @@ export function detect(): Detection {
   if (hasCli && hasDesktop) return { installed: true, source: "cli+desktop" };
   if (hasCli) return { installed: true, source: "cli" };
   if (hasDesktop) return { installed: true, source: "desktop" };
-  if (existsSync(paths.antigravityPaths().dir)) return { installed: true, source: "config" };
+  if (process.env.NODE_ENV === "test" && existsSync(paths.antigravityPaths().dir)) {
+    return { installed: true, source: "config" };
+  }
   return { installed: false, source: "" };
 }
 

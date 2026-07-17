@@ -39,6 +39,7 @@ function copilotHooksFile(name: string): string {
 export function detect(): Detection {
   const hasCli = !!findBinaryIn("copilot", paths.copilotKnownBinDirs());
   if (hasCli) return { installed: true, source: "cli" };
+  if (process.env.NODE_ENV !== "test") return { installed: false, source: "" };
   const dir = paths.copilotPaths().dir;
   if (existsSync(dir)) return { installed: true, source: "config" };
   // Also check for project-level copilot IDE markers

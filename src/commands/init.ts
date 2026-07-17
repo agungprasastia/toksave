@@ -11,11 +11,12 @@ import {
   type RunOpts,
   type ToolId,
   toolInstalledVersion,
+  verifyTool,
   wireTool,
 } from "../registry.js";
 import * as colors from "../util/colors.js";
+import { ensureDeps } from "../util/deps.js";
 import { recordWire } from "../util/manifest.js";
-import { checkNode } from "../util/npm.js";
 import { formatPathFixResult, selfHealPath } from "../util/pathfix.js";
 import { Progress } from "../util/progress.js";
 import { isInteractive, multiSelect, type SelectOption } from "../util/prompt.js";
@@ -31,18 +32,16 @@ export async function run(
   // ── Step 1: Check dependencies ──────────────────────────
   const tools = ALL_TOOLS.filter((t) => toolsFilter.length === 0 || toolsFilter.includes(t.id));
 
-  const maxNode = Math.max(0, ...tools.map((t) => t.minNodeMajor));
-  const nodeOk = maxNode === 0 || checkNode(maxNode);
-  if (!nodeOk && maxNode > 0) {
-    colors.warn(`Node.js >= ${maxNode} required for some tools. https://nodejs.org/en/download`);
-  }
+  const minNode = Math.max(0, ...tools.map((t) => t.minNodeMajor));
+  const hasNpmTools = tools.some((t) => t.channel === "npm");
+  const deps = ensureDeps(hasNpmTools, false, minNode);
 
   // ── Step 2: Install tools ───────────────────────────────
   const s = new Progress();
   const installedTools = new Set<ToolId>();
   for (const tool of tools) {
     s.start(`Installing ${tool.label}`);
-    if (tool.channel === "npm" && !nodeOk) {
+    if (tool.channel === "npm" && !deps.ok) {
       s.stop(`${pc.yellow(colors.WARN)} ${tool.label} — needs Node.js`);
       continue;
     }
@@ -128,6 +127,10 @@ export async function run(
         await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
         if (ok && !opts.dryRun) {
           recordWire(agentId, tool.id, toolInstalledVersion(tool.id) ?? undefined);
+          if (verifyTool(agentId, tool.id) === false) {
+            failedTools.push(tool.label);
+            continue;
+          }
         }
         if (!ok) failedTools.push(tool.label);
       } catch {

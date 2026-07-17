@@ -5,6 +5,17 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-07-17
+
+### Changed
+
+- **Verify after wire**: Init command now calls `verifyTool()` after `wireTool()` succeeds. If verification fails, the tool is reported as not wired — matching tokless behavior. Prevents silent wiring failures.
+- **Pre-flight dependency check**: Init command now uses unified `ensureDeps()` instead of ad-hoc `checkNode()`. Ready for git dep checks.
+
+### Fixed
+
+- **Agent detect false positives**: Config-dir fallback in `detect()` now only activates under `NODE_ENV=test` for all agents (claude, droid, antigravity, copilot). Prevents `~/.factory`, `~/.gemini`, or project-level `.vscode/mcp.json` from triggering false detection.
+
 ## [0.8.0] - 2026-07-17
 
 ### Added
