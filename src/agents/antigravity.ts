@@ -361,10 +361,7 @@ function removeCodegraphIndexHook(): void {
 // ─── Caveman ─────────────────────────────────────────────────
 
 async function wireCaveman(opts: RunOpts): Promise<boolean> {
-  if (opts.dryRun) {
-    writeOwner("antigravity", "caveman");
-    return true;
-  }
+  if (opts.dryRun) return true;
   const gemini = paths.antigravityPaths().dir;
   const skillDir = join(gemini, "config", "skills", "caveman");
   paths.ensureDir(skillDir);

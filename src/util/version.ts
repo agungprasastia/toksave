@@ -15,7 +15,7 @@ export interface VersionInfo {
 
 /** Build-time version from package.json. */
 export function toksaveVersion(): string {
-  return "0.8.1";
+  return "0.8.2";
 }
 
 /** User-Agent string with version for HTTP requests. */

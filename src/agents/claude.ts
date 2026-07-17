@@ -426,10 +426,7 @@ function hasClaudeAutoIndexHook(): boolean {
 // ─── Caveman wiring ─────────────────────────────────────────
 
 async function wireCaveman(opts: RunOpts): Promise<boolean> {
-  if (opts.dryRun) {
-    writeOwner("claude", "caveman");
-    return true;
-  }
+  if (opts.dryRun) return true;
 
   if (process.env.NODE_ENV !== "test" && findBinary("claude")) {
     const ok = cavemanExec(

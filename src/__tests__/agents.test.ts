@@ -363,6 +363,18 @@ describe("agent × tool wiring matrix (all 36 combos)", () => {
       });
     }
   }
+
+  for (const tl of ["rtk", "caveman", "codegraph", "context-mode", "ponytail", "principles"] as ToolId[]) {
+    test(`dry-run wire does not pass verify for ${tl} (caught by verify-after-wire)`, async () => {
+      const dryOpts: RunOpts = { ...opts, dryRun: true };
+      for (const [aname, agent] of Object.entries(agentMap)) {
+        const res = await agent.wire(tl, dryOpts);
+        expect(res).toBe(true);
+        const v = agent.verify(tl);
+        expect(v).toBe(false);
+      }
+    });
+  }
 });
 
 describe("agent detection config-dir fallback", () => {

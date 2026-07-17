@@ -5,6 +5,16 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-07-17
+
+### Added
+
+- **Verify-after-wire regression test**: 6 new tests confirm dry-run wire does not pass verify for any agent×tool combo. Exposes missing dryRun guards in wire functions.
+
+### Fixed
+
+- **WireCaveman dryRun writes owner marker**: Claude Code and Antigravity `wireCaveman()` called `writeOwner()` even with `dryRun: true`, causing verify to falsely report caveman as wired. `writeOwner` now correctly skipped on dryRun.
+
 ## [0.8.1] - 2026-07-17
 
 ### Changed
