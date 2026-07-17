@@ -154,8 +154,8 @@ describe("agent MCP wiring", () => {
     const cfg = readJsonFile(paths.claudePaths().settings) as Record<string, unknown>;
     const hooks = cfg?.hooks as Record<string, unknown> | undefined;
     expect(hooks?.SessionStart).toBeDefined();
-    const entry = (hooks?.SessionStart as unknown[])[0] as Record<string, unknown>;
-    expect((entry?.hooks as unknown[])[0]).toMatchObject({
+    const entry = (hooks!.SessionStart as unknown[])[0] as Record<string, unknown>;
+    expect((entry!.hooks as unknown[])[0]).toMatchObject({
       command: "toksave index --auto",
       timeout: 120000,
     });
@@ -166,7 +166,8 @@ describe("agent MCP wiring", () => {
     await claude.wire("codegraph", opts);
     const cfg = readJsonFile(paths.claudePaths().settings) as Record<string, unknown>;
     const hooks = cfg?.hooks as Record<string, unknown> | undefined;
-    expect((hooks?.SessionStart as unknown[]).length).toBe(1);
+    expect(hooks!.SessionStart).toBeDefined();
+    expect((hooks!.SessionStart as unknown[]).length).toBe(1);
   });
 
   test("Claude auto-index hook is removed on unwire", async () => {
