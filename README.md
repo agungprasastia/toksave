@@ -2,28 +2,24 @@
   <img src="assets/Logo.png" alt="toksave logo" width="300" />
 </div>
 
-## toksave
+# toksave
 
-**A unified pipeline for efficient and effective coding agents.**
-
-One tool, no config — works the moment it lands.
+**Zero-config token-saver for AI coding agents.**
 
 [![version](https://img.shields.io/github/v/release/agungprasastia/toksave?label=version)](https://github.com/agungprasastia/toksave/releases)
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue)](https://github.com/agungprasastia/toksave)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/agungprasastia/toksave/actions/workflows/ci.yml/badge.svg)](https://github.com/agungprasastia/toksave/actions)
 
-> *Many great packages make coding agents more **effective and efficient** — but discovering, installing, updating, and unifying them is painful. The best tools exist; the **wiring is the real cost**.*
-
-**toksave** — the lazy one-command solution.
+Install and wire [RTK](https://github.com/rtk-ai/rtk), [Caveman](https://github.com/JuliusBrussee/caveman), [CodeGraph](https://github.com/colbymchenry/codegraph), [Context-Mode](https://github.com/mksglu/context-mode), [Ponytail](https://github.com/dietrichgebert/ponytail), and [Principles](https://github.com/agungprasastia/toksave) into your AI agents — without hand-editing configs.
 
 <table>
-<tr><td>✔️</td><td><b>Best packages, unified</b> — picks the most effective, efficient tools and wires them without conflicts</td></tr>
+<tr><td>✔️</td><td><b>Best tools, unified</b> — picks the best token-saving tools and wires them without conflicts</td></tr>
 <tr><td>✔️</td><td><b>One command, done</b> — pick your agent, restart, go</td></tr>
 <tr><td>✔️</td><td><b>All platforms</b> — macOS, Linux, Windows</td></tr>
-<tr><td>✔️</td><td><b>Zero config</b> — everything wired, no manual edits</td></tr>
+<tr><td>✔️</td><td><b>Zero config</b> — everything wired automatically</td></tr>
 <tr><td>✔️</td><td><b>Simple updates</b> — <code>toksave update</code> upgrades everything in one shot</td></tr>
-<tr><td>✔️</td><td><b>Non-tech friendly</b> — under 30 seconds, anyone can do it</td></tr>
+<tr><td>✔️</td><td><b>Clean uninstall</b> — reverts every change it made</td></tr>
 </table>
 
 ## 🤖 Supported Agents
@@ -86,7 +82,7 @@ toksave --agents claude,opencode,codex,antigravity,copilot,droid  # all
 | **Ponytail** | ![](https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&label=) | Forces laziest working solution — YAGNI, stdlib first, delete over add |
 | **Principles** | ![](https://img.shields.io/github/stars/agungprasastia/toksave?style=flat-square&label=) | Agent coding standards — think before code, simplicity, surgical edits |
 
-### Wiring
+### Wiring per Agent
 
 | Tool | Claude | OpenCode | Codex | Antigravity | Copilot | Droid |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -115,30 +111,28 @@ curl -fsSL https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts
 irm https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts/install.ps1 | iex
 ```
 
-## 💻 Usage
+### Command Reference
 
-```
-toksave              Install + wire everything (default; safe to re-run)
-toksave doctor       Check health of all wired tools
-toksave doctor --fix Repair unhealthy tool installations
-toksave update       Update all tools to latest versions
-toksave uninstall    Remove everything toksave touched
-toksave disable      Remove all wire/unwire + owner entries for all agents
-toksave index        Pre-build CodeGraph index in current directory
-toksave self-update  Update the toksave CLI itself
-toksave --version    Print toksave version
-toksave --help       Show all commands and flags
-```
+| Command | Description |
+|---------|-------------|
+| `toksave` | Interactive setup — detects agents, installs tools, wires everything |
+| `toksave doctor` | Health check with diagnostics and repair suggestions |
+| `toksave doctor --fix` | Repair unhealthy tool installations |
+| `toksave update` | Update all tools to latest versions |
+| `toksave uninstall` | Remove toksave wiring from all agents |
+| `toksave disable` | Remove all wire/unwire + owner entries for all agents |
+| `toksave index` | Pre-build CodeGraph index in current directory |
+| `toksave self-update` | Update the toksave CLI itself |
 
-Flags:
+### Flags
 
-```
---agents <list>   Subset: claude,opencode,codex,antigravity,copilot,droid
---tools <list>    Subset: rtk,caveman,ponytail,codegraph,context-mode
---dry-run         Preview, no writes
---verbose         Every step
---yes             Skip confirmations
-```
+| Flag | Description |
+|------|-------------|
+| `-a, --agents <ids>` | Target specific agents (e.g., `claude,antigravity`) |
+| `-t, --tools <ids>` | Target specific tools (e.g., `rtk,caveman`) |
+| `-n, --dry-run` | Preview changes without modifying anything |
+| `-y, --yes` | Skip prompts, auto-select detected agents (CI-friendly) |
+| `-v, --verbose` | Show detailed output |
 
 Restart agents after install so they pick up new config.
 
