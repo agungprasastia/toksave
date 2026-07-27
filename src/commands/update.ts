@@ -24,10 +24,12 @@ export async function run(opts: RunOpts): Promise<number> {
   // ── Probe versions ──────────────────────────────────────
   const changed: (typeof ALL_TOOLS)[number]["id"][] = [];
 
+  const PAD = Math.max(18, ...ALL_TOOLS.map((t) => t.label.length + 2));
+
   for (const tool of ALL_TOOLS) {
     const installed = toolInstalledVersion(tool.id);
     const latest = await toolLatestVersion(tool.id);
-    const label = colors.pad(tool.label, 14);
+    const label = colors.pad(tool.label, PAD);
 
     const instStr = installed ? `v${installed}` : "not on PATH";
     const latStr = latest ? `v${latest}` : "?";

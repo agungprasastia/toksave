@@ -105,12 +105,18 @@ function checkAgentMcpHealth(agent: AgentId, tool: ToolId): { healthy: boolean; 
 export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promise<number> {
   colors.banner("toksave doctor", "quick health check");
 
+  const PAD = Math.max(
+    18,
+    ...ALL_AGENTS.map((a) => a.label.length + 2),
+    ...ALL_TOOLS.map((t) => t.label.length + 2),
+  );
+
   // ── Per-agent wiring status ─────────────────────────────
   for (const agent of ALL_AGENTS) {
     const det = detectAgent(agent.id);
     if (!det.installed) {
       colors.raw(
-        `  ${pc.dim(colors.BULLET)} ${colors.pad(agent.label, 14)}${pc.dim("not installed")}`,
+        `  ${pc.dim(colors.BULLET)} ${colors.pad(agent.label, PAD)}${pc.dim("not installed")}`,
       );
       continue;
     }
@@ -131,11 +137,11 @@ export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promis
 
     if (missing.length === 0) {
       colors.raw(
-        `  ${pc.green(colors.CHECK)} ${colors.pad(agent.label, 14)}${pc.dim("all tools wired")}`,
+        `  ${pc.green(colors.CHECK)} ${colors.pad(agent.label, PAD)}${pc.dim("all tools wired")}`,
       );
     } else {
       colors.raw(
-        `  ${pc.yellow(colors.WARN)} ${colors.pad(agent.label, 14)}${pc.yellow(`missing: ${missing.join(", ")}`)}`,
+        `  ${pc.yellow(colors.WARN)} ${colors.pad(agent.label, PAD)}${pc.yellow(`missing: ${missing.join(", ")}`)}`,
       );
     }
   }
@@ -148,7 +154,7 @@ export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promis
     for (const tool of ALL_TOOLS) {
       const installed = toolInstalledVersion(tool.id);
       const latest = await toolLatestVersion(tool.id);
-      const label = colors.pad(tool.label, 14);
+      const label = colors.pad(tool.label, PAD);
 
       if (tool.instructionOnly) {
         colors.raw(`  ${pc.green(colors.CHECK)} ${pc.dim(label)}${pc.dim("instruction-only")}`);
@@ -198,20 +204,20 @@ export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promis
   if (unhealthy.length > 0) {
     console.log();
     for (const { tool, health } of unhealthy) {
-      const label = colors.pad(tool.label, 14);
+      const label = colors.pad(tool.label, PAD);
       colors.raw(`  ${pc.yellow(colors.WARN)} ${label}${pc.yellow("unhealthy")}`);
       printHealthIssues(health);
 
       if (fix) {
         const result = await toolRepair(tool.id, opts);
         const icon = result.success ? pc.green(colors.CHECK) : pc.red(colors.CROSS);
-        colors.raw(`  ${icon} ${colors.pad(tool.label, 14)}${result.message}`);
+        colors.raw(`  ${icon} ${colors.pad(tool.label, PAD)}${result.message}`);
         if (result.healthAfterRepair) {
           const status = result.healthAfterRepair.healthy
             ? pc.green("healthy")
             : pc.yellow("unhealthy");
           colors.raw(
-            `  ${pc.dim(colors.BULLET)} ${colors.pad(tool.label, 14)}after repair: ${status}`,
+            `  ${pc.dim(colors.BULLET)} ${colors.pad(tool.label, PAD)}after repair: ${status}`,
           );
           printHealthIssues(result.healthAfterRepair);
         }
