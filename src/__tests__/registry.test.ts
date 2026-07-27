@@ -9,10 +9,11 @@ import {
 } from "../registry.js";
 
 describe("Registry", () => {
-  test("ALL_AGENTS has 6 entries (including copilot, droid)", () => {
-    expect(ALL_AGENTS).toHaveLength(6);
+  test("ALL_AGENTS has 7 entries (including copilot, droid, devin)", () => {
+    expect(ALL_AGENTS).toHaveLength(7);
     expect(ALL_AGENTS.map((a) => a.id)).toContain("copilot");
     expect(ALL_AGENTS.map((a) => a.id)).toContain("droid");
+    expect(ALL_AGENTS.map((a) => a.id)).toContain("devin");
   });
 
   test("ALL_TOOLS has 6 entries (including ponytail, principles)", () => {

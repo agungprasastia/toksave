@@ -7,7 +7,7 @@ export async function install(_opts: RunOpts): Promise<boolean> {
 }
 
 export function installedVersion(): string | null {
-  return null;
+  return "instruction-only";
 }
 
 export async function latestVersion(): Promise<string | null> {

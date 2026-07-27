@@ -1,6 +1,13 @@
 // ─── Enums ───────────────────────────────────────────────────
 
-export type AgentId = "claude" | "opencode" | "codex" | "antigravity" | "copilot" | "droid";
+export type AgentId =
+  | "claude"
+  | "opencode"
+  | "codex"
+  | "antigravity"
+  | "copilot"
+  | "droid"
+  | "devin";
 export type ToolId = "rtk" | "caveman" | "codegraph" | "context-mode" | "ponytail" | "principles";
 export type Channel = "github" | "npm" | "skill";
 
@@ -74,6 +81,12 @@ export const ALL_AGENTS: AgentInfo[] = [
     homepage: "https://factory.ai",
     cliBin: "droid",
   },
+  {
+    id: "devin",
+    label: "Devin / Cascade",
+    homepage: "https://devin.ai",
+    cliBin: "devin",
+  },
 ];
 
 export const ALL_TOOLS: ToolInfo[] = [
@@ -135,7 +148,12 @@ export function toolInfo(id: ToolId): ToolInfo {
 
 export function parseAgentId(s: string): AgentId | null {
   const lower = s.toLowerCase().trim();
-  if (["claude", "opencode", "codex", "antigravity", "copilot", "droid"].includes(lower)) {
+  if (
+    ["claude", "opencode", "codex", "antigravity", "copilot", "droid", "devin", "cascade"].includes(
+      lower,
+    )
+  ) {
+    if (lower === "cascade") return "devin";
     return lower as AgentId;
   }
   return null;
@@ -164,6 +182,7 @@ import * as antigravity from "./agents/antigravity.js";
 import * as claude from "./agents/claude.js";
 import * as codex from "./agents/codex.js";
 import * as copilot from "./agents/copilot.js";
+import * as devin from "./agents/devin.js";
 import * as droid from "./agents/droid.js";
 import * as opencode from "./agents/opencode.js";
 import * as cavemanTool from "./tools/caveman.js";
@@ -175,7 +194,7 @@ import * as rtkTool from "./tools/rtk.js";
 import type { HealthStatus, RepairResult } from "./util/health.js";
 import { getCachedLatest, getStaleFallback, setCachedLatest } from "./util/versioncache.js";
 
-const agentModules = { claude, opencode, codex, antigravity, copilot, droid };
+const agentModules = { claude, opencode, codex, antigravity, copilot, droid, devin };
 const toolModules = {
   rtk: rtkTool,
   caveman: cavemanTool,

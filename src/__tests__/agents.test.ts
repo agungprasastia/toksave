@@ -6,6 +6,7 @@ import * as antigravity from "../agents/antigravity.js";
 import * as claude from "../agents/claude.js";
 import * as codex from "../agents/codex.js";
 import * as copilot from "../agents/copilot.js";
+import * as devin from "../agents/devin.js";
 import * as droid from "../agents/droid.js";
 import * as opencode from "../agents/opencode.js";
 import { readJsonFile } from "../config/json.js";
@@ -345,6 +346,7 @@ describe("agent × tool wiring matrix (all 36 combos)", () => {
     antigravity,
     copilot,
     droid,
+    devin,
   };
   const tools: ToolId[] = ["rtk", "caveman", "codegraph", "context-mode", "ponytail", "principles"];
 

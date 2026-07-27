@@ -48,6 +48,8 @@ function instructionPath(agent: string): string {
       return paths.copilotPaths().instructions;
     case "droid":
       return paths.droidPaths().instructions;
+    case "devin":
+      return paths.devinPaths().instructions;
     default:
       return "";
   }

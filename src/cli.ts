@@ -139,7 +139,9 @@ export function parseCli(argv: string[]): ParsedCli {
   program
     .command("runmcp")
     .description("Internal hook to proxy MCP execution securely")
+    .argument("[args...]")
     .allowUnknownOption()
+    .allowExcessArguments(true)
     .action(() => {
       result.command = "runmcp";
       applyGlobalOpts(result, program.opts());

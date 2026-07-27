@@ -285,6 +285,45 @@ export function droidDesktopPaths(): string[] {
   return [];
 }
 
+// ─── Devin ───────────────────────────────────────────────────
+
+export interface DevinPaths {
+  dir: string;
+  hooksFile: string;
+  mcpConfig: string;
+  instructions: string;
+}
+
+export function devinPaths(): DevinPaths {
+  const h = home();
+  const dir = existsSync(join(h, ".devin")) ? join(h, ".devin") : join(h, ".config", "devin");
+  return {
+    dir,
+    hooksFile: join(dir, "hooks.json"),
+    mcpConfig: join(dir, "mcp.json"),
+    instructions: join(dir, "AGENTS.md"),
+  };
+}
+
+export function devinKnownBinDirs(): string[] {
+  return [
+    join(home(), ".local", "bin"),
+    join(home(), ".devin", "bin"),
+    join(home(), ".config", "devin", "bin"),
+  ];
+}
+
+export function devinDesktopPaths(): string[] {
+  if (process.platform === "win32") {
+    const local = process.env.LOCALAPPDATA;
+    if (local) return [join(local, "Programs", "Devin", "Devin.exe")];
+  }
+  if (process.platform === "darwin") {
+    return ["/Applications/Devin.app"];
+  }
+  return [];
+}
+
 // ─── Shared ──────────────────────────────────────────────────
 
 /** Local bin directory for tool installs. */

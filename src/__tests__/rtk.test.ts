@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import * as rtk from "../tools/rtk.js";
+import * as detect from "../util/detect.js";
 import * as exec from "../util/exec.js";
 import { ensureDir, localBin } from "../util/paths.js";
 
@@ -57,6 +58,7 @@ function restoreEnv(key: string, value: string | undefined): void {
 
 describe("RTK detection", () => {
   test("isInstalledButUnreachable is true when binary in localBin but not in PATH", () => {
+    const isOnPathSpy = spyOn(detect, "isOnPath").mockImplementation((name) => name !== "rtk");
     const binDir = localBin();
 
     ensureDir(binDir);
@@ -71,6 +73,8 @@ describe("RTK detection", () => {
     expect(health.issues[0]?.severity).toBe("error");
     expect(health.issues[0]?.message).toContain("not on your PATH");
     expect(health.issues[0]?.remediation).toContain("Enforcement hooks will fail");
+
+    isOnPathSpy.mockRestore();
   });
 
   test("isInstalledButUnreachable is false when not installed at all", () => {

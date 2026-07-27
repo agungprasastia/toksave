@@ -201,6 +201,10 @@ function printVersionTable(tools: typeof ALL_TOOLS): void {
   });
 
   for (const tool of tools) {
+    if (tool.instructionOnly) {
+      table.push([`  ${pc.green(colors.CHECK)}`, tool.label, "instruction-only"]);
+      continue;
+    }
     const installed = toolInstalledVersion(tool.id);
     if (installed) {
       table.push([`  ${pc.green(colors.CHECK)}`, tool.label, installed]);

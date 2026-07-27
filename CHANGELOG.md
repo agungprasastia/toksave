@@ -5,6 +5,20 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-07-27
+
+### Added
+
+- **Devin / Cascade Agent**: Added full support for Devin / Cascade AI agent (`devin` / `cascade` flag) with MCP (`mcp.json`) and `AGENTS.md` instructions wiring for all 6 tools.
+
+### Fixed
+
+- **`runmcp` CLI argument parsing**: Added `.argument("[args...]")` and `.allowExcessArguments(true)` to `runmcp` command registration in Commander. Prevents "too many arguments for 'runmcp'" failures when agents launch MCP servers with parameters.
+- **Bare MCP tool binary resolution**: `runmcp` now automatically resolves bare tool names (e.g. `codegraph`, `context-mode`) to their installed executables on PATH or user bin directories (`~/.local/bin`, mise shims, etc.).
+- **GUI agent PATH expansion**: `runmcp` now ensures `PATH` includes user tool paths (`~/.local/bin`, mise node shims, etc.) so GUI desktop agents with minimal PATH environments can locate `node`, `codegraph`, and `context-mode`.
+- **Caveman install fallback**: `caveman` tool installation now succeeds gracefully even if global npm installation fails or npm is absent, ensuring instruction-based skill wiring still completes.
+- **`toksave doctor` deep MCP verification**: `doctor` now performs executable-level verification (`checkAgentMcpHealth`) for `codegraph` and `context-mode`, catching unresolvable or crashing MCP configurations rather than relying solely on config file presence.
+
 ## [0.8.3] - 2026-07-17
 
 ### Fixed

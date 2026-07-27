@@ -1,21 +1,24 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { resolveNode } from "../util/detect.js";
+import { closeSync, existsSync, openSync, readSync } from "node:fs";
+import { homedir } from "node:os";
+import { isAbsolute, join, resolve as resolvePath } from "node:path";
+import { findBinary, findBinaryIn, resolveNode } from "../util/detect.js";
+import { resolveMcpExecutable } from "../util/mcpspawn.js";
 
 export function isNodeShebangScript(filePath: string): boolean {
   let fd: number | null = null;
   try {
-    const buf = Buffer.alloc(32);
-    fd = require("node:fs").openSync(filePath, "r");
-    require("node:fs").readSync(fd, buf, 0, 32, 0);
-    return buf.toString().startsWith("#!/usr/bin/env node");
+    const buf = Buffer.alloc(64);
+    fd = openSync(filePath, "r");
+    readSync(fd, buf, 0, 64, 0);
+    const head = buf.toString("utf8");
+    return head.startsWith("#!/usr/bin/env node") || /^#!.*\bnode(?:\.exe)?\b/m.test(head);
   } catch {
     return false;
   } finally {
     if (fd !== null) {
       try {
-        require("node:fs").closeSync(fd);
+        closeSync(fd);
       } catch {}
     }
   }
@@ -44,32 +47,53 @@ function resolveHookProjectDirFromInput(_input: string, cwd: string): string {
       if (existsSync(join(cur, m))) return cur;
     }
     const parent = join(cur, "..");
-    const resolved = require("node:path").resolve(parent);
+    const resolved = resolvePath(parent);
     if (resolved === cur) break;
     cur = resolved;
   }
   return cwd;
 }
 
+/** Expand PATH so GUI-launched agents (minimal env) still find node/npm tools. */
+export function ensureToolPath(): string {
+  const parts = (process.env.PATH ?? "")
+    .split(process.platform === "win32" ? ";" : ":")
+    .filter(Boolean);
+  const extras: string[] = [];
+  const home = homedir();
+  extras.push(join(home, ".local", "bin"), join(home, ".bun", "bin"), join(home, ".cargo", "bin"));
+  if (process.platform !== "win32") {
+    extras.push("/usr/local/bin", "/opt/homebrew/bin");
+  }
+  const miseNodeRoot = join(home, ".local", "share", "mise", "installs", "node");
+  if (existsSync(miseNodeRoot)) {
+    try {
+      const { readdirSync } = require("node:fs") as typeof import("node:fs");
+      const versions = readdirSync(miseNodeRoot)
+        .map((v) => join(miseNodeRoot, v, "bin"))
+        .filter((p) => existsSync(join(p, process.platform === "win32" ? "node.exe" : "node")))
+        .sort()
+        .reverse();
+      extras.push(...versions);
+    } catch {}
+  }
+  const miseShims = join(home, ".local", "share", "mise", "shims");
+  if (existsSync(miseShims)) extras.push(miseShims);
+
+  for (const dir of extras) {
+    if (dir && !parts.includes(dir)) parts.unshift(dir);
+  }
+  const next = parts.join(process.platform === "win32" ? ";" : ":");
+  process.env.PATH = next;
+  return next;
+}
+
 function preIndexIfNeeded(cwd: string): void {
-  // Fire-and-forget codegraph sync/init if .codegraph exists or markers present — like tokless RunIndex auto
-  // Only if codegraph binary present
+  // Fire-and-forget codegraph sync/init if .codegraph exists — only if binary present
   try {
-    const codegraphBin = (() => {
-      try {
-        const { execSync } = require("node:child_process");
-        const whichCmd = process.platform === "win32" ? "where" : "which";
-        const out = execSync(`${whichCmd} codegraph`, { encoding: "utf-8", timeout: 2000 })
-          .trim()
-          .split("\n")[0];
-        return out?.trim() ?? "";
-      } catch {
-        return "";
-      }
-    })();
+    const codegraphBin = resolveMcpExecutable("codegraph") ?? findBinary("codegraph") ?? "";
     if (!codegraphBin) return;
     if (!existsSync(join(cwd, ".codegraph"))) return;
-    // Spawn background sync
     const child = spawn(codegraphBin, ["sync"], { cwd, detached: true, stdio: "ignore" });
     child.unref();
   } catch {}
@@ -77,9 +101,11 @@ function preIndexIfNeeded(cwd: string): void {
 
 export function runMcp(): Promise<number> {
   return new Promise((resolve) => {
+    ensureToolPath();
+
     let args = process.argv.slice(3);
     if (args.length === 0) {
-      console.error("Usage: toksave runmcp <script_path> [args...]");
+      console.error("Usage: toksave runmcp [--agent <id>] <script_path|tool> [args...]");
       return resolve(1);
     }
 
@@ -95,16 +121,32 @@ export function runMcp(): Promise<number> {
     } catch {}
 
     if (args.length === 0) {
-      console.error("Usage: toksave runmcp [--agent <id>] <script_path> [args...]");
+      console.error("Usage: toksave runmcp [--agent <id>] <script_path|tool> [args...]");
       return resolve(1);
     }
 
-    let exe = args[0];
-    if (!exe) {
+    const requested = args[0];
+    if (!requested) {
       console.error("Error: No executable specified for MCP server.");
       return resolve(1);
     }
+
+    // Agent configs pass bare tool names (codegraph, context-mode). Resolve them.
+    let exe = resolveMcpExecutable(requested) ?? requested;
     let cmdArgs = args.slice(1);
+
+    if (!isAbsolute(exe) && !exe.includes("/") && !exe.includes("\\")) {
+      const found = findBinary(exe) ?? findBinaryIn(exe, []);
+      if (found) exe = found;
+    }
+
+    if (!existsSync(exe) && !findBinary(exe)) {
+      console.error(`Error: MCP executable not found: ${requested}`);
+      console.error(
+        "Install the tool (e.g. npm i -g @colbymchenry/codegraph context-mode) and ensure PATH includes its bin dir.",
+      );
+      return resolve(1);
+    }
 
     if (existsSync(exe) && isNodeShebangScript(exe)) {
       cmdArgs = [exe, ...cmdArgs];
@@ -121,7 +163,8 @@ export function runMcp(): Promise<number> {
       env: process.env,
     });
 
-    child.on("error", () => {
+    child.on("error", (err) => {
+      console.error(`Error: failed to start MCP server: ${err.message}`);
       resolve(1);
     });
 
