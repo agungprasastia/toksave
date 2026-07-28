@@ -51,7 +51,7 @@ toksave handles the wiring so you can focus on the code.
     <tr>
       <td align="center" width="140"><img src="assets/agents/copilot.jpg" width="56" alt="GitHub Copilot" /><br/><b>GitHub Copilot</b><br/><sub>✅ Supported</sub></td>
       <td align="center" width="140"><img src="assets/agents/droid.png" width="56" alt="Droid" /><br/><b>Droid</b><br/><sub>✅ Supported</sub></td>
-      <td align="center" width="140"><img src="assets/agents/devin.png" width="56" alt="Devin" /><br/><b>Devin / Cascade</b><br/><sub>✅ Supported</sub></td>
+      <td align="center" width="140"><img src="assets/agents/devin.jpg" width="56" alt="Devin" /><br/><b>Devin / Cascade</b><br/><sub>✅ Supported</sub></td>
     </tr>
   </table>
 </div>
