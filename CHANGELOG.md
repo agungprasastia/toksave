@@ -9,15 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Devin / Cascade Agent**: Added full support for Devin / Cascade AI agent (`devin` / `cascade` flag) with MCP (`mcp.json`) and `AGENTS.md` instructions wiring for all 6 tools.
+- **Devin / Cascade Agent**: Added full support for Devin / Cascade AI agent (`devin` / `cascade` flag) with MCP (`mcp.json`) and `AGENTS.md` instructions wiring for all 6 tools. ([@jondmarien](https://github.com/jondmarien) in [#19](https://github.com/agungprasastia/toksave/pull/19))
 
 ### Fixed
 
-- **`runmcp` CLI argument parsing**: Added `.argument("[args...]")` and `.allowExcessArguments(true)` to `runmcp` command registration in Commander. Prevents "too many arguments for 'runmcp'" failures when agents launch MCP servers with parameters.
-- **Bare MCP tool binary resolution**: `runmcp` now automatically resolves bare tool names (e.g. `codegraph`, `context-mode`) to their installed executables on PATH or user bin directories (`~/.local/bin`, mise shims, etc.).
-- **GUI agent PATH expansion**: `runmcp` now ensures `PATH` includes user tool paths (`~/.local/bin`, mise node shims, etc.) so GUI desktop agents with minimal PATH environments can locate `node`, `codegraph`, and `context-mode`.
-- **Caveman install fallback**: `caveman` tool installation now succeeds gracefully even if global npm installation fails or npm is absent, ensuring instruction-based skill wiring still completes.
-- **`toksave doctor` deep MCP verification**: `doctor` now performs executable-level verification (`checkAgentMcpHealth`) for `codegraph` and `context-mode`, catching unresolvable or crashing MCP configurations rather than relying solely on config file presence.
+- **`runmcp` CLI argument parsing**: Added `.argument("[args...]")` and `.allowExcessArguments(true)` to `runmcp` command registration in Commander. Prevents "too many arguments for 'runmcp'" failures when agents launch MCP servers with parameters. ([@jondmarien](https://github.com/jondmarien) in [#19](https://github.com/agungprasastia/toksave/pull/19))
+- **Bare MCP tool binary resolution**: `runmcp` now automatically resolves bare tool names (e.g. `codegraph`, `context-mode`) to their installed executables on PATH or user bin directories (`~/.local/bin`, mise shims, etc.). ([@jondmarien](https://github.com/jondmarien) in [#19](https://github.com/agungprasastia/toksave/pull/19))
+- **GUI agent PATH expansion**: `runmcp` now ensures `PATH` includes user tool paths (`~/.local/bin`, mise node shims, etc.) so GUI desktop agents with minimal PATH environments can locate `node`, `codegraph`, and `context-mode`. ([@jondmarien](https://github.com/jondmarien) in [#19](https://github.com/agungprasastia/toksave/pull/19))
+- **Caveman install fallback**: `caveman` tool installation now succeeds gracefully even if global npm installation fails or npm is absent, ensuring instruction-based skill wiring still completes. ([@jondmarien](https://github.com/jondmarien) in [#19](https://github.com/agungprasastia/toksave/pull/19))
+- **`toksave doctor` deep MCP verification**: `doctor` now performs executable-level verification (`checkAgentMcpHealth`) for `codegraph` and `context-mode`, catching unresolvable or crashing MCP configurations rather than relying solely on config file presence. ([@jondmarien](https://github.com/jondmarien) in [#19](https://github.com/agungprasastia/toksave/pull/19))
+
+### Contributors
+
+Thanks to community contributor:
+- **[@jondmarien](https://github.com/jondmarien)**: Add Devin/Cascade agent support, fix runmcp CLI args & PATH expansion, doctor deep MCP checks ([#19](https://github.com/agungprasastia/toksave/pull/19))
 
 ## [0.8.3] - 2026-07-17
 
