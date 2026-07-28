@@ -98,10 +98,15 @@ toksave --agents claude,opencode,antigravity # or any combination
 
 ### Install
 
-| Platform | Command |
-| :--- | :--- |
-| **macOS / Linux** | `curl -fsSL https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts/install.sh \| bash` |
-| **Windows** | `irm https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts/install.ps1 \| iex` |
+**macOS / Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts/install.sh | bash
+```
+
+**Windows:**
+```powershell
+irm https://raw.githubusercontent.com/agungprasastia/toksave/main/scripts/install.ps1 | iex
+```
 
 ### Quick start
 
