@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { closeSync, existsSync, openSync, readSync } from "node:fs";
+import { closeSync, existsSync, openSync, readdirSync, readSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve as resolvePath } from "node:path";
 import { findBinary, findBinaryIn, resolveNode } from "../util/detect.js";
@@ -68,7 +68,6 @@ export function ensureToolPath(): string {
   const miseNodeRoot = join(home, ".local", "share", "mise", "installs", "node");
   if (existsSync(miseNodeRoot)) {
     try {
-      const { readdirSync } = require("node:fs") as typeof import("node:fs");
       const versions = readdirSync(miseNodeRoot)
         .map((v) => join(miseNodeRoot, v, "bin"))
         .filter((p) => existsSync(join(p, process.platform === "win32" ? "node.exe" : "node")))

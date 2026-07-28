@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { findBinary, findBinaryIn, resolveNode } from "./detect.js";
 import * as paths from "./paths.js";
@@ -17,7 +18,7 @@ function knownUserBinDirs(): string[] {
   const dirs = [paths.localBin(), join(paths.localBin(), "..", "share", "mise", "shims")];
   // localBin is ~/.local/bin — also check sibling cargo/bun
   try {
-    const home = require("node:os").homedir() as string;
+    const home = homedir();
     dirs.push(join(home, ".bun", "bin"), join(home, ".cargo", "bin"));
   } catch {}
   return dirs;

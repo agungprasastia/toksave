@@ -95,6 +95,8 @@ function checkAgentMcpHealth(agent: AgentId, tool: ToolId): { healthy: boolean; 
         }
         return { healthy: true };
       }
+      default:
+        return { healthy: true };
     }
   } catch (err) {
     return { healthy: false, reason: err instanceof Error ? err.message : String(err) };
