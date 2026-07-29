@@ -324,6 +324,41 @@ export function devinDesktopPaths(): string[] {
   return [];
 }
 
+// ─── Warp / Oz ───────────────────────────────────────────────
+
+export interface WarpPaths {
+  dir: string;
+  hooksFile: string;
+  mcpConfig: string;
+  instructions: string;
+}
+
+export function warpPaths(): WarpPaths {
+  const h = home();
+  const dir = existsSync(join(h, ".warp")) ? join(h, ".warp") : join(h, ".config", "warp");
+  return {
+    dir,
+    hooksFile: join(dir, "hooks.json"),
+    mcpConfig: join(dir, "mcp.json"),
+    instructions: join(dir, "AGENTS.md"),
+  };
+}
+
+export function warpKnownBinDirs(): string[] {
+  return [join(home(), ".local", "bin"), join(home(), ".warp", "bin")];
+}
+
+export function warpDesktopPaths(): string[] {
+  if (process.platform === "win32") {
+    const local = process.env.LOCALAPPDATA;
+    if (local) return [join(local, "Programs", "Warp", "Warp.exe")];
+  }
+  if (process.platform === "darwin") {
+    return ["/Applications/Warp.app"];
+  }
+  return ["/usr/bin/warp-terminal"];
+}
+
 // ─── Shared ──────────────────────────────────────────────────
 
 /** Local bin directory for tool installs. */

@@ -58,6 +58,8 @@ function instructionPathForAgent(agent: string): string {
       return paths.copilotPaths().instructions;
     case "droid":
       return paths.droidPaths().instructions;
+    case "warp":
+      return paths.warpPaths().instructions;
     default:
       return "";
   }

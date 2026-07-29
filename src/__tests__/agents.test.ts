@@ -9,6 +9,7 @@ import * as copilot from "../agents/copilot.js";
 import * as devin from "../agents/devin.js";
 import * as droid from "../agents/droid.js";
 import * as opencode from "../agents/opencode.js";
+import * as warp from "../agents/warp.js";
 import { readJsonFile } from "../config/json.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
 import * as detect from "../util/detect.js";
@@ -347,6 +348,7 @@ describe("agent × tool wiring matrix (all 36 combos)", () => {
     copilot,
     droid,
     devin,
+    warp,
   };
   const tools: ToolId[] = ["rtk", "caveman", "codegraph", "context-mode", "ponytail", "principles"];
 

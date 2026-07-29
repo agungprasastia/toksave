@@ -9,11 +9,12 @@ import {
 } from "../registry.js";
 
 describe("Registry", () => {
-  test("ALL_AGENTS has 7 entries (including copilot, droid, devin)", () => {
-    expect(ALL_AGENTS).toHaveLength(7);
+  test("ALL_AGENTS has 8 entries (including copilot, droid, devin, warp)", () => {
+    expect(ALL_AGENTS).toHaveLength(8);
     expect(ALL_AGENTS.map((a) => a.id)).toContain("copilot");
     expect(ALL_AGENTS.map((a) => a.id)).toContain("droid");
     expect(ALL_AGENTS.map((a) => a.id)).toContain("devin");
+    expect(ALL_AGENTS.map((a) => a.id)).toContain("warp");
   });
 
   test("ALL_TOOLS has 6 entries (including ponytail, principles)", () => {
@@ -41,6 +42,10 @@ describe("Registry", () => {
     expect(parseAgentId("antigravity")).toBe("antigravity");
     expect(parseAgentId("copilot")).toBe("copilot");
     expect(parseAgentId("droid")).toBe("droid");
+    expect(parseAgentId("devin")).toBe("devin");
+    expect(parseAgentId("cascade")).toBe("devin");
+    expect(parseAgentId("warp")).toBe("warp");
+    expect(parseAgentId("oz")).toBe("warp");
   });
 
   test("parseAgentId invalid", () => {
