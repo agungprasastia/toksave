@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, type Mock, spyOn, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import * as antigravity from "../agents/antigravity.js";
 import * as claude from "../agents/claude.js";
 import * as codex from "../agents/codex.js";
@@ -448,5 +448,67 @@ describe("OpenCode auto-index plugin", () => {
     await opencode.wire("codegraph", opts);
     await opencode.unwire("codegraph", opts);
     expect(opencode.hasOpencodeAutoIndexPlugin()).toBe(false);
+  });
+});
+
+describe("Warp hooks.json safety", () => {
+  test("wire does not clobber malformed hooks.json", async () => {
+    // Regression: loadHooks treated unparseable JSON as {} and saveHooks overwrote the file,
+    // destroying the user's hooks content.
+    const hooksPath = paths.warpPaths().hooksFile;
+    paths.ensureDir(dirname(hooksPath));
+    writeFileSync(hooksPath, "{ this is not valid json", "utf-8");
+    const before = readFileSync(hooksPath, "utf-8");
+
+    await warp.wire("rtk", opts);
+    expect(readFileSync(hooksPath, "utf-8")).toBe(before);
+
+    await warp.unwire("rtk", opts);
+    expect(readFileSync(hooksPath, "utf-8")).toBe(before);
+  });
+
+  test("unwire removes only the TokSave hook entry, not the whole hook group", async () => {
+    // Regression: removeHookGroup dropped every entry in a matched group, deleting co-located
+    // user hooks under the same event.
+    const hooksPath = paths.warpPaths().hooksFile;
+    paths.ensureDir(dirname(hooksPath));
+    // Seed a file shaped exactly like post-wire state: user group + user group that
+    // contains both the user's entry and the TokSave entry under the same matcher.
+    writeFileSync(
+      hooksPath,
+      JSON.stringify({
+        PreToolUse: [
+          {
+            matcher: "other-matcher",
+            hooks: [{ type: "command", command: "echo-user" }],
+          },
+          {
+            matcher: "Execute",
+            hooks: [
+              { type: "command", command: "user-existing-cmd" },
+              { type: "command", command: `${paths.toksaveAbs()} rtk-hook warp`, timeout: 10 },
+            ],
+          },
+        ],
+      }),
+      "utf-8",
+    );
+
+    // Unwire must remove only the rtk-hook entry, not the whole matcher group.
+    await warp.unwire("rtk", opts);
+
+    const after = JSON.parse(readFileSync(hooksPath, "utf-8")) as {
+      PreToolUse?: { hooks?: { command?: string }[] }[];
+    };
+    // Both user groups survive; only the TokSave entry is gone.
+    expect(after.PreToolUse?.some((g) => g.hooks?.some((h) => h?.command === "echo-user"))).toBe(
+      true,
+    );
+    expect(
+      after.PreToolUse?.some((g) => g.hooks?.some((h) => h?.command === "user-existing-cmd")),
+    ).toBe(true);
+    expect(
+      after.PreToolUse?.some((g) => g.hooks?.some((h) => h?.command?.includes("rtk-hook"))),
+    ).toBe(false);
   });
 });

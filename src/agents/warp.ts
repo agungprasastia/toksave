@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { getOrCreateObject, readJsonFile, writeJsonFile } from "../config/json.js";
 import type { Detection, RunOpts, ToolId } from "../registry.js";
+import { warn } from "../util/colors.js";
 import { findBinaryIn } from "../util/detect.js";
 import * as paths from "../util/paths.js";
 import { hasOwner, removeOwner, writeOwner } from "../util/unified-block.js";
@@ -116,18 +117,18 @@ export function verify(tool: ToolId): boolean | null {
 
 type HookCfg = Record<string, unknown>;
 
-function loadHooks(): { cfg: Record<string, unknown>; raw: string } {
+function loadHooks(): { cfg: Record<string, unknown>; raw: string } | null {
   const p = paths.warpPaths();
   const raw = paths.readFile(p.hooksFile) ?? "";
+  if (!raw) return { cfg: {}, raw: "" };
   try {
-    if (raw) {
-      const cfg = JSON.parse(raw) as Record<string, unknown>;
-      return { cfg, raw };
-    }
-  } catch {}
-  const cfgFromJson = readJsonFile(p.hooksFile) as Record<string, unknown> | null;
-  if (cfgFromJson) return { cfg: cfgFromJson, raw };
-  return { cfg: {}, raw: "" };
+    const cfg = JSON.parse(raw) as Record<string, unknown>;
+    if (cfg && typeof cfg === "object" && !Array.isArray(cfg)) return { cfg, raw };
+  } catch {
+    // Intentional: fall through, hooks.json exists but is unparseable -> return null so
+    // callers never overwrite the file with a partially-rebuilt structure.
+  }
+  return null;
 }
 
 function saveHooks(cfg: Record<string, unknown>): void {
@@ -160,15 +161,24 @@ function addHookGroup(
 function removeHookGroup(cfg: Record<string, unknown>, event: string, substr: string): void {
   const arr = cfg[event] as unknown[] | undefined;
   if (!Array.isArray(arr)) return;
-  const kept = arr.filter((g) => {
+  // Remove only the inner hook entries that match `substr`. Empty groups are dropped;
+  // groups that still have user hooks are kept. The event key is deleted only when
+  // no groups remain.
+  const kept = arr.reduce<Record<string, unknown>[]>((acc, g) => {
     const hooks = (g as Record<string, unknown>).hooks as unknown[] | undefined;
-    if (!Array.isArray(hooks)) return true;
-    for (const h of hooks) {
-      const c = (h as Record<string, unknown>).command as string | undefined;
-      if (c?.includes(substr)) return false;
+    if (!Array.isArray(hooks)) {
+      acc.push(g as Record<string, unknown>);
+      return acc;
     }
-    return true;
-  });
+    const keptHooks = hooks.filter((h) => {
+      const c = (h as Record<string, unknown>).command as string | undefined;
+      return !c?.includes(substr);
+    });
+    if (keptHooks.length > 0) {
+      acc.push({ ...(g as Record<string, unknown>), hooks: keptHooks });
+    }
+    return acc;
+  }, []);
   if (kept.length === 0) delete cfg[event];
   else cfg[event] = kept as never;
 }
@@ -190,22 +200,30 @@ function hasHook(cfg: Record<string, unknown>, event: string, substr: string): b
 function installWarpRtkHook(): void {
   const p = paths.warpPaths();
   paths.ensureDir(p.dir);
-  const { cfg } = loadHooks();
+  const res = loadHooks();
+  if (!res) {
+    warn(
+      `warp: skipping hook install; could not parse ${p.hooksFile}. Restore it or delete it and re-run 'toksave wire warp'.`,
+    );
+    return;
+  }
   const tok = paths.toksaveAbs();
   const command = `${tok} rtk-hook warp`;
-  addHookGroup(cfg, "PreToolUse", "Execute", { type: "command", command, timeout: 10 });
-  saveHooks(cfg);
+  addHookGroup(res.cfg, "PreToolUse", "Execute", { type: "command", command, timeout: 10 });
+  saveHooks(res.cfg);
 }
 
 function removeWarpRtkHook(): void {
-  const { cfg } = loadHooks();
-  removeHookGroup(cfg, "PreToolUse", "rtk-hook warp");
-  saveHooks(cfg);
+  const res = loadHooks();
+  if (!res) return; // hooks.json unreadable; leave the file untouched.
+  removeHookGroup(res.cfg, "PreToolUse", "rtk-hook");
+  saveHooks(res.cfg);
 }
 
 function hasWarpRtkHook(): boolean {
-  const { cfg } = loadHooks();
-  return hasHook(cfg, "PreToolUse", "rtk-hook warp");
+  const res = loadHooks();
+  if (!res) return false;
+  return hasHook(res.cfg, "PreToolUse", "rtk-hook");
 }
 
 // ─── MCP ─────────────────────────────────────────────────────
