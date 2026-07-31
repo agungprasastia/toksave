@@ -1,3 +1,6 @@
+mod common;
+
+use common::setup;
 use toksave_rs::registry::RunOpts;
 use toksave_rs::tools::rtk::{asset_name, is_installed_but_unreachable, local_rtk_path, RtkTool};
 use toksave_rs::tools::Tool;
@@ -10,7 +13,6 @@ fn asset_name_matches_platform() {
     assert_eq!(asset, Some("rtk-x86_64-pc-windows-msvc.zip"));
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     assert_eq!(asset, Some("rtk-x86_64-unknown-linux-musl.tar.gz"));
-    // Other platforms: assert it's one of the known names or None for unsupported
     #[cfg(not(any(
         all(target_os = "windows", target_arch = "x86_64"),
         all(target_os = "linux", target_arch = "x86_64")
@@ -22,26 +24,18 @@ fn asset_name_matches_platform() {
 
 #[test]
 fn installed_but_unreachable_detects_local_bin_only() {
-    // Clean PATH env for this test
-    let old_path = std::env::var_os("PATH");
-    std::env::set_var("PATH", "");
+    let _env = setup();
     assert!(!is_installed_but_unreachable()); // nothing installed
     let bin = local_bin();
     ensure_dir(&bin).unwrap();
     std::fs::write(local_rtk_path(), "fake").unwrap();
     assert!(is_installed_but_unreachable());
     std::fs::remove_file(local_rtk_path()).ok();
-    if let Some(p) = old_path {
-        std::env::set_var("PATH", p);
-    } else {
-        std::env::remove_var("PATH");
-    }
 }
 
 #[tokio::test]
 async fn dry_run_install_returns_true_without_writing() {
-    let old = std::env::var_os("PATH");
-    std::env::set_var("PATH", "");
+    let _env = setup();
     let opts = RunOpts {
         dry_run: true,
         upgrade: false,
@@ -50,9 +44,4 @@ async fn dry_run_install_returns_true_without_writing() {
     };
     assert!(RtkTool.install(&opts).await.unwrap());
     assert!(!local_rtk_path().exists());
-    if let Some(p) = old {
-        std::env::set_var("PATH", p);
-    } else {
-        std::env::remove_var("PATH");
-    }
 }
