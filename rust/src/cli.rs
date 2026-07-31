@@ -116,6 +116,7 @@ pub struct ParsedCli {
     pub offline: bool,
     pub fix: bool,
     pub auto: bool,
+    pub hook_args: Vec<String>,
 }
 
 impl Default for ParsedCli {
@@ -128,6 +129,7 @@ impl Default for ParsedCli {
             offline: false,
             fix: false,
             auto: false,
+            hook_args: vec![],
         }
     }
 }
@@ -180,15 +182,27 @@ pub fn parse_cli(args: Vec<String>) -> ParsedCli {
         Some(Command::Disable) => parsed.command = CommandType::Disable,
         Some(Command::SelfUpdate) => parsed.command = CommandType::SelfUpdate,
         Some(Command::CodexPermHook) => parsed.command = CommandType::CodexPermHook,
-        Some(Command::RtkHook { .. }) => parsed.command = CommandType::RtkHook,
-        Some(Command::ContextModeHook { .. }) => parsed.command = CommandType::ContextModeHook,
+        Some(Command::RtkHook { args }) => {
+            parsed.command = CommandType::RtkHook;
+            parsed.hook_args = args;
+        }
+        Some(Command::ContextModeHook { args }) => {
+            parsed.command = CommandType::ContextModeHook;
+            parsed.hook_args = args;
+        }
         Some(Command::Runmcp { .. }) => parsed.command = CommandType::Runmcp,
         Some(Command::Index { auto }) => {
             parsed.command = CommandType::Index;
             parsed.auto = auto;
         }
-        Some(Command::AgyHook { .. }) => parsed.command = CommandType::AgyHook,
-        Some(Command::CopilotHook { .. }) => parsed.command = CommandType::CopilotHook,
+        Some(Command::AgyHook { args }) => {
+            parsed.command = CommandType::AgyHook;
+            parsed.hook_args = args;
+        }
+        Some(Command::CopilotHook { args }) => {
+            parsed.command = CommandType::CopilotHook;
+            parsed.hook_args = args;
+        }
     }
 
     parsed
