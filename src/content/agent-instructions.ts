@@ -294,7 +294,7 @@ export function toklessAgentBody(owners: ToklessOwner[]): string {
   // Always include principles when any owner present, unless only principles itself is requested
   // (then body is just principles). For >=1 non-principles owner, ensure principles included once at top.
   // Keep duplicates removed and sorted by TOKLESS_OWNERS order.
-  const sorted = [...owners].sort((a, b) => TOKLESS_OWNERS.indexOf(a) - TOKLESS_OWNERS.indexOf(b));
+  const sorted = owners.toSorted((a, b) => TOKLESS_OWNERS.indexOf(a) - TOKLESS_OWNERS.indexOf(b));
 
   let b = "";
   if (sorted.length >= 2) {

@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Warp / Oz Agent Support**: Added full support for Warp / Oz AI Agent (`warp` / `oz` CLI flag) with MCP (`mcp.json`) and `AGENTS.md` instructions wiring across all 6 tools, with official brand icon `assets/agents/warp.png`.
+- **Warp / Oz Agent Support**: Added full support for Warp / Oz AI Agent (`warp` / `oz` CLI flag) with MCP (`mcp.json`) and `AGENTS.md` instructions wiring across all 6 tools, with official brand icon `assets/agents/warp.png`. ([@jondmarien](https://github.com/jondmarien) in [#22](https://github.com/agungprasastia/toksave/pull/22))
+
+### Fixed
+
+- **Warp hooks.json never clobbered on wire/unwire**: `loadHooks()` returned `{}` for an unparseable `hooks.json`, so the next write destroyed the user's hooks. It now returns `null` on malformed JSON and wire/unwire/verify skip the write. `removeHookGroup()` previously removed the entire matched hook group, deleting co-located user hooks — it now removes only the TokSave `rtk-hook` entry and keeps groups that still hold user hooks. Regression tests added.
+- **Immutable sort without spread copy**: Replaced `[...owners].sort(...)` with `owners.toSorted(...)` in agent instructions rendering (ES2023, no intermediate array allocation).
+
+### Changed
+
+- **Dead code removal & command refactors**: Removed unused exports and deprecated helpers across the codebase (~720 lines): `src/util/progress.ts`, `src/util/separators.ts`, barrel files `src/agents/index.ts` and `src/commands/index.ts`, `src/content/rtk-rules.ts`, plus unused functions in `json`, `toml`, `colors`, `errors`, `manifest`, `mcpspawn`, `npm`, `paths`, `unified-block`, `version`, and `download` utilities. Refactored command approval (copilot) to use a `Set`, agent detection in `init` to use a `Map`, and `disable`/`doctor`/`uninstall`/`update` to use `reduce`/`Set` for clearer, faster logic. Enabled `noImplicitAny` in `tsconfig.json` for stricter type checking.
+
+### Contributors
+
+Thanks to community contributor:
+- **[@jondmarien](https://github.com/jondmarien)**: Add Warp / Oz agent support with MCP and AGENTS.md wiring, official brand icon ([#22](https://github.com/agungprasastia/toksave/pull/22))
 
 ## [0.8.4] - 2026-07-27
 
