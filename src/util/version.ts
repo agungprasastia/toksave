@@ -1,4 +1,5 @@
 import * as semver from "semver";
+import pkg from "../../package.json";
 
 // ─── Version info type ──────────────────────────────────────
 
@@ -12,7 +13,7 @@ export interface VersionInfo {
 
 /** Build-time version from package.json. */
 export function toksaveVersion(): string {
-  return "0.8.4";
+  return pkg.version;
 }
 
 /** User-Agent string with version for HTTP requests. */
