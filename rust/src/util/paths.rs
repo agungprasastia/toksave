@@ -59,6 +59,61 @@ pub fn claude_desktop_paths() -> Vec<PathBuf> {
     }
 }
 
+pub struct OpencodePaths {
+    pub dir: PathBuf,
+    pub config: PathBuf,
+    pub agents_md: PathBuf,
+}
+
+pub fn opencode_paths() -> OpencodePaths {
+    let h = home();
+    let dir = h.join(".config").join("opencode");
+    OpencodePaths {
+        config: dir.join("config.json"),
+        agents_md: dir.join("AGENTS.md"),
+        dir,
+    }
+}
+
+pub struct CodexPaths {
+    pub dir: PathBuf,
+    pub instructions: PathBuf,
+}
+
+pub fn codex_paths() -> CodexPaths {
+    let h = home();
+    let dir = h.join(".codex");
+    CodexPaths {
+        instructions: dir.join("instructions.md"),
+        dir,
+    }
+}
+
+pub struct AntigravityPaths {
+    pub dir: PathBuf,
+}
+
+pub fn antigravity_paths() -> AntigravityPaths {
+    let h = home();
+    AntigravityPaths {
+        dir: h.join(".antigravity"),
+    }
+}
+
+pub struct CopilotPaths {
+    pub dir: PathBuf,
+    pub skills_dir: PathBuf,
+}
+
+pub fn copilot_paths() -> CopilotPaths {
+    let h = home();
+    let dir = h.join(".copilot");
+    CopilotPaths {
+        skills_dir: dir.join("skills"),
+        dir,
+    }
+}
+
 pub fn local_bin() -> PathBuf {
     if cfg!(windows) {
         if let Some(la) = env::var_os("LOCALAPPDATA") {

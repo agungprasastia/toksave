@@ -77,6 +77,16 @@ pub async fn fetch_with_retry(url: &str, opts: &DownloadOptions) -> Result<Vec<u
     fetch_with_retry_inner(url, opts).await
 }
 
+pub async fn fetch_text(url: &str) -> Result<String> {
+    let opts = DownloadOptions {
+        timeout: Duration::from_secs(10),
+        ..Default::default()
+    };
+    let bytes = fetch_with_retry_inner(url, &opts).await?;
+    String::from_utf8(bytes)
+        .map_err(|e| ToksaveError::network("text", &format!("invalid UTF-8: {e}"), url, None))
+}
+
 pub async fn fetch_json(url: &str) -> Result<serde_json::Value> {
     let opts = DownloadOptions {
         timeout: Duration::from_secs(10),

@@ -17,6 +17,7 @@ zip = "2"
 dirs = "5"
 colored = "2"
 sha2 = "0.10"
+urlencoding = "2.1"
 
 [dev-dependencies]
 tiny_http = "0.12"

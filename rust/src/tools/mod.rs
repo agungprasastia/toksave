@@ -1,6 +1,16 @@
+pub mod caveman;
+pub mod codegraph;
+pub mod context_mode;
+pub mod ponytail;
+pub mod principles;
 pub mod rtk;
 
 use crate::registry::{RunOpts, ToolId};
+pub use crate::tools::caveman::CavemanTool;
+pub use crate::tools::codegraph::CodegraphTool;
+pub use crate::tools::context_mode::ContextModeTool;
+pub use crate::tools::ponytail::PonytailTool;
+pub use crate::tools::principles::PrinciplesTool;
 pub use crate::tools::rtk::{installed_version as rtk_installed_version, RtkTool};
 use crate::util::errors::Result;
 use crate::util::health::HealthStatus;
@@ -16,7 +26,11 @@ pub trait Tool {
 pub fn tool_installed_version(tool: ToolId) -> Option<String> {
     match tool {
         ToolId::Rtk => rtk_installed_version(),
-        _ => None, // other tools ported in later phases
+        ToolId::Caveman => CavemanTool.installed_version(),
+        ToolId::Codegraph => CodegraphTool.installed_version(),
+        ToolId::ContextMode => ContextModeTool.installed_version(),
+        ToolId::Ponytail => PonytailTool.installed_version(),
+        ToolId::Principles => PrinciplesTool.installed_version(),
     }
 }
 
@@ -26,17 +40,21 @@ pub async fn install_tool(tool: ToolId, opts: &RunOpts) -> Result<bool> {
     }
     match tool {
         ToolId::Rtk => RtkTool.install(opts).await,
-        _ => Ok(false), // not yet implemented
+        ToolId::Caveman => CavemanTool.install(opts).await,
+        ToolId::Codegraph => CodegraphTool.install(opts).await,
+        ToolId::ContextMode => ContextModeTool.install(opts).await,
+        ToolId::Ponytail => PonytailTool.install(opts).await,
+        ToolId::Principles => PrinciplesTool.install(opts).await,
     }
 }
 
 pub fn tool_health_check(tool: ToolId) -> HealthStatus {
     match tool {
         ToolId::Rtk => RtkTool.health_check(),
-        _ => HealthStatus {
-            healthy: false,
-            version: None,
-            issues: vec![],
-        },
+        ToolId::Caveman => CavemanTool.health_check(),
+        ToolId::Codegraph => CodegraphTool.health_check(),
+        ToolId::ContextMode => ContextModeTool.health_check(),
+        ToolId::Ponytail => PonytailTool.health_check(),
+        ToolId::Principles => PrinciplesTool.health_check(),
     }
 }

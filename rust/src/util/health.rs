@@ -27,3 +27,10 @@ pub struct HealthStatus {
     pub version: Option<String>,
     pub issues: Vec<HealthIssue>,
 }
+
+#[derive(Debug, Clone)]
+pub struct RepairResult {
+    pub success: bool,
+    pub message: String,
+    pub health_after_repair: Option<HealthStatus>,
+}
