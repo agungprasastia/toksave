@@ -91,7 +91,7 @@ mod tests {
             "fakebin"
         };
         fs::write(tmp.join(exe), "x").unwrap();
-        let found = find_binary_in("fakebin", &[tmp.clone()]);
+        let found = find_binary_in("fakebin", std::slice::from_ref(&tmp));
         assert!(found.is_some());
         fs::remove_dir_all(&tmp).ok();
     }
