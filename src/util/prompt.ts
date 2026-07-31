@@ -51,7 +51,7 @@ export async function confirm(message: string, defaultValue = false): Promise<bo
 
 export async function multiSelect(title: string, options: SelectOption[]): Promise<string[]> {
   if (!isInteractive()) {
-    return options.filter((o) => o.selected && !o.disabled).map((o) => o.value);
+    return options.flatMap((option) => (option.selected && !option.disabled ? [option.value] : []));
   }
 
   const items = options.map((o) => ({ ...o }));
@@ -110,7 +110,9 @@ export async function multiSelect(title: string, options: SelectOption[]): Promi
 
     const cleanup = () => {
       stdout.write(`\x1B[${items.length + 1}A\x1B[J`); // Moved up one less since we didn't print final \n
-      const selectedLabels = items.filter((i) => i.selected && !i.disabled).map((i) => i.label);
+      const selectedLabels = items.flatMap((item) =>
+        item.selected && !item.disabled ? [item.label] : [],
+      );
       const answer = selectedLabels.length > 0 ? selectedLabels.join(", ") : "None";
       stdout.write(
         `\x1B[2K\r${pc.cyan("?")} ${pc.bold(title)} ${pc.dim("·")} ${pc.cyan(answer)}\n`,
@@ -165,7 +167,7 @@ export async function multiSelect(title: string, options: SelectOption[]): Promi
         render();
       } else if (key.name === "return") {
         cleanup();
-        resolve(items.filter((i) => i.selected && !i.disabled).map((i) => i.value));
+        resolve(items.flatMap((item) => (item.selected && !item.disabled ? [item.value] : [])));
       }
     };
 

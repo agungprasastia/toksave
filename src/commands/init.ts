@@ -71,6 +71,7 @@ export async function run(
     const d = detectAgent(a.id);
     if (d.installed) detected.push({ id: a.id, source: d.source });
   }
+  const detectedById = new Map(detected.map((agent) => [agent.id, agent]));
 
   // ── Step 4: Pick agents ─────────────────────────────────
   let requested: AgentId[];
@@ -82,7 +83,7 @@ export async function run(
     requested = detected.map((d) => d.id);
   } else {
     const options: SelectOption[] = ALL_AGENTS.map((a) => {
-      const det = detected.find((d) => d.id === a.id);
+      const det = detectedById.get(a.id);
       return {
         value: a.id,
         label: a.label,
@@ -106,7 +107,7 @@ export async function run(
   const failures: { id: AgentId; failed: string[] }[] = [];
 
   for (const agentId of requested) {
-    const det = detected.find((d) => d.id === agentId);
+    const det = detectedById.get(agentId);
     if (!det) {
       const info = agentInfo(agentId);
       colors.warn(`${info.label} not installed — install it first: ${info.homepage}`);
@@ -148,10 +149,10 @@ export async function run(
 
   // ── Step 6: Summary ─────────────────────────────────────
   console.log();
-  const wired = requested
-    .filter((id) => !failures.some((f) => f.id === id))
-    .filter((id) => detected.some((d) => d.id === id))
-    .map((id) => agentInfo(id).label);
+  const failedAgents = new Set(failures.map((failure) => failure.id));
+  const wired = requested.flatMap((id) =>
+    !failedAgents.has(id) && detectedById.has(id) ? [agentInfo(id).label] : [],
+  );
 
   if (wired.length > 0) {
     console.log(

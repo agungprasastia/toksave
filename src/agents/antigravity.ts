@@ -325,7 +325,7 @@ function installCodegraphIndexHook(): void {
   const hooks = getOrCreateObject(cfg, "hooks");
   const ss = (hooks.SessionStart as unknown[]) ?? [];
   const command = `${paths.toksaveAbs()} agy-hook codegraph-index`;
-  if (!ss.some((g) => JSON.stringify(g).includes("codegraph-index"))) {
+  if (!ss.some(hasCodegraphIndexHook)) {
     ss.push({
       matcher: ".*",
       hooks: [{ type: "command", command, timeout: 10 }],
@@ -350,12 +350,16 @@ function removeCodegraphIndexHook(): void {
   }
   const ss = hooks.SessionStart as unknown[] | undefined;
   if (!Array.isArray(ss)) return;
-  const filtered = ss.filter((g) => !JSON.stringify(g).includes("codegraph-index"));
+  const filtered = ss.filter((g) => !hasCodegraphIndexHook(g));
   if (filtered.length !== ss.length) {
     if (filtered.length === 0) delete hooks.SessionStart;
     else hooks.SessionStart = filtered as never;
     writeJsonFile(hooksFile, cfg);
   }
+}
+
+function hasCodegraphIndexHook(value: unknown): boolean {
+  return JSON.stringify(value).includes("codegraph-index");
 }
 
 // ─── Caveman ─────────────────────────────────────────────────

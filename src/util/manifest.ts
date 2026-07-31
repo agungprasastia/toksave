@@ -125,12 +125,3 @@ export function wasWiredByUs(agent: string, tool: string): boolean {
   const m = readManifest();
   return m.entries.some((e) => e.agent === agent && e.tool === tool);
 }
-
-/** Clear the entire manifest. */
-export function clearManifest(): void {
-  try {
-    withManifestLock(() => writeManifest({ entries: [] }));
-  } catch {
-    /* ignore */
-  }
-}

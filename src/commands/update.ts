@@ -25,10 +25,15 @@ export async function run(opts: RunOpts): Promise<number> {
   const changed: (typeof ALL_TOOLS)[number]["id"][] = [];
 
   const PAD = Math.max(18, ...ALL_TOOLS.map((t) => t.label.length + 2));
+  const latestVersions = new Map(
+    await Promise.all(
+      ALL_TOOLS.map(async (tool) => [tool.id, await toolLatestVersion(tool.id)] as const),
+    ),
+  );
 
   for (const tool of ALL_TOOLS) {
     const installed = toolInstalledVersion(tool.id);
-    const latest = await toolLatestVersion(tool.id);
+    const latest = latestVersions.get(tool.id) ?? null;
     const label = colors.pad(tool.label, PAD);
 
     const instStr = installed ? `v${installed}` : "not on PATH";
@@ -70,34 +75,43 @@ export async function run(opts: RunOpts): Promise<number> {
   const upgraded = new Set<(typeof changed)[number]>();
   const failed: string[] = [];
 
-  for (const id of changed) {
-    const info = toolInfo(id);
-    s.start(`Upgrading ${info.label}`);
-    try {
-      await installTool(id, upgradeOpts);
-      upgraded.add(id);
-      await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
-      s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
-    } catch (err: unknown) {
-      const e = err as Error;
-      failed.push(info.label);
-      s.stop(`${pc.red(colors.CROSS)} ${info.label} — ${String(e.message || e)}`);
-    }
-  }
+  await changed.reduce(
+    (previous, id) =>
+      previous.then(async () => {
+        const info = toolInfo(id);
+        s.start(`Upgrading ${info.label}`);
+        try {
+          await installTool(id, upgradeOpts);
+          upgraded.add(id);
+          await new Promise((r) => setTimeout(r, 200)); // UX delay so progress bar is visible
+          s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
+        } catch (err: unknown) {
+          const e = err as Error;
+          failed.push(info.label);
+          s.stop(`${pc.red(colors.CROSS)} ${info.label} — ${String(e.message || e)}`);
+        }
+      }),
+    Promise.resolve(),
+  );
 
   // ── Re-sync wiring (only where already wired) ──────────
   configureInstructionConflicts(true);
-  for (const toolId of upgraded) {
-    for (const agent of ALL_AGENTS) {
-      const det = detectAgent(agent.id);
-      if (!det.installed) continue;
-      if (verifyTool(agent.id, toolId) === true) {
+  const wiring = [...upgraded].flatMap((toolId) =>
+    ALL_AGENTS.flatMap((agent) =>
+      detectAgent(agent.id).installed && verifyTool(agent.id, toolId) === true
+        ? [{ agentId: agent.id, toolId }]
+        : [],
+    ),
+  );
+  await wiring.reduce(
+    (previous, { agentId, toolId }) =>
+      previous.then(async () => {
         try {
-          await wireTool(agent.id, toolId, upgradeOpts);
+          await wireTool(agentId, toolId, upgradeOpts);
         } catch {}
-      }
-    }
-  }
+      }),
+    Promise.resolve(),
+  );
   configureInstructionConflicts(false);
 
   console.log();

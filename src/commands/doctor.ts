@@ -159,10 +159,15 @@ export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promis
   if (!offline) {
     console.log();
     let outdated = 0;
+    const latestVersions = new Map(
+      await Promise.all(
+        ALL_TOOLS.map(async (tool) => [tool.id, await toolLatestVersion(tool.id)] as const),
+      ),
+    );
 
     for (const tool of ALL_TOOLS) {
       const installed = toolInstalledVersion(tool.id);
-      const latest = await toolLatestVersion(tool.id);
+      const latest = latestVersions.get(tool.id) ?? null;
       const label = colors.pad(tool.label, PAD);
 
       if (tool.instructionOnly) {
@@ -206,32 +211,37 @@ export async function run(offline: boolean, fix: boolean, opts: RunOpts): Promis
   }
 
   // ── Tool health ─────────────────────────────────────────
-  const unhealthy = ALL_TOOLS.map((tool) => ({ tool, health: toolHealthCheck(tool.id) })).filter(
-    ({ health }) => !health.healthy,
-  );
+  const unhealthy = ALL_TOOLS.flatMap((tool) => {
+    const health = toolHealthCheck(tool.id);
+    return health.healthy ? [] : [{ tool, health }];
+  });
 
   if (unhealthy.length > 0) {
     console.log();
+    let repairChain = Promise.resolve();
     for (const { tool, health } of unhealthy) {
       const label = colors.pad(tool.label, PAD);
       colors.raw(`  ${pc.yellow(colors.WARN)} ${label}${pc.yellow("unhealthy")}`);
       printHealthIssues(health);
 
       if (fix) {
-        const result = await toolRepair(tool.id, opts);
-        const icon = result.success ? pc.green(colors.CHECK) : pc.red(colors.CROSS);
-        colors.raw(`  ${icon} ${colors.pad(tool.label, PAD)}${result.message}`);
-        if (result.healthAfterRepair) {
-          const status = result.healthAfterRepair.healthy
-            ? pc.green("healthy")
-            : pc.yellow("unhealthy");
-          colors.raw(
-            `  ${pc.dim(colors.BULLET)} ${colors.pad(tool.label, PAD)}after repair: ${status}`,
-          );
-          printHealthIssues(result.healthAfterRepair);
-        }
+        repairChain = repairChain.then(async () => {
+          const result = await toolRepair(tool.id, opts);
+          const icon = result.success ? pc.green(colors.CHECK) : pc.red(colors.CROSS);
+          colors.raw(`  ${icon} ${colors.pad(tool.label, PAD)}${result.message}`);
+          if (result.healthAfterRepair) {
+            const status = result.healthAfterRepair.healthy
+              ? pc.green("healthy")
+              : pc.yellow("unhealthy");
+            colors.raw(
+              `  ${pc.dim(colors.BULLET)} ${colors.pad(tool.label, PAD)}after repair: ${status}`,
+            );
+            printHealthIssues(result.healthAfterRepair);
+          }
+        });
       }
     }
+    await repairChain;
 
     if (!fix) {
       console.log();

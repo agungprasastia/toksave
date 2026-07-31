@@ -72,26 +72,6 @@ export class DownloadError extends ToolError {
   }
 }
 
-export class VersionError extends ToolError {
-  constructor(toolId: string, context: Omit<ErrorContext, "message"> & { message?: string }) {
-    super(toolId, "version-detection-failed", {
-      message: context.message ?? `Failed to detect ${toolId} version`,
-      ...context,
-    });
-    this.name = "VersionError";
-  }
-}
-
-export class HealthCheckError extends ToolError {
-  constructor(toolId: string, context: Omit<ErrorContext, "message"> & { message?: string }) {
-    super(toolId, "health-check-failed", {
-      message: context.message ?? `Health check failed for ${toolId}`,
-      ...context,
-    });
-    this.name = "HealthCheckError";
-  }
-}
-
 export class NetworkError extends ToolError {
   constructor(toolId: string, context: Omit<ErrorContext, "message"> & { message?: string }) {
     super(toolId, "network-error", {

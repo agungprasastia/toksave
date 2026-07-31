@@ -57,10 +57,6 @@ export function sectionMarkers(owner: ToklessOwner): string[] {
   return [primary, ...legacy];
 }
 
-export function sectionPresent(body: string, owner: ToklessOwner): boolean {
-  return sectionMarkers(owner).some((m) => body.includes(m));
-}
-
 function hasOwner(owners: string[], want: string): boolean {
   return owners.includes(want);
 }
@@ -322,17 +318,4 @@ export function toklessAgentBody(owners: ToklessOwner[]): string {
   if (hasOwner(sorted, "codegraph")) b += `${instructionSection("codegraph")}\n\n`;
   if (hasOwner(sorted, "context-mode")) b += `${instructionSection("context-mode")}\n\n`;
   return b.trimEnd();
-}
-
-/** Infer active owners from headings present in body. */
-export function tokenizeBody(body: string): ToklessOwner[] {
-  const out: ToklessOwner[] = [];
-  for (const owner of TOKLESS_OWNERS) {
-    if (sectionPresent(body, owner)) out.push(owner);
-  }
-  return out;
-}
-
-export function getTemplate(): string {
-  return AGENT_INSTRUCTIONS_TEMPLATE;
 }

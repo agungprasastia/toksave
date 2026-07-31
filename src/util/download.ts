@@ -113,36 +113,6 @@ function isSafeArchivePath(entryPath: string, destDir: string): boolean {
   return !relative(destDir, targetPath).startsWith("..");
 }
 
-/** Download a URL to a file path. */
-export async function downloadFile(
-  url: string,
-  dest: string,
-  opts?: DownloadOptions,
-): Promise<void> {
-  try {
-    const resp = await fetchWithRetry(url, opts);
-
-    const parent = dirname(dest);
-    if (!existsSync(parent)) mkdirSync(parent, { recursive: true });
-
-    const buffer = await fetchBuffer(resp, opts);
-    if (opts?.checksum) {
-      verifyChecksum(buffer, opts.checksum, url);
-    }
-    await Bun.write(dest, buffer);
-  } catch (err) {
-    if (err instanceof DownloadError || err instanceof IntegrityError) throw err;
-
-    throw new NetworkError("file", {
-      message: `Network error downloading from ${url}`,
-      cause: err,
-      url,
-      remediation:
-        "Check your internet connection. If behind a proxy, ensure proxy settings are configured.",
-    });
-  }
-}
-
 /** Download and extract a .tar.gz to a destination directory. */
 export async function downloadTarGz(
   url: string,

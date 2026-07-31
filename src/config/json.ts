@@ -31,15 +31,6 @@ export function getOrCreateObject(
   return parent[key] as Record<string, unknown>;
 }
 
-/** Get or create a nested array. */
-export function getOrCreateArray(parent: Record<string, unknown>, key: string): unknown[] {
-  if (typeof parent !== "object" || parent === null) return [];
-  if (!Array.isArray(parent[key])) {
-    parent[key] = [];
-  }
-  return parent[key] as unknown[];
-}
-
 /** Add a string to a JSON array if not already present. */
 export function addToArrayIfMissing(arr: unknown[], entry: unknown): void {
   if (!arr.includes(entry)) {
@@ -56,13 +47,4 @@ export function removeFromArray(arr: unknown[], entry: unknown): void {
 /** Check if an object has a key. */
 export function hasKey(obj: Record<string, unknown>, key: string): boolean {
   return typeof obj === "object" && obj !== null && key in obj;
-}
-
-/** Remove a key from an object. */
-export function removeKey(obj: Record<string, unknown>, key: string): boolean {
-  if (typeof obj === "object" && obj !== null && key in obj) {
-    delete obj[key];
-    return true;
-  }
-  return false;
 }

@@ -1,11 +1,4 @@
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -248,10 +241,6 @@ export function copilotKnownBinDirs(): string[] {
   return [join(home(), ".local", "bin")];
 }
 
-export function copilotDesktopPaths(): string[] {
-  return [];
-}
-
 // ─── Droid (Factory) ─────────────────────────────────────────
 
 export interface DroidPaths {
@@ -400,12 +389,6 @@ export function writeFile(path: string, content: string): void {
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, content, "utf-8");
   renameSync(tmp, path);
-}
-
-/** Append to a file, creating it if needed. */
-export function appendFile(path: string, content: string): void {
-  ensureDir(dirname(path));
-  appendFileSync(path, content, "utf-8");
 }
 
 /** Get the toksave binary absolute path or alias. */

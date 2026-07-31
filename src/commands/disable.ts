@@ -78,17 +78,27 @@ async function disableImpl(
 
   const s = new Progress();
   s.start(String(agentIDs.length));
-  for (const id of agentIDs) {
-    const info = ALL_AGENTS.find((a) => a.id === id)!;
-    s.start(`Removing from ${info.label}`);
-    for (const tool of toolsPicked) {
-      if (opts.dryRun) continue;
-      try {
-        await unwireTool(id, tool.id, opts);
-      } catch {}
-    }
-    s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
-  }
+  await agentIDs.reduce(
+    (previous, id) =>
+      previous.then(async () => {
+        const info = ALL_AGENTS.find((agent) => agent.id === id);
+        if (!info) return;
+        s.start(`Removing from ${info.label}`);
+        if (!opts.dryRun) {
+          await toolsPicked.reduce(
+            (toolPrevious, tool) =>
+              toolPrevious.then(async () => {
+                try {
+                  await unwireTool(id, tool.id, opts);
+                } catch {}
+              }),
+            Promise.resolve(),
+          );
+        }
+        s.stop(`${pc.green(colors.CHECK)} ${info.label}`);
+      }),
+    Promise.resolve(),
+  );
 
   if (
     removeTools &&
@@ -105,7 +115,10 @@ async function disableImpl(
     }
   }
 
-  const agentLabels = agentIDs.map((id) => ALL_AGENTS.find((a) => a.id === id)!.label);
+  const agentLabels = agentIDs.flatMap((id) => {
+    const info = ALL_AGENTS.find((agent) => agent.id === id);
+    return info ? [info.label] : [];
+  });
   const toolLabels = toolsPicked.map((t) => t.label);
 
   colors.raw("");

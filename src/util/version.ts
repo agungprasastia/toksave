@@ -1,7 +1,4 @@
 import * as semver from "semver";
-import type { ToolId } from "../registry.js";
-import { ALL_TOOLS, toolInstalledVersion, toolLatestVersion } from "../registry.js";
-import { bustCache } from "./versioncache.js";
 
 // ─── Version info type ──────────────────────────────────────
 
@@ -46,44 +43,6 @@ export function semverGte(a: string, b: string): boolean {
   return semverCmp(a, b) >= 0;
 }
 
-export function semverLt(a: string, b: string): boolean {
-  return semverCmp(a, b) < 0;
-}
-
-// ─── Version gathering ──────────────────────────────────────
-
-const trackableTools = () => ALL_TOOLS.filter((t) => !t.notTrackable);
-
-export async function gatherVersions(): Promise<Record<string, VersionInfo>> {
-  const tools = trackableTools();
-  const latestResults = await Promise.all(
-    tools.map(async (t) => {
-      const v = await toolLatestVersion(t.id);
-      return [t.id, v] as const;
-    }),
-  );
-  const latestMap: Record<string, string | null> = {};
-  for (const [id, v] of latestResults) {
-    latestMap[id] = v;
-  }
-
-  const out: Record<string, VersionInfo> = {};
-  for (const t of tools) {
-    const installed = toolInstalledVersion(t.id);
-    out[t.id] = {
-      installed,
-      latest: latestMap[t.id] ?? null,
-      present: installed !== null,
-    };
-  }
-  return out;
-}
-
-export async function gatherVersionsForce(): Promise<Record<string, VersionInfo>> {
-  bustCache();
-  return gatherVersions();
-}
-
 export function countOutdated(versions: Record<string, VersionInfo>): number {
   let n = 0;
   for (const v of Object.values(versions)) {
@@ -92,16 +51,4 @@ export function countOutdated(versions: Record<string, VersionInfo>): number {
     }
   }
   return n;
-}
-
-export function installedVersionFor(id: ToolId): string | null {
-  return toolInstalledVersion(id);
-}
-
-export async function latestVersionFor(id: ToolId): Promise<string | null> {
-  return toolLatestVersion(id);
-}
-
-export function bustVersionCache(): void {
-  bustCache();
 }

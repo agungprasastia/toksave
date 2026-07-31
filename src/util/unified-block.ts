@@ -442,42 +442,5 @@ export function hasOwnerInRaw(raw: string, owner: string): boolean {
   return blocks.some((b) => b.owner === owner);
 }
 
-export function ownersFromRaw(raw: string): ToklessOwner[] {
-  const cleaned = stripLegacy(raw);
-  const { blocks } = fileParts(cleaned);
-  const set = new Set<string>();
-  for (const b of blocks) set.add(b.owner);
-  const list = [...set] as ToklessOwner[];
-  // sort by registry order
-  list.sort((a, b) => TOKLESS_OWNERS.indexOf(a) - TOKLESS_OWNERS.indexOf(b));
-  return list;
-}
-
-// For test helpers
-export function _internalStripLegacy(raw: string): string {
-  return stripLegacy(raw);
-}
-export function _internalFileParts(raw: string) {
-  return fileParts(raw);
-}
-
-// Legacy cleanup wrappers for old TokSave fences — used during migration
-export function stripLegacyFencesFromFile(agent: string): void {
-  const path = instructionPath(agent);
-  if (!path) return;
-  const raw = paths.readFile(path);
-  if (!raw) return;
-  const cleaned = stripLegacy(raw);
-  if (cleaned !== raw) {
-    if (!cleaned.trim()) {
-      try {
-        rmSync(path, { force: true });
-      } catch {}
-    } else {
-      paths.writeFile(path, cleaned);
-    }
-  }
-}
-
 // Used by autoindex cleanup + separators
 export { instructionPath };

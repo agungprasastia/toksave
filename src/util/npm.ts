@@ -1,5 +1,5 @@
 import { InstallError } from "./errors.js";
-import { npmCmd, run, runStdout } from "./exec.js";
+import { npmCmd, run } from "./exec.js";
 import { userAgent } from "./version.js";
 
 /** Install an npm package globally. */
@@ -39,15 +39,4 @@ export async function latestVersion(pkg: string): Promise<string | null> {
   } catch {
     return null;
   }
-}
-
-/** Check if Node.js is installed and meets minimum version. */
-export function checkNode(minMajor: number): boolean {
-  const out = runStdout("node", ["--version"]);
-  if (!out) return false;
-  const v = out.trim().replace(/^v/, "");
-  const firstPart = v.split(".")[0];
-  if (!firstPart) return false;
-  const major = Number.parseInt(firstPart, 10);
-  return !Number.isNaN(major) && major >= minMajor;
 }

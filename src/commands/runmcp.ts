@@ -69,8 +69,12 @@ export function ensureToolPath(): string {
   if (existsSync(miseNodeRoot)) {
     try {
       const versions = readdirSync(miseNodeRoot)
-        .map((v) => join(miseNodeRoot, v, "bin"))
-        .filter((p) => existsSync(join(p, process.platform === "win32" ? "node.exe" : "node")))
+        .flatMap((version) => {
+          const bin = join(miseNodeRoot, version, "bin");
+          return existsSync(join(bin, process.platform === "win32" ? "node.exe" : "node"))
+            ? [bin]
+            : [];
+        })
         .sort()
         .reverse();
       extras.push(...versions);
@@ -79,8 +83,12 @@ export function ensureToolPath(): string {
   const miseShims = join(home, ".local", "share", "mise", "shims");
   if (existsSync(miseShims)) extras.push(miseShims);
 
+  const partSet = new Set(parts);
   for (const dir of extras) {
-    if (dir && !parts.includes(dir)) parts.unshift(dir);
+    if (dir && !partSet.has(dir)) {
+      parts.unshift(dir);
+      partSet.add(dir);
+    }
   }
   const next = parts.join(process.platform === "win32" ? ";" : ":");
   process.env.PATH = next;

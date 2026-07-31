@@ -12,7 +12,8 @@
     "noEmit": true,
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["bun"]
+    "types": ["bun"],
+    "noImplicitAny": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "target"]

@@ -28,7 +28,9 @@ export async function run(
   colors.banner("toksave", "uninstall");
 
   // ── Detect installed agents ──────────────────────────────
-  const detected = ALL_AGENTS.filter((a) => detectAgent(a.id).installed).map((a) => a.id);
+  const detected = ALL_AGENTS.flatMap((agent) =>
+    detectAgent(agent.id).installed ? [agent.id] : [],
+  );
 
   if (detected.length === 0) {
     colors.raw("  Nothing wired.");
@@ -40,7 +42,8 @@ export async function run(
   let agentIds: AgentId[];
 
   if (agentsFilter.length > 0) {
-    agentIds = agentsFilter.filter((id) => detected.includes(id));
+    const detectedSet = new Set(detected);
+    agentIds = agentsFilter.filter((id) => detectedSet.has(id));
   } else if (opts.yes || !isInteractive()) {
     agentIds = [...detected];
   } else {

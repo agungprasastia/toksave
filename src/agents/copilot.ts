@@ -231,17 +231,15 @@ function ensureCopilotRtkCommandApproval(): void {
       const loc = locs[key] as Record<string, unknown> | undefined;
       if (!loc) continue;
       const approvals = (loc.tool_approvals as unknown[]) ?? [];
-      if (
-        approvals.some((a) => {
-          const m = a as Record<string, unknown>;
-          return (
-            m.kind === "commands" &&
-            Array.isArray(m.commandIdentifiers) &&
-            (m.commandIdentifiers as string[]).includes("rtk")
-          );
-        })
-      )
-        continue;
+      const approvedCommands = new Set(
+        approvals.flatMap((approval) => {
+          const record = approval as Record<string, unknown>;
+          return record.kind === "commands" && Array.isArray(record.commandIdentifiers)
+            ? (record.commandIdentifiers as string[])
+            : [];
+        }),
+      );
+      if (approvedCommands.has("rtk")) continue;
       approvals.push({ kind: "commands", commandIdentifiers: ["rtk"] });
       loc.tool_approvals = approvals as never;
       changed = true;

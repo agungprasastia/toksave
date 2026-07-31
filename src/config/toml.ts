@@ -56,11 +56,6 @@ export function upsertTableBool(
   current[key] = value;
 }
 
-/** Set a top-level key. */
-export function setTopKey(doc: Record<string, unknown>, key: string, value: string): void {
-  doc[key] = value;
-}
-
 /** Set an array of strings in a dotted table path. */
 export function setTableArray(
   doc: Record<string, unknown>,
