@@ -61,7 +61,7 @@ fn stale_lock_age() -> Duration {
 
 /// Acquire the manifest lock by creating a lock dir (mkdir is atomic).
 /// Timeout after 5s; stale locks older than 30s are force-removed.
-fn with_manifest_lock<T>(f: impl FnOnce() -> T) -> T {
+fn with_manifest_lock<T>(f: impl FnOnce() -> Result<T>) -> Result<T> {
     let lock = lock_path();
     if let Some(parent) = lock.parent() {
         let _ = crate::util::paths::ensure_dir(parent);
@@ -80,13 +80,17 @@ fn with_manifest_lock<T>(f: impl FnOnce() -> T) -> T {
                     }
                 }
                 if started.elapsed().unwrap_or_default() > Duration::from_secs(5) {
-                    eprintln!("Timed out waiting for manifest lock: {}", lock.display());
-                    break;
+                    return Err(ToksaveError::tool(
+                        "manifest",
+                        &format!("Timed out waiting for manifest lock: {}", lock.display()),
+                    ));
                 }
                 std::thread::sleep(Duration::from_millis(50));
             }
         }
     }
+    // Normal exit means THIS process created the lock; the timeout path returned
+    // Err above, so a foreign lock is never deleted.
     let result = f();
     let _ = fs::remove_dir_all(&lock);
     result
@@ -106,18 +110,16 @@ pub fn record_wire(agent: &str, tool: &str, version: Option<&str>) -> Result<()>
             wired_at: now_iso8601(),
             version: version.map(str::to_string),
         });
-        let _ = write_manifest(&m);
-    });
-    Ok(())
+        write_manifest(&m)
+    })
 }
 
 pub fn remove_wire(agent: &str, tool: &str) -> Result<()> {
     with_manifest_lock(|| {
         let mut m = read_manifest_file();
         m.entries.retain(|e| !(e.agent == agent && e.tool == tool));
-        let _ = write_manifest(&m);
-    });
-    Ok(())
+        write_manifest(&m)
+    })
 }
 
 pub fn was_wired_by_us(agent: &str, tool: &str) -> bool {
