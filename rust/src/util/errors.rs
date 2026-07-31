@@ -69,6 +69,11 @@ impl ToksaveError {
     pub fn config(path: &str, message: &str) -> Self {
         Self::new(ToksaveErrorKind::Config, path, message, None)
     }
+
+    pub fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
+        self.source = Some(Box::new(source));
+        self
+    }
 }
 
 impl fmt::Display for ToksaveError {

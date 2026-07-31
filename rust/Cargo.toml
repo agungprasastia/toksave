@@ -16,6 +16,7 @@ tar = "0.4"
 zip = "2"
 dirs = "5"
 colored = "2"
+sha2 = "0.10"
 
 [dev-dependencies]
 tiny_http = "0.12"

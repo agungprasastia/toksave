@@ -2,6 +2,7 @@ pub mod version;
 
 pub mod colors;
 pub mod detect;
+pub mod download;
 pub mod errors;
 pub mod exec;
 pub mod health;
