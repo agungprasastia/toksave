@@ -63,6 +63,7 @@ pub struct OpencodePaths {
     pub dir: PathBuf,
     pub config: PathBuf,
     pub agents_md: PathBuf,
+    pub plugins_dir: PathBuf,
 }
 
 pub fn opencode_paths() -> OpencodePaths {
@@ -71,12 +72,23 @@ pub fn opencode_paths() -> OpencodePaths {
     OpencodePaths {
         config: dir.join("config.json"),
         agents_md: dir.join("AGENTS.md"),
+        plugins_dir: dir.join("plugins"),
         dir,
     }
 }
 
+pub fn opencode_known_bin_dirs() -> Vec<PathBuf> {
+    vec![home().join(".local").join("bin")]
+}
+
+pub fn opencode_desktop_paths() -> Vec<PathBuf> {
+    vec![]
+}
+
 pub struct CodexPaths {
     pub dir: PathBuf,
+    pub config: PathBuf,
+    pub hooks: PathBuf,
     pub instructions: PathBuf,
 }
 
@@ -84,24 +96,60 @@ pub fn codex_paths() -> CodexPaths {
     let h = home();
     let dir = h.join(".codex");
     CodexPaths {
+        config: dir.join("config.toml"),
+        hooks: dir.join("hooks.json"),
         instructions: dir.join("instructions.md"),
         dir,
     }
 }
 
+pub fn codex_known_bin_dirs() -> Vec<PathBuf> {
+    vec![home().join(".local").join("bin")]
+}
+
 pub struct AntigravityPaths {
     pub dir: PathBuf,
+    pub hooks: PathBuf,
 }
 
 pub fn antigravity_paths() -> AntigravityPaths {
     let h = home();
+    let dir = h.join(".antigravity");
     AntigravityPaths {
-        dir: h.join(".antigravity"),
+        hooks: dir.join("hooks.json"),
+        dir,
     }
+}
+
+pub fn antigravity_known_bin_dirs() -> Vec<PathBuf> {
+    vec![home().join(".local").join("bin")]
+}
+
+pub fn antigravity_desktop_paths() -> Vec<PathBuf> {
+    vec![]
+}
+
+pub fn antigravity_mcp_files() -> Vec<PathBuf> {
+    let p = antigravity_paths();
+    vec![
+        p.dir.join("mcp.json"),
+        p.dir.join("config").join("mcp.json"),
+    ]
+}
+
+pub fn antigravity_settings_files() -> Vec<PathBuf> {
+    let p = antigravity_paths();
+    vec![
+        p.dir.join("settings.json"),
+        p.dir.join("config").join("settings.json"),
+    ]
 }
 
 pub struct CopilotPaths {
     pub dir: PathBuf,
+    pub hooks_dir: PathBuf,
+    pub mcp_config: PathBuf,
+    pub instructions: PathBuf,
     pub skills_dir: PathBuf,
 }
 
@@ -109,9 +157,88 @@ pub fn copilot_paths() -> CopilotPaths {
     let h = home();
     let dir = h.join(".copilot");
     CopilotPaths {
+        hooks_dir: dir.join("hooks"),
+        mcp_config: dir.join("mcp.json"),
+        instructions: dir.join("instructions.md"),
         skills_dir: dir.join("skills"),
         dir,
     }
+}
+
+pub fn copilot_known_bin_dirs() -> Vec<PathBuf> {
+    vec![home().join(".local").join("bin")]
+}
+
+pub struct DroidPaths {
+    pub dir: PathBuf,
+    pub hooks_file: PathBuf,
+    pub mcp_config: PathBuf,
+}
+
+pub fn droid_paths() -> DroidPaths {
+    let h = home();
+    let dir = h.join(".factory-droid");
+    DroidPaths {
+        hooks_file: dir.join("hooks.json"),
+        mcp_config: dir.join("mcp.json"),
+        dir,
+    }
+}
+
+pub fn droid_known_bin_dirs() -> Vec<PathBuf> {
+    vec![home().join(".local").join("bin")]
+}
+
+pub fn droid_desktop_paths() -> Vec<PathBuf> {
+    vec![]
+}
+
+pub struct DevinPaths {
+    pub dir: PathBuf,
+    pub hooks_file: PathBuf,
+    pub mcp_config: PathBuf,
+}
+
+pub fn devin_paths() -> DevinPaths {
+    let h = home();
+    let dir = h.join(".devin");
+    DevinPaths {
+        hooks_file: dir.join("hooks.json"),
+        mcp_config: dir.join("mcp.json"),
+        dir,
+    }
+}
+
+pub fn devin_known_bin_dirs() -> Vec<PathBuf> {
+    vec![home().join(".local").join("bin")]
+}
+
+pub fn devin_desktop_paths() -> Vec<PathBuf> {
+    vec![]
+}
+
+pub struct WarpPaths {
+    pub dir: PathBuf,
+    pub hooks_file: PathBuf,
+    pub mcp_config: PathBuf,
+}
+
+pub fn warp_paths() -> WarpPaths {
+    let h = home();
+    let dir = h.join(".warp");
+    WarpPaths {
+        hooks_file: dir.join("hooks.json"),
+        mcp_config: dir.join("mcp.json"),
+        dir,
+    }
+}
+
+pub fn warp_known_bin_dirs() -> Vec<PathBuf> {
+    vec![home().join(".local").join("bin")]
+}
+
+pub fn warp_desktop_paths() -> Vec<PathBuf> {
+    vec![]
 }
 
 pub fn local_bin() -> PathBuf {

@@ -1,5 +1,8 @@
-use crate::agents::claude::ClaudeAgent;
 use crate::agents::Agent;
+use crate::agents::{
+    AntigravityAgent, ClaudeAgent, CodexAgent, CopilotAgent, DevinAgent, DroidAgent, OpencodeAgent,
+    WarpAgent,
+};
 pub use crate::tools::install_tool;
 use crate::util::errors::Result;
 
@@ -217,25 +220,33 @@ pub fn parse_tool_id(s: &str) -> Option<ToolId> {
     }
 }
 
-pub fn detect_agent(id: AgentId) -> Detection {
+pub fn get_agent(id: AgentId) -> Box<dyn Agent> {
     match id {
-        AgentId::Claude => ClaudeAgent.detect(),
-        _ => Detection::default(),
+        AgentId::Claude => Box::new(ClaudeAgent),
+        AgentId::Opencode => Box::new(OpencodeAgent),
+        AgentId::Codex => Box::new(CodexAgent),
+        AgentId::Antigravity => Box::new(AntigravityAgent),
+        AgentId::Copilot => Box::new(CopilotAgent),
+        AgentId::Droid => Box::new(DroidAgent),
+        AgentId::Devin => Box::new(DevinAgent),
+        AgentId::Warp => Box::new(WarpAgent),
     }
+}
+
+pub fn detect_agent(id: AgentId) -> Detection {
+    get_agent(id).detect()
 }
 
 pub async fn wire_tool(agent: AgentId, tool: ToolId, opts: &RunOpts) -> Result<bool> {
-    match agent {
-        AgentId::Claude => ClaudeAgent.wire(tool, opts),
-        _ => Ok(false),
-    }
+    get_agent(agent).wire(tool, opts)
+}
+
+pub async fn unwire_tool(agent: AgentId, tool: ToolId, opts: &RunOpts) -> Result<bool> {
+    get_agent(agent).unwire(tool, opts)
 }
 
 pub fn verify_tool(agent: AgentId, tool: ToolId) -> Option<bool> {
-    match agent {
-        AgentId::Claude => ClaudeAgent.verify(tool),
-        _ => None,
-    }
+    get_agent(agent).verify(tool)
 }
 
 pub fn tool_installed_version(id: ToolId) -> Option<String> {
