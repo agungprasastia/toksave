@@ -190,7 +190,10 @@ pub fn parse_cli(args: Vec<String>) -> ParsedCli {
             parsed.command = CommandType::ContextModeHook;
             parsed.hook_args = args;
         }
-        Some(Command::Runmcp { .. }) => parsed.command = CommandType::Runmcp,
+        Some(Command::Runmcp { args }) => {
+            parsed.command = CommandType::Runmcp;
+            parsed.hook_args = args;
+        }
         Some(Command::Index { auto }) => {
             parsed.command = CommandType::Index;
             parsed.auto = auto;

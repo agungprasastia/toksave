@@ -34,9 +34,11 @@ fn main() {
                 )
             }
         }
-        other => {
-            println!("toksave-rs: `{other:?}` not implemented in Rust yet (TS build handles it).");
-            0
+        CommandType::Runmcp => toksave_rs::commands::runmcp::run(&parsed.hook_args),
+        CommandType::Index => toksave_rs::commands::index::run_index(parsed.auto),
+        CommandType::SelfUpdate => {
+            let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
+            rt.block_on(toksave_rs::commands::self_update::run())
         }
     };
     std::process::exit(code);
