@@ -22,8 +22,11 @@ async function main(): Promise<void> {
       const code = runCodegraphIndexHook();
       process.exit(code);
     }
-    // rtk-hook variants: agy, codex, claude, copilot, droid, devin
-    if (a0 === "rtk-hook" && ["agy", "codex", "claude", "copilot", "droid", "devin"].includes(a1)) {
+    // rtk-hook variants: agy, codex, claude, copilot, droid, devin, warp
+    if (
+      a0 === "rtk-hook" &&
+      ["agy", "codex", "claude", "copilot", "droid", "devin", "warp"].includes(a1)
+    ) {
       const { runRtkHookVariant } = require("./commands/rtk-hook.js");
       const code = runRtkHookVariant(a1);
       process.exit(code);

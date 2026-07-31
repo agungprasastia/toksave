@@ -50,6 +50,8 @@ function instructionPath(agent: string): string {
       return paths.droidPaths().instructions;
     case "devin":
       return paths.devinPaths().instructions;
+    case "warp":
+      return paths.warpPaths().instructions;
     default:
       return "";
   }

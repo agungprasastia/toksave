@@ -82,6 +82,13 @@ function checkAgentMcpHealth(agent: AgentId, tool: ToolId): { healthy: boolean; 
         if (!entry) return { healthy: false, reason: "not configured" };
         return mcpSpawnHealthy(entry.command ?? "", entry.args ?? []);
       }
+      case "warp": {
+        const cfg = (readJsonFile(paths.warpPaths().mcpConfig) as Record<string, unknown>) ?? {};
+        const srv = (cfg.mcpServers as Record<string, { command?: string; args?: string[] }>) ?? {};
+        const entry = srv[tool];
+        if (!entry) return { healthy: false, reason: "not configured" };
+        return mcpSpawnHealthy(entry.command ?? "", entry.args ?? []);
+      }
       case "antigravity": {
         for (const f of paths.antigravityMcpFiles()) {
           const cfg = (readJsonFile(f) as Record<string, unknown>) ?? {};
