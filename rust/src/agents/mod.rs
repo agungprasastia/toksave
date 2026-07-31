@@ -1,3 +1,7 @@
+pub mod claude;
+
+pub use claude::ClaudeAgent;
+
 use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::errors::Result;
 
