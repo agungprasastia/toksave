@@ -1,5 +1,196 @@
 use crate::cli::ParsedCli;
+use crate::registry::{
+    agent_info, detect_agent, install_tool, tool_info, tool_installed_version, verify_tool,
+    wire_tool, AgentId, ToolId, ALL_TOOLS,
+};
+use crate::util::colors;
+use crate::util::exec::run_stdout;
+use crate::util::manifest::record_wire;
 
-pub async fn run_init(_parsed: &ParsedCli) -> i32 {
-    0
+pub async fn run_init(parsed: &ParsedCli) -> i32 {
+    colors::banner("toksave", "global token-saver for AI agents");
+
+    // ── Step 1: Filter tools ──
+    let tools: Vec<ToolId> = ALL_TOOLS
+        .iter()
+        .filter(|t| parsed.tools.is_empty() || parsed.tools.contains(&t.id))
+        .map(|t| t.id)
+        .collect();
+
+    // Node dep check for npm-channel tools (port of ensureDeps)
+    let has_npm_tools = tools
+        .iter()
+        .any(|t| tool_info(*t).channel == crate::registry::Channel::Npm);
+    let min_node = tools
+        .iter()
+        .map(|t| tool_info(*t).min_node_major)
+        .max()
+        .unwrap_or(0);
+    let deps_ok = check_deps(has_npm_tools, min_node);
+
+    // ── Step 2: Install tools ──
+    let mut installed_tools = std::collections::HashSet::new();
+    for t in &tools {
+        let info = tool_info(*t);
+        let is_npm = info.channel == crate::registry::Channel::Npm;
+        if is_npm && !deps_ok {
+            colors::warn(&format!("{} — needs Node.js", info.label));
+            continue;
+        }
+        match install_tool(*t, &parsed.opts).await {
+            Ok(true) => {
+                installed_tools.insert(*t);
+                colors::ok(info.label);
+            }
+            Ok(false) => colors::warn(&format!("{} — skipped", info.label)),
+            Err(e) => colors::err(&format!("{} — {}", info.label, e.message)),
+        }
+    }
+
+    // ── Step 3: Detect agents ──
+    let mut detected: Vec<(AgentId, String)> = vec![];
+    for a in crate::registry::ALL_AGENTS {
+        let d = detect_agent(a.id);
+        if d.installed {
+            detected.push((a.id, d.source));
+        }
+    }
+
+    // ── Step 4: Pick agents ──
+    let requested: Vec<AgentId> = if !parsed.agents.is_empty() {
+        parsed.agents.clone()
+    } else if parsed.opts.yes || !is_interactive() {
+        detected.iter().map(|(id, _)| *id).collect()
+    } else {
+        // Interactive multi-select ported in a later phase; for now fall back to detected
+        detected.iter().map(|(id, _)| *id).collect()
+    };
+
+    if requested.is_empty() {
+        println!("  Nothing selected.");
+        return 0;
+    }
+
+    let detected_by_id: std::collections::HashMap<AgentId, String> = detected.into_iter().collect();
+
+    // ── Step 5: Wire tools into agents ──
+    let mut failures: Vec<(AgentId, Vec<String>)> = vec![];
+    for agent_id in &requested {
+        let Some(_source) = detected_by_id.get(agent_id) else {
+            let info = agent_info(*agent_id);
+            colors::warn(&format!(
+                "{} not installed — install it first: {}",
+                info.label, info.homepage
+            ));
+            continue;
+        };
+        let info = agent_info(*agent_id);
+        let mut failed_tools: Vec<String> = vec![];
+        for t in &tools {
+            if !installed_tools.contains(t) {
+                failed_tools.push(tool_info(*t).label.to_string());
+                continue;
+            }
+            match wire_tool(*agent_id, *t, &parsed.opts).await {
+                Ok(true) => {
+                    if !parsed.opts.dry_run {
+                        if verify_tool(*agent_id, *t) == Some(false) {
+                            failed_tools.push(tool_info(*t).label.to_string());
+                            continue;
+                        }
+                        let _ = record_wire(
+                            &format!("{:?}", agent_id).to_lowercase(),
+                            &tool_name(*t),
+                            tool_installed_version(*t).as_deref(),
+                        );
+                    }
+                }
+                _ => failed_tools.push(tool_info(*t).label.to_string()),
+            }
+        }
+        if failed_tools.is_empty() {
+            colors::ok(info.label);
+        } else {
+            colors::warn(&format!(
+                "{} — {} not wired",
+                info.label,
+                failed_tools.join(", ")
+            ));
+            failures.push((*agent_id, failed_tools));
+        }
+    }
+
+    // ── Step 6: Summary ──
+    println!();
+    if failures.is_empty() {
+        colors::ok("Equipped.");
+    } else {
+        for (id, failed) in &failures {
+            colors::warn(&format!(
+                "{}: {} not wired. Run `toksave doctor` for details.",
+                agent_info(*id).label,
+                failed.join(", ")
+            ));
+        }
+    }
+    print_version_table(&tools);
+    println!();
+
+    if failures.is_empty() {
+        0
+    } else {
+        1
+    }
+}
+
+fn check_deps(need_node: bool, min_node: u32) -> bool {
+    if !need_node {
+        return true;
+    }
+    let Some(out) = run_stdout("node", &["--version"]) else {
+        return false;
+    };
+    let v = out.trim_start_matches('v');
+    let major: u32 = v
+        .split('.')
+        .next()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    if major < min_node {
+        eprintln!(
+            "Node.js {out} detected but >= v{min_node}.x required. Upgrade Node.js at https://nodejs.org"
+        );
+        return false;
+    }
+    true
+}
+
+fn is_interactive() -> bool {
+    use std::io::IsTerminal;
+    std::io::stdout().is_terminal()
+}
+
+fn tool_name(t: ToolId) -> String {
+    match t {
+        ToolId::Rtk => "rtk".to_string(),
+        ToolId::Caveman => "caveman".to_string(),
+        ToolId::Codegraph => "codegraph".to_string(),
+        ToolId::ContextMode => "context-mode".to_string(),
+        ToolId::Ponytail => "ponytail".to_string(),
+        ToolId::Principles => "principles".to_string(),
+    }
+}
+
+fn print_version_table(tools: &[ToolId]) {
+    for t in tools {
+        let info = tool_info(*t);
+        if info.instruction_only {
+            println!("  {} {} instruction-only", colors::CHECK, info.label);
+            continue;
+        }
+        match tool_installed_version(*t) {
+            Some(v) => println!("  {} {} {}", colors::CHECK, info.label, v),
+            None => println!("  {} {} not installed", colors::BULLET, info.label),
+        }
+    }
 }

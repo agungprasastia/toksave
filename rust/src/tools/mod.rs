@@ -21,6 +21,9 @@ pub fn tool_installed_version(tool: ToolId) -> Option<String> {
 }
 
 pub async fn install_tool(tool: ToolId, opts: &RunOpts) -> Result<bool> {
+    if std::env::var("TOKSAVE_TEST_RTK_INSTALL").is_ok() && tool == ToolId::Rtk && !opts.dry_run {
+        return Ok(true);
+    }
     match tool {
         ToolId::Rtk => RtkTool.install(opts).await,
         _ => Ok(false), // not yet implemented

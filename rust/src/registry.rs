@@ -1,3 +1,8 @@
+use crate::agents::claude::ClaudeAgent;
+use crate::agents::Agent;
+pub use crate::tools::install_tool;
+use crate::util::errors::Result;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AgentId {
     Claude,
@@ -210,4 +215,29 @@ pub fn parse_tool_id(s: &str) -> Option<ToolId> {
         }
         _ => None,
     }
+}
+
+pub fn detect_agent(id: AgentId) -> Detection {
+    match id {
+        AgentId::Claude => ClaudeAgent.detect(),
+        _ => Detection::default(),
+    }
+}
+
+pub async fn wire_tool(agent: AgentId, tool: ToolId, opts: &RunOpts) -> Result<bool> {
+    match agent {
+        AgentId::Claude => ClaudeAgent.wire(tool, opts),
+        _ => Ok(false),
+    }
+}
+
+pub fn verify_tool(agent: AgentId, tool: ToolId) -> Option<bool> {
+    match agent {
+        AgentId::Claude => ClaudeAgent.verify(tool),
+        _ => None,
+    }
+}
+
+pub fn tool_installed_version(id: ToolId) -> Option<String> {
+    crate::tools::tool_installed_version(id)
 }
