@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use std::io::Write;
 use std::path::PathBuf;
 use toksave_rs::util::download::{
@@ -16,7 +17,9 @@ fn is_safe_archive_path_rejects_traversal() {
     assert!(!is_safe_archive_path("../escape.txt", &dest));
     assert!(!is_safe_archive_path("a/../../escape.txt", &dest));
     assert!(!is_safe_archive_path("/absolute/path", &dest));
-    assert!(!is_safe_archive_path("C:/abs", &dest));
+    if cfg!(windows) {
+        assert!(!is_safe_archive_path("C:/abs", &dest));
+    }
 }
 
 #[tokio::test]
@@ -25,8 +28,9 @@ async fn fetch_404_not_retried_and_errors() {
     let port = server.server_addr().to_ip().unwrap().port();
     let url = format!("http://127.0.0.1:{port}/missing");
     let h = std::thread::spawn(move || {
-        if let Ok(_req) = server.recv() {
-            // respond 404
+        if let Ok(req) = server.recv() {
+            let resp = tiny_http::Response::from_string("not found").with_status_code(404);
+            req.respond(resp).ok();
         }
     });
     let res = fetch_with_retry(&url, &DownloadOptions::default()).await;
@@ -75,4 +79,60 @@ async fn download_zip_rejects_zip_slip() {
     assert!(res.is_err());
     assert!(!dest.join("..").join("evil.txt").exists());
     h.join().ok();
+}
+
+fn make_valid_zip() -> Vec<u8> {
+    let cursor = std::io::Cursor::new(vec![0u8; 0]);
+    let mut zw = zip::ZipWriter::new(cursor);
+    let opts = zip::write::SimpleFileOptions::default();
+    zw.start_file("ok.txt", opts).unwrap();
+    zw.write_all(b"hello").unwrap();
+    zw.finish().unwrap().into_inner()
+}
+
+#[tokio::test]
+async fn download_zip_good_checksum_succeeds() {
+    let bytes = make_valid_zip();
+    let hash = format!("{:x}", Sha256::digest(&bytes));
+
+    let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+    let port = server.server_addr().to_ip().unwrap().port();
+    let url = format!("http://127.0.0.1:{port}/good.zip");
+    let h = std::thread::spawn(move || {
+        if let Ok(req) = server.recv() {
+            req.respond(tiny_http::Response::from_data(bytes)).ok();
+        }
+    });
+    let dest = tmp_dir().join("checksum_good");
+    let opts = DownloadOptions {
+        checksum: Some(hash),
+        ..Default::default()
+    };
+    let res = download_zip(&url, &dest, &opts).await;
+    assert!(res.is_ok(), "expected Ok, got {:?}", res);
+    h.join().ok();
+    let _ = std::fs::remove_dir_all(&dest);
+}
+
+#[tokio::test]
+async fn download_zip_bad_checksum_errors() {
+    let bytes = make_valid_zip();
+
+    let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+    let port = server.server_addr().to_ip().unwrap().port();
+    let url = format!("http://127.0.0.1:{port}/bad.zip");
+    let h = std::thread::spawn(move || {
+        if let Ok(req) = server.recv() {
+            req.respond(tiny_http::Response::from_data(bytes)).ok();
+        }
+    });
+    let dest = tmp_dir().join("checksum_bad");
+    let opts = DownloadOptions {
+        checksum: Some("deadbeef".to_string()),
+        ..Default::default()
+    };
+    let res = download_zip(&url, &dest, &opts).await;
+    assert!(res.is_err());
+    h.join().ok();
+    let _ = std::fs::remove_dir_all(&dest);
 }
