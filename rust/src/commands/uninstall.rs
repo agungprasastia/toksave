@@ -1,0 +1,131 @@
+use crate::cli::ParsedCli;
+use crate::registry::{
+    agent_info, detect_agent, tool_info, unwire_tool, AgentId, ToolId, ALL_AGENTS, ALL_TOOLS,
+};
+use crate::util::colors;
+use crate::util::manifest::remove_wire;
+use std::process::Command;
+
+pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
+    colors::banner("toksave", "uninstall");
+
+    // ── Detect installed agents ──
+    let detected: Vec<AgentId> = ALL_AGENTS
+        .iter()
+        .filter(|a| detect_agent(a.id).installed)
+        .map(|a| a.id)
+        .collect();
+
+    if detected.is_empty() {
+        println!("  Nothing wired.");
+        println!();
+        return 0;
+    }
+
+    // ── Pick agents ──
+    let agent_ids: Vec<AgentId> = if !parsed.agents.is_empty() {
+        let detected_set: std::collections::HashSet<AgentId> = detected.iter().copied().collect();
+        parsed
+            .agents
+            .iter()
+            .copied()
+            .filter(|id| detected_set.contains(id))
+            .collect()
+    } else {
+        // Non-interactive assumed (CLI binary has no TTY prompt); mirror --yes/CI behavior.
+        detected.clone()
+    };
+
+    if agent_ids.is_empty() {
+        println!("  Nothing selected.");
+        println!();
+        return 0;
+    }
+
+    // ── Pick tools ──
+    let tools: Vec<ToolId> = if parsed.tools.is_empty() {
+        ALL_TOOLS.iter().map(|t| t.id).collect()
+    } else {
+        parsed.tools.clone()
+    };
+
+    // ── Unwire ──
+    for agent_id in &agent_ids {
+        let info = agent_info(*agent_id);
+        for tool_id in &tools {
+            if !parsed.opts.dry_run {
+                let _ = unwire_tool(*agent_id, *tool_id, &parsed.opts).await;
+                let _ = remove_wire(
+                    &format!("{:?}", agent_id).to_lowercase(),
+                    tool_name(*tool_id),
+                );
+            }
+        }
+        println!("  {} {}", colors::CHECK, info.label);
+    }
+
+    // ── Cleanup cache + purge binaries on full removal ──
+    if !parsed.opts.dry_run && tools.len() == ALL_TOOLS.len() && agent_ids.len() == detected.len() {
+        let cache = crate::util::paths::cache_dir();
+        if cache.exists() {
+            let _ = std::fs::remove_dir_all(&cache);
+        }
+        purge_binaries_if_confirmed(parsed);
+    }
+
+    // ── Summary ──
+    println!();
+    let agent_labels: Vec<&str> = agent_ids.iter().map(|id| agent_info(*id).label).collect();
+    let tool_labels: Vec<&str> = tools.iter().map(|id| tool_info(*id).label).collect();
+    colors::ok(&format!(
+        "Uninstalled {} from {}.",
+        tool_labels.join(", "),
+        agent_labels.join(", ")
+    ));
+    println!();
+    0
+}
+
+fn tool_name(t: ToolId) -> &'static str {
+    match t {
+        ToolId::Rtk => "rtk",
+        ToolId::Caveman => "caveman",
+        ToolId::Codegraph => "codegraph",
+        ToolId::ContextMode => "context-mode",
+        ToolId::Ponytail => "ponytail",
+        ToolId::Principles => "principles",
+    }
+}
+
+fn purge_binaries_if_confirmed(parsed: &ParsedCli) {
+    if parsed.opts.dry_run || std::env::var("TOKSAVE_TEST").is_ok_and(|v| v == "1") {
+        return;
+    }
+    if !parsed.opts.yes {
+        // Interactive prompt not implemented in Rust CLI; require --yes.
+        return;
+    }
+
+    // rtk
+    let local_bin = crate::util::paths::local_bin();
+    let rtk_path = if cfg!(windows) {
+        local_bin.join("rtk.exe")
+    } else {
+        local_bin.join("rtk")
+    };
+    if rtk_path.exists() {
+        let _ = Command::new(&rtk_path)
+            .args(["init", "--uninstall"])
+            .output();
+        let _ = std::fs::remove_file(&rtk_path);
+    }
+
+    // npm globals
+    for pkg in [
+        "context-mode",
+        "@colbymchenry/codegraph",
+        "@dietrichgebert/ponytail",
+    ] {
+        let _ = Command::new("npm").args(["uninstall", "-g", pkg]).output();
+    }
+}
