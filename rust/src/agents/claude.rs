@@ -57,7 +57,38 @@ impl Agent for ClaudeAgent {
                 }
                 Ok(true)
             }
-            _ => Ok(false), // ported in later phases
+            ToolId::Codegraph => {
+                if !opts.dry_run {
+                    wire_mcp("codegraph", vec!["runmcp", "codegraph", "serve", "--mcp"])?;
+                    crate::util::unified_block::write_owner("claude", "codegraph")?;
+                }
+                Ok(true)
+            }
+            ToolId::ContextMode => {
+                if !opts.dry_run {
+                    wire_mcp("context-mode", vec!["runmcp", "context-mode"])?;
+                    crate::util::unified_block::write_owner("claude", "context-mode")?;
+                }
+                Ok(true)
+            }
+            ToolId::Caveman => {
+                if !opts.dry_run {
+                    crate::util::unified_block::write_owner("claude", "caveman")?;
+                }
+                Ok(true)
+            }
+            ToolId::Ponytail => {
+                if !opts.dry_run {
+                    crate::util::unified_block::write_owner("claude", "ponytail")?;
+                }
+                Ok(true)
+            }
+            ToolId::Principles => {
+                if !opts.dry_run {
+                    crate::util::unified_block::write_owner("claude", "principles")?;
+                }
+                Ok(true)
+            }
         }
     }
 
@@ -69,14 +100,52 @@ impl Agent for ClaudeAgent {
                 }
                 Ok(true)
             }
-            _ => Ok(false),
+            ToolId::Codegraph => {
+                if !opts.dry_run {
+                    remove_mcp("codegraph")?;
+                    crate::util::unified_block::remove_owner("claude", "codegraph")?;
+                }
+                Ok(true)
+            }
+            ToolId::ContextMode => {
+                if !opts.dry_run {
+                    remove_mcp("context-mode")?;
+                    crate::util::unified_block::remove_owner("claude", "context-mode")?;
+                }
+                Ok(true)
+            }
+            ToolId::Caveman => {
+                if !opts.dry_run {
+                    crate::util::unified_block::remove_owner("claude", "caveman")?;
+                }
+                Ok(true)
+            }
+            ToolId::Ponytail => {
+                if !opts.dry_run {
+                    crate::util::unified_block::remove_owner("claude", "ponytail")?;
+                }
+                Ok(true)
+            }
+            ToolId::Principles => {
+                if !opts.dry_run {
+                    crate::util::unified_block::remove_owner("claude", "principles")?;
+                }
+                Ok(true)
+            }
         }
     }
 
     fn verify(&self, tool: ToolId) -> Option<bool> {
         match tool {
             ToolId::Rtk => Some(has_rtk_hook()),
-            _ => None,
+            ToolId::Codegraph => Some(has_mcp("codegraph")),
+            ToolId::ContextMode => Some(has_mcp("context-mode")),
+            ToolId::Caveman => Some(crate::util::unified_block::has_owner("claude", "caveman")),
+            ToolId::Ponytail => Some(crate::util::unified_block::has_owner("claude", "ponytail")),
+            ToolId::Principles => Some(crate::util::unified_block::has_owner(
+                "claude",
+                "principles",
+            )),
         }
     }
 }
@@ -278,4 +347,36 @@ fn strip_rtk_ref_from_md(file_path: &Path) {
     if result != raw.trim() {
         let _ = write_file(file_path, &format!("{result}\n"));
     }
+}
+
+fn wire_mcp(name: &str, args: Vec<&str>) -> Result<()> {
+    let p = claude_paths();
+    let mut cfg = read_json_file(&p.global_json)?.unwrap_or_else(|| serde_json::json!({}));
+    let servers = get_or_create_object(&mut cfg, "mcpServers");
+    let cmd_args: Vec<serde_json::Value> = args.iter().map(|a| serde_json::json!(a)).collect();
+    servers[name] = serde_json::json!({
+        "command": toksave_abs(),
+        "args": cmd_args
+    });
+    write_json_file(&p.global_json, &cfg)
+}
+
+fn remove_mcp(name: &str) -> Result<()> {
+    let p = claude_paths();
+    if let Some(mut cfg) = read_json_file(&p.global_json)? {
+        if let Some(mcp) = cfg.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
+            mcp.remove(name);
+        }
+        write_json_file(&p.global_json, &cfg)?;
+    }
+    Ok(())
+}
+
+fn has_mcp(name: &str) -> bool {
+    let p = claude_paths();
+    let cfg = read_json_file(&p.global_json).ok().flatten();
+    cfg.as_ref()
+        .and_then(|c| c.get("mcpServers"))
+        .and_then(|m| m.get(name))
+        .is_some()
 }
