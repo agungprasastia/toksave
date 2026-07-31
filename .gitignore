@@ -12,6 +12,9 @@ bun.lockb
 # Rust (legacy — safe to remove these dirs)
 target/
 
+# Rust build artifacts
+rust/target/
+
 # IDE
 .vscode/
 .idea/
