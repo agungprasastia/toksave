@@ -12,6 +12,9 @@ pub struct ManifestEntry {
     pub wired_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+    /// "active" (absent) or "disabled". Old manifests without the field read as active.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -109,6 +112,7 @@ pub fn record_wire(agent: &str, tool: &str, version: Option<&str>) -> Result<()>
             tool: tool.to_string(),
             wired_at: now_iso8601(),
             version: version.map(str::to_string),
+            state: None,
         });
         write_manifest(&m)
     })
@@ -118,6 +122,19 @@ pub fn remove_wire(agent: &str, tool: &str) -> Result<()> {
     with_manifest_lock(|| {
         let mut m = read_manifest_file();
         m.entries.retain(|e| !(e.agent == agent && e.tool == tool));
+        write_manifest(&m)
+    })
+}
+
+/// Mark an entry disabled (unwired but kept in manifest). No-op if absent.
+pub fn mark_disabled(agent: &str, tool: &str) -> Result<()> {
+    with_manifest_lock(|| {
+        let mut m = read_manifest_file();
+        for e in &mut m.entries {
+            if e.agent == agent && e.tool == tool {
+                e.state = Some("disabled".into());
+            }
+        }
         write_manifest(&m)
     })
 }

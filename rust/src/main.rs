@@ -7,6 +7,7 @@ fn main() {
         CommandType::Doctor => run_doctor(parsed.clone()),
         CommandType::Update => run_update(parsed.clone()),
         CommandType::Uninstall => run_uninstall(parsed.clone()),
+        CommandType::Disable => run_disable(parsed.clone()),
         other => {
             println!("toksave-rs: `{other:?}` not implemented in Rust yet (TS build handles it).");
             0
@@ -37,4 +38,9 @@ fn run_update(parsed: toksave_rs::cli::ParsedCli) -> i32 {
 fn run_uninstall(parsed: toksave_rs::cli::ParsedCli) -> i32 {
     let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
     rt.block_on(toksave_rs::commands::uninstall::run_uninstall(&parsed))
+}
+
+fn run_disable(parsed: toksave_rs::cli::ParsedCli) -> i32 {
+    let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
+    rt.block_on(toksave_rs::commands::disable::run_disable(&parsed))
 }
