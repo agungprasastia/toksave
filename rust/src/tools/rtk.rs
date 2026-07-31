@@ -209,6 +209,36 @@ impl Tool for RtkTool {
     }
 }
 
+pub async fn repair(opts: &RunOpts) -> crate::util::health::RepairResult {
+    let before = RtkTool.health_check();
+    if before.healthy {
+        return crate::util::health::RepairResult {
+            success: true,
+            message: "RTK is already healthy, no repair needed".to_string(),
+            health_after_repair: Some(before),
+        };
+    }
+    let upgrade_opts = RunOpts {
+        upgrade: true,
+        ..*opts
+    };
+    let _ = RtkTool.install(&upgrade_opts).await;
+    let after = RtkTool.health_check();
+    if after.healthy {
+        crate::util::health::RepairResult {
+            success: true,
+            message: "RTK successfully repaired".to_string(),
+            health_after_repair: Some(after),
+        }
+    } else {
+        crate::util::health::RepairResult {
+            success: false,
+            message: "Repair attempted but health check still failing".to_string(),
+            health_after_repair: Some(after),
+        }
+    }
+}
+
 pub fn installed_version() -> Option<String> {
     let path_version = run_stdout("rtk", &["--version"])?;
     let pv = path_version.trim();

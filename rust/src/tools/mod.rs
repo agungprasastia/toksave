@@ -13,7 +13,7 @@ pub use crate::tools::ponytail::PonytailTool;
 pub use crate::tools::principles::PrinciplesTool;
 pub use crate::tools::rtk::{installed_version as rtk_installed_version, RtkTool};
 use crate::util::errors::Result;
-use crate::util::health::HealthStatus;
+use crate::util::health::{HealthStatus, RepairResult};
 
 #[allow(async_fn_in_trait)]
 pub trait Tool {
@@ -56,5 +56,27 @@ pub fn tool_health_check(tool: ToolId) -> HealthStatus {
         ToolId::ContextMode => ContextModeTool.health_check(),
         ToolId::Ponytail => PonytailTool.health_check(),
         ToolId::Principles => PrinciplesTool.health_check(),
+    }
+}
+
+pub async fn tool_latest_version(tool: ToolId) -> Option<String> {
+    match tool {
+        ToolId::Rtk => RtkTool.latest_version().await.ok().flatten(),
+        ToolId::Caveman => CavemanTool.latest_version().await.ok().flatten(),
+        ToolId::Codegraph => CodegraphTool.latest_version().await.ok().flatten(),
+        ToolId::ContextMode => ContextModeTool.latest_version().await.ok().flatten(),
+        ToolId::Ponytail => PonytailTool.latest_version().await.ok().flatten(),
+        ToolId::Principles => PrinciplesTool.latest_version().await.ok().flatten(),
+    }
+}
+
+pub async fn tool_repair(tool: ToolId, opts: &RunOpts) -> RepairResult {
+    match tool {
+        ToolId::Rtk => rtk::repair(opts).await,
+        ToolId::Caveman => caveman::repair(opts).await,
+        ToolId::Codegraph => codegraph::repair(opts).await,
+        ToolId::ContextMode => context_mode::repair(opts).await,
+        ToolId::Ponytail => ponytail::repair(opts).await,
+        ToolId::Principles => principles::repair(opts).await,
     }
 }
