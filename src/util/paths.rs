@@ -82,7 +82,19 @@ pub fn opencode_known_bin_dirs() -> Vec<PathBuf> {
 }
 
 pub fn opencode_desktop_paths() -> Vec<PathBuf> {
-    vec![]
+    if cfg!(windows) {
+        if let Some(local) = env::var_os("LOCALAPPDATA") {
+            return vec![PathBuf::from(local)
+                .join("Programs")
+                .join("OpenCode")
+                .join("OpenCode.exe")];
+        }
+        vec![]
+    } else if cfg!(target_os = "macos") {
+        vec![PathBuf::from("/Applications/OpenCode.app")]
+    } else {
+        vec![PathBuf::from("/usr/bin/ai.opencode.desktop")]
+    }
 }
 
 pub struct CodexPaths {
@@ -114,19 +126,56 @@ pub struct AntigravityPaths {
 
 pub fn antigravity_paths() -> AntigravityPaths {
     let h = home();
-    let dir = h.join(".antigravity");
+    let gemini = h.join(".gemini");
+    let dir = if gemini.exists() {
+        gemini
+    } else {
+        h.join(".antigravity")
+    };
     AntigravityPaths {
-        hooks: dir.join("hooks.json"),
+        hooks: dir.join("config").join("hooks.json"),
         dir,
     }
 }
 
 pub fn antigravity_known_bin_dirs() -> Vec<PathBuf> {
-    vec![home().join(".local").join("bin")]
+    let mut v = vec![home().join(".local").join("bin")];
+    if cfg!(windows) {
+        if let Some(local) = env::var_os("LOCALAPPDATA") {
+            v.push(PathBuf::from(local).join("agy").join("bin"));
+        }
+    }
+    v
 }
 
 pub fn antigravity_desktop_paths() -> Vec<PathBuf> {
-    vec![]
+    if cfg!(windows) {
+        let mut v = vec![];
+        if let Some(local) = env::var_os("LOCALAPPDATA") {
+            let p = PathBuf::from(local);
+            v.push(
+                p.join("Programs")
+                    .join("Antigravity")
+                    .join("Antigravity.exe"),
+            );
+            v.push(
+                p.join("Programs")
+                    .join("Antigravity IDE")
+                    .join("Antigravity IDE.exe"),
+            );
+        }
+        v
+    } else if cfg!(target_os = "macos") {
+        vec![
+            PathBuf::from("/Applications/Antigravity.app"),
+            PathBuf::from("/Applications/Antigravity IDE.app"),
+        ]
+    } else {
+        vec![
+            PathBuf::from("/opt/antigravity"),
+            PathBuf::from("/opt/antigravity-ide"),
+        ]
+    }
 }
 
 pub fn antigravity_mcp_files() -> Vec<PathBuf> {
@@ -190,7 +239,19 @@ pub fn droid_known_bin_dirs() -> Vec<PathBuf> {
 }
 
 pub fn droid_desktop_paths() -> Vec<PathBuf> {
-    vec![]
+    if cfg!(windows) {
+        if let Some(local) = env::var_os("LOCALAPPDATA") {
+            return vec![PathBuf::from(local)
+                .join("Programs")
+                .join("Factory Droid")
+                .join("Factory Droid.exe")];
+        }
+        vec![]
+    } else if cfg!(target_os = "macos") {
+        vec![PathBuf::from("/Applications/Factory Droid.app")]
+    } else {
+        vec![]
+    }
 }
 
 pub struct DevinPaths {
@@ -214,7 +275,19 @@ pub fn devin_known_bin_dirs() -> Vec<PathBuf> {
 }
 
 pub fn devin_desktop_paths() -> Vec<PathBuf> {
-    vec![]
+    if cfg!(windows) {
+        if let Some(local) = env::var_os("LOCALAPPDATA") {
+            return vec![PathBuf::from(local)
+                .join("Programs")
+                .join("Devin")
+                .join("Devin.exe")];
+        }
+        vec![]
+    } else if cfg!(target_os = "macos") {
+        vec![PathBuf::from("/Applications/Devin.app")]
+    } else {
+        vec![]
+    }
 }
 
 pub struct WarpPaths {
@@ -238,7 +311,19 @@ pub fn warp_known_bin_dirs() -> Vec<PathBuf> {
 }
 
 pub fn warp_desktop_paths() -> Vec<PathBuf> {
-    vec![]
+    if cfg!(windows) {
+        if let Some(local) = env::var_os("LOCALAPPDATA") {
+            return vec![PathBuf::from(local)
+                .join("Programs")
+                .join("Warp")
+                .join("Warp.exe")];
+        }
+        vec![]
+    } else if cfg!(target_os = "macos") {
+        vec![PathBuf::from("/Applications/Warp.app")]
+    } else {
+        vec![PathBuf::from("/usr/bin/warp-terminal")]
+    }
 }
 
 pub fn local_bin() -> PathBuf {

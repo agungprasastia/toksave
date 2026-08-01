@@ -51,8 +51,10 @@ pub async fn run_disable(parsed: &ParsedCli) -> i32 {
     };
 
     // ── Unwire + mark disabled ──
+    let mut prog = crate::util::ui::Progress::new();
     for agent_id in &agent_ids {
         let info = agent_info(*agent_id);
+        prog.start(&format!("Disabling in {}", info.label));
         for tool_id in &tools {
             if !parsed.opts.dry_run {
                 let _ = unwire_tool(*agent_id, *tool_id, &parsed.opts).await;
@@ -62,7 +64,7 @@ pub async fn run_disable(parsed: &ParsedCli) -> i32 {
                 );
             }
         }
-        println!("  {} {}", colors::CHECK, info.label);
+        prog.stop(&format!("{} {}", colors::CHECK, info.label));
     }
 
     // ── Summary ──

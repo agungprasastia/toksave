@@ -23,11 +23,24 @@ fn exe_candidates(name: &str) -> Vec<String> {
 fn exists_executable(dir: &Path, name: &str) -> Option<String> {
     for cand in exe_candidates(name) {
         let p = dir.join(&cand);
-        if p.is_file() {
+        if p.is_file() && is_executable(&p) {
             return Some(p.to_string_lossy().to_string());
         }
     }
     None
+}
+
+#[cfg(unix)]
+fn is_executable(p: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    p.metadata()
+        .map(|m| m.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(not(unix))]
+fn is_executable(_p: &Path) -> bool {
+    true
 }
 
 pub fn is_on_path(name: &str) -> bool {

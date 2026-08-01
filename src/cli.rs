@@ -138,11 +138,8 @@ pub fn parse_cli(args: Vec<String>) -> ParsedCli {
     let mut cli = match Cli::try_parse_from(&args) {
         Ok(c) => c,
         Err(e) => {
-            // clap already printed the error/help; mirror TS behavior of exiting non-zero on bad args
-            std::process::exit(match e.kind() {
-                clap::error::ErrorKind::DisplayHelp | clap::error::ErrorKind::DisplayVersion => 0,
-                _ => 2,
-            });
+            // clap prints help/version to stdout, errors to stderr, then exits with the right code
+            e.exit();
         }
     };
 

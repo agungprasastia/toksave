@@ -1,5 +1,6 @@
 use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
+use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file};
 use crate::util::paths::{copilot_known_bin_dirs, copilot_paths, toksave_abs};
@@ -22,10 +23,8 @@ impl Default for CopilotAgent {
 impl Agent for CopilotAgent {
     fn detect(&self) -> Detection {
         let p = copilot_paths();
-        let has_cli = copilot_known_bin_dirs()
-            .iter()
-            .any(|d| d.join("copilot").exists());
-        let has_config = p.dir.exists();
+        let has_cli = find_binary_in("copilot", &copilot_known_bin_dirs()).is_some();
+        let has_config = std::env::var("TOKSAVE_TEST").is_ok() && p.dir.exists();
         if has_cli {
             Detection {
                 installed: true,

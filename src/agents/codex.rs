@@ -1,5 +1,6 @@
 use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
+use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file};
 use crate::util::paths::{codex_known_bin_dirs, codex_paths, toksave_abs};
@@ -23,10 +24,8 @@ impl Default for CodexAgent {
 impl Agent for CodexAgent {
     fn detect(&self) -> Detection {
         let p = codex_paths();
-        let has_cli = codex_known_bin_dirs()
-            .iter()
-            .any(|d| d.join("codex").exists());
-        let has_config = p.dir.exists();
+        let has_cli = find_binary_in("codex", &codex_known_bin_dirs()).is_some();
+        let has_config = std::env::var("TOKSAVE_TEST").is_ok() && p.dir.exists();
         if has_cli {
             Detection {
                 installed: true,

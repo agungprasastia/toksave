@@ -1,8 +1,9 @@
 use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
+use crate::util::detect::find_binary_in;
 use crate::util::errors::{Result, ToksaveError};
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file};
-use crate::util::paths::{toksave_abs, warp_known_bin_dirs, warp_paths};
+use crate::util::paths::{toksave_abs, warp_desktop_paths, warp_known_bin_dirs, warp_paths};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
 pub struct WarpAgent;
@@ -22,16 +23,29 @@ impl Default for WarpAgent {
 impl Agent for WarpAgent {
     fn detect(&self) -> Detection {
         let p = warp_paths();
-        let has_cli = warp_known_bin_dirs()
-            .iter()
-            .any(|d| d.join("warp").exists());
-        let has_config = p.dir.exists();
+        let has_cli = find_binary_in("warp", &warp_known_bin_dirs()).is_some();
+        let has_desktop = warp_desktop_paths().iter().any(|p| p.exists());
+        if has_cli && has_desktop {
+            return Detection {
+                installed: true,
+                source: "cli+desktop".to_string(),
+            };
+        }
         if has_cli {
-            Detection {
+            return Detection {
                 installed: true,
                 source: "cli".to_string(),
-            }
-        } else if has_config {
+            };
+        }
+        if has_desktop {
+            return Detection {
+                installed: true,
+                source: "desktop".to_string(),
+            };
+        }
+        let has_config = std::env::var("TOKSAVE_TEST").is_ok() && p.dir.exists();
+        let has_mcp = p.mcp_config.exists();
+        if has_config || has_mcp {
             Detection {
                 installed: true,
                 source: "config".to_string(),

@@ -1,8 +1,9 @@
 use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
+use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file};
-use crate::util::paths::{droid_known_bin_dirs, droid_paths, toksave_abs};
+use crate::util::paths::{droid_desktop_paths, droid_known_bin_dirs, droid_paths, toksave_abs};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
 pub struct DroidAgent;
@@ -22,25 +23,35 @@ impl Default for DroidAgent {
 impl Agent for DroidAgent {
     fn detect(&self) -> Detection {
         let p = droid_paths();
-        let has_cli = droid_known_bin_dirs()
-            .iter()
-            .any(|d| d.join("droid").exists());
-        let has_config = p.dir.exists();
+        let has_cli = find_binary_in("droid", &droid_known_bin_dirs()).is_some();
+        let has_desktop = droid_desktop_paths().iter().any(|p| p.exists());
+        if has_cli && has_desktop {
+            return Detection {
+                installed: true,
+                source: "cli+desktop".to_string(),
+            };
+        }
         if has_cli {
-            Detection {
+            return Detection {
                 installed: true,
                 source: "cli".to_string(),
-            }
-        } else if has_config {
-            Detection {
+            };
+        }
+        if has_desktop {
+            return Detection {
+                installed: true,
+                source: "desktop".to_string(),
+            };
+        }
+        if std::env::var("TOKSAVE_TEST").is_ok() && p.dir.exists() {
+            return Detection {
                 installed: true,
                 source: "config".to_string(),
-            }
-        } else {
-            Detection {
-                installed: false,
-                source: String::new(),
-            }
+            };
+        }
+        Detection {
+            installed: false,
+            source: String::new(),
         }
     }
 

@@ -50,8 +50,10 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
     };
 
     // ── Unwire ──
+    let mut prog = crate::util::ui::Progress::new();
     for agent_id in &agent_ids {
         let info = agent_info(*agent_id);
+        prog.start(&format!("Uninstalling from {}", info.label));
         for tool_id in &tools {
             if !parsed.opts.dry_run {
                 let _ = unwire_tool(*agent_id, *tool_id, &parsed.opts).await;
@@ -61,7 +63,7 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
                 );
             }
         }
-        println!("  {} {}", colors::CHECK, info.label);
+        prog.stop(&format!("{} {}", colors::CHECK, info.label));
     }
 
     // ── Cleanup cache + purge binaries on full removal ──
@@ -97,12 +99,29 @@ fn tool_name(t: ToolId) -> &'static str {
     }
 }
 
+/// Prompt to purge toksave-installed binaries. Mirrors TS: only asked when
+/// interactive; returns false (skip) on non-TTY or user declining.
+fn interactive_confirm() -> bool {
+    use std::io::IsTerminal;
+    if !std::io::stdin().is_terminal() {
+        return false;
+    }
+    dialoguer::Confirm::new()
+        .with_prompt("Also remove binaries/packages toksave installed (rtk, npm globals)?")
+        .default(false)
+        .interact()
+        .unwrap_or(false)
+}
+
 fn purge_binaries_if_confirmed(parsed: &ParsedCli) {
-    if parsed.opts.dry_run || std::env::var("TOKSAVE_TEST").is_ok_and(|v| v == "1") {
+    if parsed.opts.dry_run {
+        println!("  [dry-run] would purge toksave-installed binaries + npm globals");
         return;
     }
-    if !parsed.opts.yes {
-        // Interactive prompt not implemented in Rust CLI; require --yes.
+    if std::env::var("TOKSAVE_TEST").is_ok_and(|v| v == "1") {
+        return;
+    }
+    if !parsed.opts.yes && !interactive_confirm() {
         return;
     }
 

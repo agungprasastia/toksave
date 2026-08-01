@@ -24,9 +24,16 @@ pub fn info(msg: &str) {
 pub fn banner(title: &str, subtitle: &str) {
     println!();
     println!(
-        "  {}{}",
-        title.bold().cyan(),
-        format!("  {subtitle}").dimmed()
+        "{}",
+        "──────────────────────────────────────────────────────".dimmed()
+    );
+    println!(
+        "  {} {}  {}",
+        "✔".magenta().bold(),
+        format!("{title} v{}", crate::util::version::toksave_version())
+            .magenta()
+            .bold(),
+        subtitle.dimmed()
     );
     println!();
 }

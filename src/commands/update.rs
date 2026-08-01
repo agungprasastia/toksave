@@ -103,6 +103,7 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
         yes: parsed.opts.yes,
     };
 
+    let mut prog = crate::util::ui::Progress::new();
     let mut set = tokio::task::JoinSet::new();
     for id in changed {
         let opts = upgrade_opts;
@@ -117,22 +118,19 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
         match join_res {
             Ok((id, Ok(_))) => {
                 upgraded.push(id);
-                println!("  {} {}", colors::CHECK.green(), tool_info(id).label);
+                prog.stop(&format!("{} {}", colors::CHECK, tool_info(id).label));
             }
             Ok((id, Err(e))) => {
                 let info = tool_info(id);
                 failed.push(info.label.to_string());
-                println!(
-                    "  {} {}",
-                    colors::CROSS.red(),
-                    format!("{} — {}", info.label, e.message).red()
-                );
+                prog.stop(&format!("{} {} — {}", colors::CROSS, info.label, e.message));
             }
             Err(e) => {
                 failed.push("unknown".to_string());
                 colors::err(&format!("task panicked: {e}"));
             }
         }
+        prog.start("Upgrading");
     }
 
     // ── Re-sync wiring (only where already wired) ──
@@ -155,10 +153,9 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
     }
 
     // ── Summary ──
-    println!();
     if !upgraded.is_empty() {
         let names: Vec<&str> = upgraded.iter().map(|id| tool_info(*id).label).collect();
-        colors::ok(&format!("Updated {}.", names.join(", ")));
+        crate::util::ui::green_box(&format!("Updated {}.", names.join(", ")));
     }
     for name in &failed {
         colors::warn(&format!("{name} failed to update."));

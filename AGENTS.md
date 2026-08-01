@@ -1,4 +1,4 @@
-# TokSave Agent Instructions (Rust Rewrite)
+# TokSave Agent Instructions
 
 ## Project
 TokSave is a Rust CLI that installs and wires token-saving tools into AI coding agents. Targets Claude Code, OpenCode, Codex, Antigravity, Copilot, Droid, Devin, Warp, and wires RTK, Caveman, CodeGraph, Context-Mode, Ponytail, Principles.

@@ -43,7 +43,7 @@ tar xzf "$TMPDIR/$ASSET" -C "$TMPDIR"
 
 # Install
 mkdir -p "$INSTALL_DIR"
-mv "$TMPDIR/toksave-${TARGET}" "$INSTALL_DIR/toksave"
+mv "$TMPDIR/toksave" "$INSTALL_DIR/toksave"
 chmod +x "$INSTALL_DIR/toksave"
 
 echo ""

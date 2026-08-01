@@ -30,6 +30,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
 
     // ── Step 2: Install tools ──
     let mut installed_tools = std::collections::HashSet::new();
+    let mut prog = crate::util::ui::Progress::new();
     for t in &tools {
         let info = tool_info(*t);
         let is_npm = info.channel == crate::registry::Channel::Npm;
@@ -37,14 +38,32 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
             colors::warn(&format!("{} — needs Node.js", info.label));
             continue;
         }
+        prog.start(&format!("Installing {}", info.label));
+        if let Some(bar) = prog.bar() {
+            crate::util::download::set_download_progress_bar(bar);
+        }
+        let already = tool_installed_version(*t);
         match install_tool(*t, &parsed.opts).await {
             Ok(true) => {
                 installed_tools.insert(*t);
-                colors::ok(info.label);
+                let suffix = if parsed.opts.dry_run {
+                    match already {
+                        Some(v) => format!(" {v}"),
+                        None => " (would install)".to_string(),
+                    }
+                } else {
+                    String::new()
+                };
+                prog.stop(&format!("{} {}{}", colors::CHECK, info.label, suffix));
             }
-            Ok(false) => colors::warn(&format!("{} — skipped", info.label)),
-            Err(e) => colors::err(&format!("{} — {}", info.label, e.message)),
+            Ok(false) => {
+                prog.stop(&format!("{} {} — skipped", colors::WARN, info.label));
+            }
+            Err(e) => {
+                prog.stop(&format!("{} {} — {}", colors::CROSS, info.label, e.message));
+            }
         }
+        crate::util::download::clear_download_progress_bar();
     }
 
     // ── Step 3: Detect agents ──
@@ -57,13 +76,28 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
     }
 
     // ── Step 4: Pick agents ──
+    let detected_ids: Vec<AgentId> = detected.iter().map(|(id, _)| *id).collect();
     let requested: Vec<AgentId> = if !parsed.agents.is_empty() {
         parsed.agents.clone()
     } else if parsed.opts.yes || !is_interactive() {
-        detected.iter().map(|(id, _)| *id).collect()
+        detected_ids
     } else {
-        // Interactive multi-select ported in a later phase; for now fall back to detected
-        detected.iter().map(|(id, _)| *id).collect()
+        let select_options: Vec<crate::util::ui::SelectOption> = crate::registry::ALL_AGENTS
+            .iter()
+            .map(|a| {
+                let det = detected.iter().find(|(id, _)| *id == a.id);
+                crate::util::ui::SelectOption {
+                    value: a.id,
+                    label: a.label.to_string(),
+                    disabled: det.is_none(),
+                    hint: det
+                        .map(|(_, src)| src.clone())
+                        .unwrap_or_else(|| a.homepage.to_string()),
+                    selected: false,
+                }
+            })
+            .collect();
+        crate::util::ui::multi_select("Select agents to wire toksave into", select_options)
     };
 
     if requested.is_empty() {
@@ -75,6 +109,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
 
     // ── Step 5: Wire tools into agents ──
     let mut failures: Vec<(AgentId, Vec<String>)> = vec![];
+    let mut prog = crate::util::ui::Progress::new();
     for agent_id in &requested {
         let Some(_source) = detected_by_id.get(agent_id) else {
             let info = agent_info(*agent_id);
@@ -85,6 +120,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
             continue;
         };
         let info = agent_info(*agent_id);
+        prog.start(&format!("Wiring {}", info.label));
         let mut failed_tools: Vec<String> = vec![];
         for t in &tools {
             if !installed_tools.contains(t) {
@@ -109,10 +145,11 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
             }
         }
         if failed_tools.is_empty() {
-            colors::ok(info.label);
+            prog.stop(&format!("{} {}", colors::CHECK, info.label));
         } else {
-            colors::warn(&format!(
-                "{} — {} not wired",
+            prog.stop(&format!(
+                "{} {} — {} not wired",
+                colors::WARN,
                 info.label,
                 failed_tools.join(", ")
             ));
@@ -121,17 +158,21 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
     }
 
     // ── Step 6: Summary ──
-    println!();
-    if failures.is_empty() {
-        colors::ok("Equipped.");
-    } else {
-        for (id, failed) in &failures {
-            colors::warn(&format!(
-                "{}: {} not wired. Run `toksave doctor` for details.",
-                agent_info(*id).label,
-                failed.join(", ")
-            ));
-        }
+    let wired: Vec<&str> = requested
+        .iter()
+        .filter(|id| !failures.iter().any(|(fid, _)| fid == *id))
+        .filter(|id| detected_by_id.contains_key(*id))
+        .map(|id| agent_info(*id).label)
+        .collect();
+    if !wired.is_empty() {
+        crate::util::ui::green_box(&format!("Equipped {}.", wired.join(", ")));
+    }
+    for (id, failed) in &failures {
+        colors::warn(&format!(
+            "{}: {} not wired. Run `toksave doctor` for details.",
+            agent_info(*id).label,
+            failed.join(", ")
+        ));
     }
     print_version_table(&tools);
     println!();
@@ -167,7 +208,7 @@ fn check_deps(need_node: bool, min_node: u32) -> bool {
 
 fn is_interactive() -> bool {
     use std::io::IsTerminal;
-    std::io::stdout().is_terminal()
+    std::io::stdin().is_terminal()
 }
 
 fn tool_name(t: ToolId) -> String {

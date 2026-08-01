@@ -1,8 +1,39 @@
 use crate::util::errors::{Result, ToksaveError};
 use crate::util::version::toksave_version;
+use futures_util::StreamExt;
 use std::io::Read;
 use std::path::Path;
+use std::sync::Mutex;
 use std::time::Duration;
+
+/// Optional live progress bar for large binary downloads. Set per-install by
+/// the caller (init/update); `fetch_with_retry_inner` updates it as chunks
+/// stream in. A global sink avoids threading a callback through the whole
+/// install chain — only RTK downloads binaries and installs run sequentially.
+static PROGRESS_BAR: Mutex<Option<indicatif::ProgressBar>> = Mutex::new(None);
+
+pub fn set_download_progress_bar(bar: indicatif::ProgressBar) {
+    if let Ok(mut g) = PROGRESS_BAR.lock() {
+        *g = Some(bar);
+    }
+}
+
+pub fn clear_download_progress_bar() {
+    if let Ok(mut g) = PROGRESS_BAR.lock() {
+        *g = None;
+    }
+}
+
+fn report_progress(done: u64, total: Option<u64>) {
+    if let Ok(g) = PROGRESS_BAR.lock() {
+        if let Some(bar) = g.as_ref() {
+            if let Some(total) = total {
+                bar.set_length(total);
+            }
+            bar.set_position(done);
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct DownloadOptions {
@@ -36,11 +67,18 @@ async fn fetch_with_retry_inner(url: &str, opts: &DownloadOptions) -> Result<Vec
         match resp {
             Ok(r) => {
                 if r.status().is_success() {
-                    let bytes = r.bytes().await.map_err(|e| {
-                        ToksaveError::network("download", "failed to read body", url, None)
-                            .with_source(e)
-                    })?;
-                    return Ok(bytes.to_vec());
+                    let total = r.content_length();
+                    let mut bytes = Vec::with_capacity(total.unwrap_or(0) as usize);
+                    let mut stream = r.bytes_stream();
+                    while let Some(chunk) = stream.next().await {
+                        let chunk = chunk.map_err(|e| {
+                            ToksaveError::network("download", "failed to read body", url, None)
+                                .with_source(e)
+                        })?;
+                        bytes.extend_from_slice(&chunk);
+                        report_progress(bytes.len() as u64, total);
+                    }
+                    return Ok(bytes);
                 }
                 if r.status().as_u16() == 404 {
                     return Err(ToksaveError::download(
