@@ -5,6 +5,23 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Rust port (in progress)**: TokSave is being rewritten from TypeScript to Rust (`src/`), with the agent & tool matrix consolidated in `src/registry.rs`.
+- **Install failure diagnostics**: Failed tool installation now reports which command failed, its exit code, captured stderr tail, and remediation hints (ensure Node 18+ / npm / deno are on PATH, check proxy, retry).
+- **Per-tool phase progress**: `toksave install <agent>` shows per-tool progress phases (resolve, install, wire) instead of one indeterminate spinner.
+- **Runtime probe in `toksave doctor`**: Probes each agent's installed binaries and hooks at runtime — detects missing binaries, Windows backslash paths that break Git Bash hooks, and hooks that fail to run (3s live-run check); reports `hooks.json`/`config.toml`/`mcp.json` MCP server entries pointing at missing binaries. No hooks are modified.
+- **Codex `config.toml` MCP probe**: Reads `[mcp_servers.*]` from `config.toml` via `toml_edit` (not regex) to detect broken MCP entries alongside the JSON-based walker.
+- **`expected_bin_dirs` + PATH prepend in `toksave init`**: The workspace PATH is prepended with agent binary dirs so freshly installed tools resolve in new shells.
+- **Legacy fence cleanup**: Old TokSave instruction fences (non-toksave markers) are stripped when regenerating `AGENTS.md` blocks.
+- **Owner-consolidated `AGENTS.md` updates**: Rewrites group existing agent/RTK owners into one TokSave block instead of appending duplicates; a full-file `write_owner` no longer overwrites the entire `AGENTS.md`.
+
+### Fixed
+
+- **Env race in unit tests**: `env::set_var` is process-global while cargo unit tests run multi-threaded — tests mutating `HOME`/`PATH`/caches could poison parallel tests. Added `env_test_lock()` (static mutex) serializing the 5 affected tests (paths, detect, unified-block).
+
 ## [0.8.5] - 2026-07-28
 
 ### Added
