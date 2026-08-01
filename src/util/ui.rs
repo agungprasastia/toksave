@@ -10,7 +10,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{stdout, IsTerminal};
 use std::time::Duration;
 
-const BAR_WIDTH: &str = "20";
 const BAR_COL: usize = 40; // bar/percent column start (fixed alignment)
 
 /// Task progress, mirroring the old tokless UI: on a TTY each task renders
@@ -19,6 +18,7 @@ const BAR_COL: usize = 40; // bar/percent column start (fixed alignment)
 pub struct Progress {
     tty: bool,
     bar: Option<ProgressBar>,
+    last_label: Option<String>,
 }
 
 impl Progress {
@@ -26,6 +26,7 @@ impl Progress {
         Self {
             tty: std::io::stdout().is_terminal(),
             bar: None,
+            last_label: None,
         }
     }
 
@@ -38,19 +39,18 @@ impl Progress {
     pub fn start(&mut self, label: &str) {
         if !self.tty {
             println!("  {label}");
+            self.last_label = Some(label.to_string());
             return;
         }
         let bar = ProgressBar::new(100);
-        let msg_col = BAR_COL;
-        let tpl = format!("  {{msg:<{msg_col}}}[{{bar:{BAR_WIDTH}}}] {{percent:>3}}%{{msg:>0}}");
-        let _ = tpl; // template assembled below with style colors
         bar.set_style(
-            ProgressStyle::with_template("  {msg}  [{bar:20}] {percent:>3}%")
+            ProgressStyle::with_template("  {spinner} {msg}[{bar:20}] {percent:>3}%")
                 .unwrap()
-                .progress_chars("█░"),
+                .progress_chars("█░")
+                .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
         );
-        bar.set_message(format!("  {label}"));
         bar.enable_steady_tick(Duration::from_millis(80));
+        bar.set_message(format!("{:<width$}", label, width = BAR_COL));
         bar.set_position(0);
         self.bar = Some(bar);
     }
@@ -62,7 +62,8 @@ impl Progress {
     }
 
     /// Terminal state: on TTY renders the final green bar line at a fixed
-    /// column ("  ✔ Label [████...] 100% tail"); non-TTY prints the message.
+    /// column ("  ✔ Label [████...] 100% tail"); non-TTY updates the label
+    /// line in place (adds a check prefix) without a duplicate.
     pub fn stop(&mut self, message: &str) {
         let clean = strip_ansi(message);
         let clean = clean.trim_start_matches('✔').trim_start().to_string();
@@ -73,6 +74,7 @@ impl Progress {
                 Some((l, t)) => (l.to_string(), t.to_string()),
                 None => (clean.clone(), String::new()),
             };
+            // 2 indent + ✔ + space + label(<40) + [bar] + 100% + tail
             let padded = format!("  {} {:<BAR_COL$}", "✔".green(), label.bold());
             let green_bar = "█".repeat(20).green();
             let tail_dim = if tail.is_empty() {
@@ -87,7 +89,10 @@ impl Progress {
                 println!("{padded}[{green_bar}] {}{}", "100%".green(), tail_dim);
             }
         } else {
-            println!("  {clean}");
+            // Non-TTY: "start" already printed "  {label}"; no reprint.
+            if self.last_label.is_some() {
+                self.last_label = None;
+            }
         }
     }
 }
@@ -144,13 +149,6 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
     }
 
     let mut cursor = options.iter().position(|o| !o.disabled).unwrap_or(0);
-
-    let _max_label_len = options
-        .iter()
-        .map(|o| o.label.len())
-        .max()
-        .unwrap_or(16)
-        .max(16);
 
     let _ = enable_raw_mode();
     let mut out = stdout();
