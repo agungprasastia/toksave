@@ -1,7 +1,7 @@
 use crate::registry::RunOpts;
 use crate::tools::Tool;
 use crate::util::detect::is_on_path;
-use crate::util::errors::Result;
+use crate::util::errors::{Result, ToksaveError};
 use crate::util::exec::{run, run_stdout};
 use crate::util::health::{HealthIssue, HealthStatus, RepairResult};
 use crate::util::json::{read_json_file, write_json_file};
@@ -29,8 +29,23 @@ impl Tool for PonytailTool {
             return Ok(false);
         }
 
+        opts.reportf("npm install -g", 0.4);
         let res = run(npm, &["install", "-g", &format!("{PONYTAIL_PKG}@latest")]);
-        Ok(res.code == 0)
+        if res.code != 0 {
+            return Err(ToksaveError::install(
+                "ponytail",
+                &format!(
+                    "npm install failed\n{}",
+                    crate::util::exec::last_nonempty_lines(
+                        &format!("{}\n{}", res.stderr, res.stdout),
+                        4,
+                    )
+                ),
+                Some("Check your npm registry or network, then run: toksave install ponytail"),
+            ));
+        }
+        opts.reportf("ready", 1.0);
+        Ok(true)
     }
 
     fn installed_version(&self) -> Option<String> {
@@ -116,7 +131,7 @@ pub async fn repair(opts: &RunOpts) -> RepairResult {
 
     let upgrade_opts = RunOpts {
         upgrade: true,
-        ..*opts
+        ..opts.clone()
     };
     let ok = PonytailTool.install(&upgrade_opts).await.unwrap_or(false);
     let after = health_check();

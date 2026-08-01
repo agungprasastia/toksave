@@ -54,12 +54,36 @@ pub struct ToolInfo {
     pub instruction_only: bool,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+/// Install-phase report sink: receives `(phase, frac)` as an install progresses.
+pub type ReportSink = std::sync::Arc<dyn Fn(&str, f64) + Send + Sync>;
+
+#[derive(Clone, Default)]
 pub struct RunOpts {
     pub dry_run: bool,
     pub upgrade: bool,
     pub verbose: bool,
     pub yes: bool,
+    /// Optional install-phase sink reported by tool installs.
+    pub report: Option<ReportSink>,
+}
+
+impl RunOpts {
+    pub fn reportf(&self, phase: &str, frac: f64) {
+        if let Some(r) = &self.report {
+            r(phase, frac);
+        }
+    }
+}
+
+impl std::fmt::Debug for RunOpts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RunOpts")
+            .field("dry_run", &self.dry_run)
+            .field("upgrade", &self.upgrade)
+            .field("verbose", &self.verbose)
+            .field("yes", &self.yes)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

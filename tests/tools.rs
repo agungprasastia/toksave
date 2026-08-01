@@ -99,6 +99,7 @@ async fn install_dry_run_all_tools() {
         upgrade: false,
         verbose: false,
         yes: true,
+        report: None,
     };
 
     for &tool in &[

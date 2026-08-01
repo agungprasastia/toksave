@@ -14,6 +14,7 @@ pub struct CodegraphTool;
 
 impl Tool for CodegraphTool {
     async fn install(&self, opts: &RunOpts) -> Result<bool> {
+        opts.reportf("checking", 0.1);
         if is_on_path("codegraph") && !opts.upgrade {
             return Ok(true);
         }
@@ -22,8 +23,23 @@ impl Tool for CodegraphTool {
         }
 
         let npm = crate::util::exec::npm_cmd();
+        opts.reportf("npm install -g", 0.4);
         let res = run(npm, &["install", "-g", PACKAGE]);
-        Ok(res.code == 0 || is_on_path("codegraph") || resolve_codegraph_bin().is_some())
+        if res.code != 0 && !is_on_path("codegraph") && resolve_codegraph_bin().is_none() {
+            return Err(ToksaveError::install(
+                "codegraph",
+                &format!(
+                    "npm install failed\n{}",
+                    crate::util::exec::last_nonempty_lines(
+                        &format!("{}\n{}", res.stderr, res.stdout),
+                        4,
+                    )
+                ),
+                Some("Check your npm registry or network, then run: toksave install codegraph"),
+            ));
+        }
+        opts.reportf("ready", 1.0);
+        Ok(true)
     }
 
     fn installed_version(&self) -> Option<String> {
@@ -230,7 +246,7 @@ pub async fn repair(opts: &RunOpts) -> RepairResult {
 
     let upgrade_opts = RunOpts {
         upgrade: true,
-        ..*opts
+        ..opts.clone()
     };
     let _ = CodegraphTool.install(&upgrade_opts).await;
 

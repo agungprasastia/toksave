@@ -41,6 +41,7 @@ async fn dry_run_install_returns_true_without_writing() {
         upgrade: false,
         verbose: false,
         yes: true,
+        report: None,
     };
     assert!(RtkTool.install(&opts).await.unwrap());
     assert!(!local_rtk_path().exists());

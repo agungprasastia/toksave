@@ -122,6 +122,13 @@ pub fn npx_cmd() -> &'static str {
     }
 }
 
+/// Up to `n` most recent non-empty lines of a command's output, joined with
+/// newlines — the failure detail window shown when an install fails.
+pub fn last_nonempty_lines(s: &str, n: usize) -> String {
+    let lines: Vec<&str> = s.lines().filter(|l| !l.trim().is_empty()).collect();
+    lines[lines.len().saturating_sub(n)..].join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -160,5 +167,12 @@ mod tests {
         };
         assert_eq!(r.code, -1);
         assert!(r.stderr.contains("timed out"));
+    }
+
+    #[test]
+    fn last_nonempty_lines_takes_tail() {
+        assert_eq!(last_nonempty_lines("a\n\nb\nc\nd\ne", 3), "c\nd\ne");
+        assert_eq!(last_nonempty_lines("only", 4), "only");
+        assert_eq!(last_nonempty_lines("", 4), "");
     }
 }

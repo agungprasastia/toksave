@@ -13,6 +13,7 @@ const OPTS: RunOpts = RunOpts {
     upgrade: false,
     verbose: false,
     yes: true,
+    report: None,
 };
 
 #[test]

@@ -19,6 +19,7 @@ pub struct Progress {
     tty: bool,
     bar: Option<ProgressBar>,
     last_label: Option<String>,
+    label: Option<String>,
 }
 
 impl Progress {
@@ -27,6 +28,7 @@ impl Progress {
             tty: std::io::stdout().is_terminal(),
             bar: None,
             last_label: None,
+            label: None,
         }
     }
 
@@ -52,7 +54,18 @@ impl Progress {
         bar.enable_steady_tick(Duration::from_millis(80));
         bar.set_message(format!("{:<width$}", label, width = BAR_COL));
         bar.set_position(0);
+        self.label = Some(label.to_string());
         self.bar = Some(bar);
+    }
+
+    /// In-place phase update on the spinner line (e.g. "checking" → "npm
+    /// install -g" → "ready"); fraction drives the bar fill. Non-TTY no-op.
+    pub fn phase(&mut self, phase: &str, frac: f64) {
+        let (Some(label), Some(bar)) = (self.label.as_deref(), self.bar.as_ref()) else {
+            return;
+        };
+        bar.set_message(format!("{:<width$} {}", label, phase, width = BAR_COL));
+        bar.set_position((frac * 100.0).round() as u64);
     }
 
     /// Clone of the underlying bar, for wiring real download progress
@@ -69,6 +82,7 @@ impl Progress {
         let clean = clean.trim_start_matches('✔').trim_start().to_string();
         if let Some(bar) = self.bar.take() {
             bar.finish_and_clear();
+            self.label = None;
             // Split "Label tail..." → label + tail (version / note).
             let (label, tail) = match clean.split_once(' ') {
                 Some((l, t)) => (l.to_string(), t.to_string()),
@@ -89,9 +103,13 @@ impl Progress {
                 println!("{padded}[{green_bar}] {}{}", "100%".green(), tail_dim);
             }
         } else {
-            // Non-TTY: "start" already printed "  {label}"; no reprint.
+            // Non-TTY: "start" already printed "  {label}"; only failures and
+            // warnings print here — a success would duplicate the label line.
             if self.last_label.is_some() {
                 self.last_label = None;
+            }
+            if clean.starts_with('✖') || clean.starts_with('⚠') {
+                println!("  {clean}");
             }
         }
     }

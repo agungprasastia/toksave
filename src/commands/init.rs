@@ -6,6 +6,36 @@ use crate::registry::{
 use crate::util::colors;
 use crate::util::exec::run_stdout;
 use crate::util::manifest::record_wire;
+use colored::Colorize;
+use std::sync::{Arc, Mutex};
+
+/// Shared progress handle: tool installs report phases back through
+/// `RunOpts.report`, which re-enters the spinner via the mutex.
+struct Prog(Arc<Mutex<crate::util::ui::Progress>>);
+
+impl Prog {
+    fn new() -> Self {
+        Self(Arc::new(Mutex::new(crate::util::ui::Progress::new())))
+    }
+    fn start_section(&self, name: &str) {
+        self.0.lock().unwrap().start_section(name);
+    }
+    fn start(&self, label: &str) {
+        self.0.lock().unwrap().start(label);
+    }
+    fn stop(&self, message: &str) {
+        self.0.lock().unwrap().stop(message);
+    }
+    fn bar(&self) -> Option<indicatif::ProgressBar> {
+        self.0.lock().unwrap().bar()
+    }
+    fn report_sink(&self) -> Option<crate::registry::ReportSink> {
+        let inner = Arc::clone(&self.0);
+        Some(Arc::new(move |phase, frac| {
+            inner.lock().unwrap().phase(phase, frac);
+        }))
+    }
+}
 
 pub async fn run_init(parsed: &ParsedCli) -> i32 {
     colors::banner("toksave", "global token-saver for AI agents");
@@ -30,7 +60,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
 
     // ── Step 2: Install tools ──
     let mut installed_tools = std::collections::HashSet::new();
-    let mut prog = crate::util::ui::Progress::new();
+    let prog = Prog::new();
     prog.start_section("Tools");
     for t in &tools {
         let info = tool_info(*t);
@@ -43,8 +73,10 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         if let Some(bar) = prog.bar() {
             crate::util::download::set_download_progress_bar(bar);
         }
+        let mut opts = parsed.opts.clone();
+        opts.report = prog.report_sink();
         let pre_version = tool_installed_version(*t);
-        match install_tool(*t, &parsed.opts).await {
+        match install_tool(*t, &opts).await {
             Ok(true) => {
                 installed_tools.insert(*t);
                 let line = if parsed.opts.dry_run {
@@ -76,7 +108,14 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
                 prog.stop(&format!("{} {}{}", colors::WARN, info.label, tail));
             }
             Err(e) => {
-                prog.stop(&format!("{} {} — {}", colors::CROSS, info.label, e.message));
+                let first = e.message.lines().next().unwrap_or("").to_string();
+                prog.stop(&format!("{} {} — {}", colors::CROSS, info.label, first));
+                for line in e.message.lines().skip(1) {
+                    println!("      {line}");
+                }
+                if let Some(rem) = &e.remediation {
+                    println!("      {}", rem.dimmed());
+                }
             }
         }
         crate::util::download::clear_download_progress_bar();
@@ -125,7 +164,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
 
     // ── Step 5: Wire tools into agents ──
     let mut failures: Vec<(AgentId, Vec<String>)> = vec![];
-    let mut prog = crate::util::ui::Progress::new();
+    let prog = Prog::new();
     prog.start_section("Agents");
     for agent_id in &requested {
         let Some(_source) = detected_by_id.get(agent_id) else {

@@ -2,7 +2,7 @@ use crate::content::caveman_skill::{CAVEMAN_SKILL_MD, CAVEMAN_SKILL_VERSION};
 use crate::registry::RunOpts;
 use crate::tools::Tool;
 use crate::util::detect::is_on_path;
-use crate::util::errors::Result;
+use crate::util::errors::{Result, ToksaveError};
 use crate::util::exec::run;
 use crate::util::health::{HealthIssue, HealthStatus, RepairResult};
 use crate::util::json::{read_json_file, write_json_file};
@@ -34,6 +34,7 @@ pub struct CavemanTool;
 
 impl Tool for CavemanTool {
     async fn install(&self, opts: &RunOpts) -> Result<bool> {
+        opts.reportf("checking", 0.1);
         if !opts.dry_run
             && env::var("TOKSAVE_TEST").is_err()
             && !opts.upgrade
@@ -50,8 +51,23 @@ impl Tool for CavemanTool {
             return Ok(true);
         }
 
+        opts.reportf("npm install -g", 0.4);
         let res = run(npm, &["install", "-g", "github:JuliusBrussee/caveman"]);
-        Ok(res.code == 0 || is_on_path("caveman") || true)
+        if res.code != 0 && !is_on_path("caveman") {
+            return Err(ToksaveError::install(
+                "caveman",
+                &format!(
+                    "npm install failed\n{}",
+                    crate::util::exec::last_nonempty_lines(
+                        &format!("{}\n{}", res.stderr, res.stdout),
+                        4,
+                    )
+                ),
+                Some("Check your npm registry or network, then run: toksave install caveman"),
+            ));
+        }
+        opts.reportf("ready", 1.0);
+        Ok(true)
     }
 
     fn installed_version(&self) -> Option<String> {

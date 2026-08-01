@@ -149,6 +149,7 @@ pub fn parse_cli(args: Vec<String>) -> ParsedCli {
         upgrade: false,
         verbose: cli.verbose,
         yes: cli.yes,
+        report: None,
     };
     parsed.opts = opts;
 

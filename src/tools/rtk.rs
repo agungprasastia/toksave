@@ -56,6 +56,7 @@ pub struct RtkTool;
 
 impl Tool for RtkTool {
     async fn install(&self, opts: &RunOpts) -> Result<bool> {
+        opts.reportf("checking", 0.1);
         if installed_version().is_some() && !opts.upgrade {
             return Ok(true);
         }
@@ -69,6 +70,7 @@ impl Tool for RtkTool {
         if let Some(asset) = asset_name() {
             let url = format!("https://github.com/rtk-ai/rtk/releases/latest/download/{asset}");
             let result = async {
+                opts.reportf("downloading", 0.4);
                 if asset.ends_with(".tar.gz") {
                     download_tar_gz(&url, &dest, &DownloadOptions::default()).await?;
                     make_executable(&dest.join("rtk"))?;
@@ -85,6 +87,7 @@ impl Tool for RtkTool {
                         Some("Try running 'rtk init -g' manually after installation completes"),
                     ));
                 }
+                opts.reportf("ready", 1.0);
                 Ok(true)
             }
             .await;
@@ -220,7 +223,7 @@ pub async fn repair(opts: &RunOpts) -> crate::util::health::RepairResult {
     }
     let upgrade_opts = RunOpts {
         upgrade: true,
-        ..*opts
+        ..opts.clone()
     };
     let _ = RtkTool.install(&upgrade_opts).await;
     let after = RtkTool.health_check();

@@ -1,6 +1,7 @@
 use toksave::cli::{parse_cli, CommandType};
 
 fn main() {
+    toksave::util::detect::ensure_process_path();
     let args: Vec<String> = std::env::args().collect();
     if let Some(code) = early_hook_dispatch(&args) {
         std::process::exit(code);

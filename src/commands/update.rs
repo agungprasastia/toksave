@@ -101,12 +101,13 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
         upgrade: true,
         verbose: parsed.opts.verbose,
         yes: parsed.opts.yes,
+        report: None,
     };
 
     let mut prog = crate::util::ui::Progress::new();
     let mut set = tokio::task::JoinSet::new();
     for id in changed {
-        let opts = upgrade_opts;
+        let opts = upgrade_opts.clone();
         set.spawn(async move {
             let result = install_tool(id, &opts).await;
             (id, result)

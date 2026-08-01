@@ -1,7 +1,7 @@
 use crate::registry::RunOpts;
 use crate::tools::Tool;
 use crate::util::detect::is_on_path;
-use crate::util::errors::Result;
+use crate::util::errors::{Result, ToksaveError};
 use crate::util::exec::{run, run_stdout};
 use crate::util::health::{HealthIssue, HealthStatus, RepairResult};
 
@@ -11,6 +11,7 @@ pub struct ContextModeTool;
 
 impl Tool for ContextModeTool {
     async fn install(&self, opts: &RunOpts) -> Result<bool> {
+        opts.reportf("checking", 0.1);
         if is_on_path("context-mode") && !opts.upgrade {
             return Ok(true);
         }
@@ -19,8 +20,23 @@ impl Tool for ContextModeTool {
         }
 
         let npm = crate::util::exec::npm_cmd();
+        opts.reportf("npm install -g", 0.4);
         let res = run(npm, &["install", "-g", PACKAGE]);
-        Ok(res.code == 0 || is_on_path("context-mode"))
+        if res.code != 0 && !is_on_path("context-mode") {
+            return Err(ToksaveError::install(
+                "context-mode",
+                &format!(
+                    "npm install failed\n{}",
+                    crate::util::exec::last_nonempty_lines(
+                        &format!("{}\n{}", res.stderr, res.stdout),
+                        4,
+                    )
+                ),
+                Some("Check your npm registry or network, then run: toksave install context-mode"),
+            ));
+        }
+        opts.reportf("ready", 1.0);
+        Ok(true)
     }
 
     fn installed_version(&self) -> Option<String> {
@@ -115,7 +131,7 @@ pub async fn repair(opts: &RunOpts) -> RepairResult {
 
     let upgrade_opts = RunOpts {
         upgrade: true,
-        ..*opts
+        ..opts.clone()
     };
     let _ = ContextModeTool.install(&upgrade_opts).await;
 
