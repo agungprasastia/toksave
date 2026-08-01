@@ -3,6 +3,7 @@ use crate::registry::{detect_agent, verify_tool, ALL_AGENTS, ALL_TOOLS};
 use crate::tools::{tool_health_check, tool_installed_version, tool_latest_version, tool_repair};
 use crate::util::colors;
 use crate::util::health::{HealthStatus, Severity};
+use crate::util::probe::probe_agent;
 use colored::Colorize;
 
 pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
@@ -51,6 +52,16 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
                 colors::WARN.yellow(),
                 label,
                 missing_str.yellow()
+            );
+        }
+
+        // Runtime probe: wired hook/MCP commands must resolve and run.
+        for issue in probe_agent(agent.id) {
+            println!(
+                "      {} {}{}",
+                colors::WARN.yellow(),
+                issue.kind,
+                format!(" — {}", issue.detail).yellow()
             );
         }
     }

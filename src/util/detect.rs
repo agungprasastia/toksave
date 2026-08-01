@@ -153,6 +153,7 @@ mod tests {
 
     #[test]
     fn ensure_process_path_prepends_existing_dirs() {
+        let _g = crate::util::env_test_lock();
         let tmp = env::temp_dir().join("toksave-path-test");
         let local_bin = tmp.join(".local").join("bin");
         fs::create_dir_all(&local_bin).unwrap();

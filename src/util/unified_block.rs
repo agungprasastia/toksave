@@ -261,6 +261,7 @@ mod tests {
 
     #[test]
     fn write_owner_consolidates_owners_and_keeps_surroundings() {
+        let _g = crate::util::env_test_lock();
         let tmp = std::env::temp_dir().join("toksave-block-test");
         let claude_dir = tmp.join(".claude");
         std::fs::create_dir_all(&claude_dir).unwrap();

@@ -389,6 +389,7 @@ mod tests {
 
     #[test]
     fn home_uses_env() {
+        let _g = crate::util::env_test_lock();
         let tmp = env::temp_dir().join("toksave-paths-test-home");
         fs::create_dir_all(&tmp).unwrap();
         let old = env::var_os("HOME");
@@ -403,6 +404,7 @@ mod tests {
 
     #[test]
     fn cache_dir_uses_env_override() {
+        let _g = crate::util::env_test_lock();
         let tmp = env::temp_dir().join("toksave-cache-test");
         let old = env::var_os("TOKSAVE_CACHE_DIR");
         env::set_var("TOKSAVE_CACHE_DIR", &tmp);
@@ -424,6 +426,7 @@ mod tests {
 
     #[test]
     fn claude_paths_under_home() {
+        let _g = crate::util::env_test_lock();
         let tmp = env::temp_dir().join("toksave-claude-test");
         let old = env::var_os("HOME");
         env::set_var("HOME", &tmp);
