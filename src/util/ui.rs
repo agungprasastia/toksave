@@ -172,7 +172,7 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
         first_render = false;
 
         // Title line matching original TS tokless/toksave UI
-        println!("{} {}", "●".magenta().bold(), title.magenta().bold());
+        println!("{} {}\x1b[K", "●".magenta().bold(), title.magenta().bold());
 
         // Options
         for (i, opt) in options.iter().enumerate() {
@@ -207,7 +207,7 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
 
             let hint = opt.hint.dimmed().to_string();
 
-            println!("{prefix}{icon}{display_label}    {tag}  {hint}");
+            println!("{prefix}{icon}{display_label}    {tag}  {hint}\x1b[K");
         }
 
         // Footer rule
