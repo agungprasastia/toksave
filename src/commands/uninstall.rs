@@ -145,6 +145,8 @@ fn purge_binaries_if_confirmed(parsed: &ParsedCli) {
         "@colbymchenry/codegraph",
         "@dietrichgebert/ponytail",
     ] {
-        let _ = Command::new("npm").args(["uninstall", "-g", pkg]).output();
+        let _ = Command::new(crate::util::exec::npm_cmd())
+            .args(["uninstall", "-g", pkg])
+            .output();
     }
 }

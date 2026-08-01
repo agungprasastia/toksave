@@ -31,6 +31,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
     // ── Step 2: Install tools ──
     let mut installed_tools = std::collections::HashSet::new();
     let mut prog = crate::util::ui::Progress::new();
+    prog.start_section("Tools");
     for t in &tools {
         let info = tool_info(*t);
         let is_npm = info.channel == crate::registry::Channel::Npm;
@@ -42,22 +43,37 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         if let Some(bar) = prog.bar() {
             crate::util::download::set_download_progress_bar(bar);
         }
-        let already = tool_installed_version(*t);
+        let pre_version = tool_installed_version(*t);
         match install_tool(*t, &parsed.opts).await {
             Ok(true) => {
                 installed_tools.insert(*t);
-                let suffix = if parsed.opts.dry_run {
-                    match already {
-                        Some(v) => format!(" {v}"),
-                        None => " (would install)".to_string(),
+                let line = if parsed.opts.dry_run {
+                    match tool_installed_version(*t).or(pre_version) {
+                        Some(_) if info.instruction_only => {
+                            format!("{} {} instruction-only", colors::CHECK, info.label)
+                        }
+                        Some(v) if v == "installed" => {
+                            format!("{} {} installed", colors::CHECK, info.label)
+                        }
+                        Some(v) => format!("{} {} {}", colors::CHECK, info.label, v),
+                        None => format!(
+                            "{} {} not installed (would install)",
+                            colors::WARN,
+                            info.label
+                        ),
                     }
                 } else {
-                    String::new()
+                    format!("{} {}", colors::CHECK, info.label)
                 };
-                prog.stop(&format!("{} {}{}", colors::CHECK, info.label, suffix));
+                prog.stop(&line);
             }
             Ok(false) => {
-                prog.stop(&format!("{} {} — skipped", colors::WARN, info.label));
+                let tail: &str = if parsed.opts.dry_run {
+                    " — skipped (dry run)"
+                } else {
+                    " — skipped"
+                };
+                prog.stop(&format!("{} {}{}", colors::WARN, info.label, tail));
             }
             Err(e) => {
                 prog.stop(&format!("{} {} — {}", colors::CROSS, info.label, e.message));
@@ -110,6 +126,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
     // ── Step 5: Wire tools into agents ──
     let mut failures: Vec<(AgentId, Vec<String>)> = vec![];
     let mut prog = crate::util::ui::Progress::new();
+    prog.start_section("Agents");
     for agent_id in &requested {
         let Some(_source) = detected_by_id.get(agent_id) else {
             let info = agent_info(*agent_id);
@@ -120,7 +137,12 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
             continue;
         };
         let info = agent_info(*agent_id);
-        prog.start(&format!("Wiring {}", info.label));
+        let dry_suffix = if parsed.opts.dry_run {
+            " (dry run)"
+        } else {
+            ""
+        };
+        prog.start(&format!("Wiring {}{}", info.label, dry_suffix));
         let mut failed_tools: Vec<String> = vec![];
         for t in &tools {
             if !installed_tools.contains(t) {
@@ -129,28 +151,43 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
             }
             match wire_tool(*agent_id, *t, &parsed.opts).await {
                 Ok(true) => {
-                    if !parsed.opts.dry_run {
-                        if verify_tool(*agent_id, *t) == Some(false) {
+                    if parsed.opts.dry_run {
+                        if tool_installed_version(*t).is_none() {
                             failed_tools.push(tool_info(*t).label.to_string());
-                            continue;
                         }
-                        let _ = record_wire(
-                            &format!("{:?}", agent_id).to_lowercase(),
-                            &tool_name(*t),
-                            tool_installed_version(*t).as_deref(),
-                        );
+                        continue;
                     }
+                    if verify_tool(*agent_id, *t) == Some(false) {
+                        failed_tools.push(tool_info(*t).label.to_string());
+                        continue;
+                    }
+                    let _ = record_wire(
+                        &format!("{:?}", agent_id).to_lowercase(),
+                        &tool_name(*t),
+                        tool_installed_version(*t).as_deref(),
+                    );
                 }
                 _ => failed_tools.push(tool_info(*t).label.to_string()),
             }
         }
         if failed_tools.is_empty() {
-            prog.stop(&format!("{} {}", colors::CHECK, info.label));
+            let suffix = if parsed.opts.dry_run {
+                " (dry run)"
+            } else {
+                ""
+            };
+            prog.stop(&format!("{} {}{}", colors::CHECK, info.label, suffix));
         } else {
+            let suffix = if parsed.opts.dry_run {
+                " (dry run)"
+            } else {
+                ""
+            };
             prog.stop(&format!(
-                "{} {} — {} not wired",
+                "{} {}{} — {} not wired",
                 colors::WARN,
                 info.label,
+                suffix,
                 failed_tools.join(", ")
             ));
             failures.push((*agent_id, failed_tools));
@@ -177,7 +214,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
     print_version_table(&tools);
     println!();
 
-    if failures.is_empty() {
+    if failures.is_empty() || parsed.opts.dry_run {
         0
     } else {
         1

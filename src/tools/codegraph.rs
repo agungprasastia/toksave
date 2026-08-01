@@ -21,7 +21,8 @@ impl Tool for CodegraphTool {
             return Ok(true);
         }
 
-        let res = run("npm", &["install", "-g", PACKAGE]);
+        let npm = crate::util::exec::npm_cmd();
+        let res = run(npm, &["install", "-g", PACKAGE]);
         Ok(res.code == 0 || is_on_path("codegraph") || resolve_codegraph_bin().is_some())
     }
 
@@ -82,9 +83,11 @@ pub fn codegraph_real_install(opts: &RunOpts, agent: &str) -> bool {
 }
 
 pub fn installed_version() -> Option<String> {
-    if is_on_path("npm") {
-        let res = run_stdout("npm", &["list", "-g", PACKAGE, "--depth=0", "--json"]);
-        if let Some(stdout) = res {
+    // npm global list requires npm to be resolvable; on Windows "npm" bare name
+    // may not spawn (no .exe) — use npm_cmd() which resolves "npm.cmd".
+    let npm = crate::util::exec::npm_cmd();
+    if is_on_path(npm) {
+        if let Some(stdout) = run_stdout(npm, &["list", "-g", PACKAGE, "--depth=0", "--json"]) {
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
                 if let Some(ver) = json
                     .get("dependencies")
@@ -95,6 +98,13 @@ pub fn installed_version() -> Option<String> {
                     return Some(ver.to_string());
                 }
             }
+        }
+    }
+    // Fallback: if the binary itself is on PATH, read its --version directly.
+    if let Some(out) = run_stdout("codegraph", &["--version"]) {
+        let v = out.trim().trim_start_matches('v');
+        if !v.is_empty() {
+            return Some(v.to_string());
         }
     }
     None

@@ -24,11 +24,12 @@ impl Tool for PonytailTool {
             }
         }
 
-        if !is_on_path("npm") {
+        let npm = crate::util::exec::npm_cmd();
+        if !is_on_path(npm) {
             return Ok(false);
         }
 
-        let res = run("npm", &["install", "-g", &format!("{PONYTAIL_PKG}@latest")]);
+        let res = run(npm, &["install", "-g", &format!("{PONYTAIL_PKG}@latest")]);
         Ok(res.code == 0)
     }
 
@@ -46,22 +47,19 @@ impl Tool for PonytailTool {
 }
 
 pub fn installed_version() -> Option<String> {
-    if !is_on_path("npm") {
-        if ponytail_plugin_installed() {
-            return Some("0.0.0".to_string());
-        }
-        return None;
-    }
-
-    if let Some(stdout) = run_stdout("npm", &["list", "-g", PONYTAIL_PKG, "--depth=0", "--json"]) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
-            if let Some(ver) = json
-                .get("dependencies")
-                .and_then(|d| d.get(PONYTAIL_PKG))
-                .and_then(|entry| entry.get("version"))
-                .and_then(|v| v.as_str())
-            {
-                return Some(ver.to_string());
+    let npm = crate::util::exec::npm_cmd();
+    if is_on_path(npm) {
+        if let Some(stdout) = run_stdout(npm, &["list", "-g", PONYTAIL_PKG, "--depth=0", "--json"])
+        {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
+                if let Some(ver) = json
+                    .get("dependencies")
+                    .and_then(|d| d.get(PONYTAIL_PKG))
+                    .and_then(|entry| entry.get("version"))
+                    .and_then(|v| v.as_str())
+                {
+                    return Some(ver.to_string());
+                }
             }
         }
     }

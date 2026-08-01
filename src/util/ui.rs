@@ -10,10 +10,12 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{stdout, IsTerminal};
 use std::time::Duration;
 
-const LABEL_WIDTH: usize = 30;
+const BAR_WIDTH: &str = "20";
+const BAR_COL: usize = 40; // bar/percent column start (fixed alignment)
 
-/// Task progress, mirroring the old TS `Progress`: on a TTY renders an
-/// animated bar + label, on non-TTY just prints the label / final message.
+/// Task progress, mirroring the old tokless UI: on a TTY each task renders
+/// check + label, and the bar lives at a fixed column; `stop` finalizes the
+/// line with a full green bar + 100%. Sections get a tree header.
 pub struct Progress {
     tty: bool,
     bar: Option<ProgressBar>,
@@ -27,19 +29,28 @@ impl Progress {
         }
     }
 
+    /// Section header + tree branch (e.g. `Tools` / `Agents` like tokless).
+    pub fn start_section(&mut self, name: &str) {
+        println!("{}", name.bold());
+        println!("{}", "│".dimmed());
+    }
+
     pub fn start(&mut self, label: &str) {
         if !self.tty {
             println!("  {label}");
             return;
         }
         let bar = ProgressBar::new(100);
+        let msg_col = BAR_COL;
+        let tpl = format!("  {{msg:<{msg_col}}}[{{bar:{BAR_WIDTH}}}] {{percent:>3}}%{{msg:>0}}");
+        let _ = tpl; // template assembled below with style colors
         bar.set_style(
-            ProgressStyle::with_template("{spinner} {msg}{spaces}[{bar:20}] {percent}%")
+            ProgressStyle::with_template("  {msg}  [{bar:20}] {percent:>3}%")
                 .unwrap()
-                .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
+                .progress_chars("█░"),
         );
+        bar.set_message(format!("  {label}"));
         bar.enable_steady_tick(Duration::from_millis(80));
-        bar.set_message(truncate(label));
         bar.set_position(0);
         self.bar = Some(bar);
     }
@@ -50,13 +61,33 @@ impl Progress {
         self.bar.clone()
     }
 
+    /// Terminal state: on TTY renders the final green bar line at a fixed
+    /// column ("  ✔ Label [████...] 100% tail"); non-TTY prints the message.
     pub fn stop(&mut self, message: &str) {
+        let clean = strip_ansi(message);
+        let clean = clean.trim_start_matches('✔').trim_start().to_string();
         if let Some(bar) = self.bar.take() {
-            bar.set_message(truncate(&strip_ansi(message)));
             bar.finish_and_clear();
-            println!("  {}", strip_ansi(message));
+            // Split "Label tail..." → label + tail (version / note).
+            let (label, tail) = match clean.split_once(' ') {
+                Some((l, t)) => (l.to_string(), t.to_string()),
+                None => (clean.clone(), String::new()),
+            };
+            let padded = format!("  {} {:<BAR_COL$}", "✔".green(), label.bold());
+            let green_bar = "█".repeat(20).green();
+            let tail_dim = if tail.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", tail.dimmed())
+            };
+            let warn = clean.contains(" not installed") || clean.contains("skipped");
+            if warn {
+                println!("  {} {}", "⚠".yellow(), clean.dimmed());
+            } else {
+                println!("{padded}[{green_bar}] {}{}", "100%".green(), tail_dim);
+            }
         } else {
-            println!("  {message}");
+            println!("  {clean}");
         }
     }
 }
@@ -64,15 +95,6 @@ impl Progress {
 impl Default for Progress {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-fn truncate(s: &str) -> String {
-    let plain = strip_ansi(s);
-    if plain.len() <= LABEL_WIDTH {
-        plain.to_string()
-    } else {
-        plain.chars().take(LABEL_WIDTH - 3).collect::<String>() + "..."
     }
 }
 
@@ -123,7 +145,7 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
 
     let mut cursor = options.iter().position(|o| !o.disabled).unwrap_or(0);
 
-    let max_label_len = options
+    let _max_label_len = options
         .iter()
         .map(|o| o.label.len())
         .max()
@@ -166,10 +188,11 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
             } else if opt.selected {
                 "◉ ".green().bold().to_string()
             } else {
-                "○ ".to_string()
+                "○ ".dimmed().to_string()
             };
 
-            let padded_label = format!("{:<width$}", opt.label, width = max_label_len);
+            let padded_label = format!("{:<width$}", opt.label, width = 16);
+
             let display_label = if opt.disabled {
                 padded_label.dimmed().to_string()
             } else {

@@ -45,11 +45,12 @@ impl Tool for CavemanTool {
             return Ok(true);
         }
 
-        if !is_on_path("npm") {
+        let npm = crate::util::exec::npm_cmd();
+        if !is_on_path(npm) {
             return Ok(true);
         }
 
-        let res = run("npm", &["install", "-g", "github:JuliusBrussee/caveman"]);
+        let res = run(npm, &["install", "-g", "github:JuliusBrussee/caveman"]);
         Ok(res.code == 0 || is_on_path("caveman") || true)
     }
 
@@ -174,7 +175,11 @@ pub fn skills_agent_id(agent: &str) -> &str {
 
 pub fn resolve_caveman_bin(agent: &str, upgrade: bool) -> (String, Vec<String>) {
     let use_npx = !is_on_path("caveman");
-    let bin = if use_npx { "npx" } else { "caveman" };
+    let bin = if use_npx {
+        crate::util::exec::npx_cmd()
+    } else {
+        "caveman"
+    };
     let mut args = if use_npx {
         vec![
             "-y".to_string(),
@@ -208,7 +213,7 @@ pub fn resolve_skills_bin(npx_args: &[String]) -> (String, Vec<String>) {
             },
         )
     } else {
-        ("npx".to_string(), npx_args.to_vec())
+        (crate::util::exec::npx_cmd().to_string(), npx_args.to_vec())
     }
 }
 

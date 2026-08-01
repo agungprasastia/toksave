@@ -18,7 +18,8 @@ impl Tool for ContextModeTool {
             return Ok(true);
         }
 
-        let res = run("npm", &["install", "-g", PACKAGE]);
+        let npm = crate::util::exec::npm_cmd();
+        let res = run(npm, &["install", "-g", PACKAGE]);
         Ok(res.code == 0 || is_on_path("context-mode"))
     }
 
@@ -36,9 +37,9 @@ impl Tool for ContextModeTool {
 }
 
 pub fn installed_version() -> Option<String> {
-    if is_on_path("npm") {
-        let res = run_stdout("npm", &["list", "-g", PACKAGE, "--depth=0", "--json"]);
-        if let Some(stdout) = res {
+    let npm = crate::util::exec::npm_cmd();
+    if is_on_path(npm) {
+        if let Some(stdout) = run_stdout(npm, &["list", "-g", PACKAGE, "--depth=0", "--json"]) {
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
                 if let Some(ver) = json
                     .get("dependencies")
@@ -50,6 +51,9 @@ pub fn installed_version() -> Option<String> {
                 }
             }
         }
+    }
+    if is_on_path("context-mode") {
+        return Some("installed".to_string());
     }
     None
 }
