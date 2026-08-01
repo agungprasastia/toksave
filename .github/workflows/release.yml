@@ -15,48 +15,46 @@ jobs:
       matrix:
         include:
           - target: linux-x64
-            bun-target: bun-linux-x64
             os: ubuntu-latest
+            rust-target: x86_64-unknown-linux-gnu
             ext: ""
           - target: linux-arm64
-            bun-target: bun-linux-arm64
             os: ubuntu-latest
+            rust-target: aarch64-unknown-linux-gnu
             ext: ""
           - target: darwin-x64
-            bun-target: bun-darwin-x64
             os: macos-latest
+            rust-target: x86_64-apple-darwin
             ext: ""
           - target: darwin-arm64
-            bun-target: bun-darwin-arm64
             os: macos-latest
+            rust-target: aarch64-apple-darwin
             ext: ""
           - target: windows-x64
-            bun-target: bun-windows-x64
             os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
             ext: ".exe"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          bun-version: latest
-
-      - run: bun install
+          targets: ${{ matrix.rust-target }}
 
       - name: Test
-        run: bun test
+        run: cargo test --verbose --all-targets
 
-      - name: Compile
-        run: bun build ./src/index.ts --compile --target=${{ matrix.bun-target }} --outfile toksave-${{ matrix.target }}${{ matrix.ext }}
+      - name: Build Release
+        run: cargo build --release --target ${{ matrix.rust-target }}
 
       - name: Package (Unix)
         if: matrix.ext == ''
-        run: tar czf toksave-${{ matrix.target }}.tar.gz toksave-${{ matrix.target }}
+        run: tar czf toksave-${{ matrix.target }}.tar.gz -C target/${{ matrix.rust-target }}/release toksave
 
       - name: Package (Windows)
         if: matrix.ext == '.exe'
-        run: 7z a toksave-${{ matrix.target }}.zip toksave-${{ matrix.target }}.exe
-        shell: bash
+        run: 7z a toksave-${{ matrix.target }}.zip target\${{ matrix.rust-target }}\release\toksave.exe
+        shell: pwsh
 
       - uses: actions/upload-artifact@v7
         with:
