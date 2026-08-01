@@ -6,7 +6,7 @@ mod common;
 
 fn bin() -> PathBuf {
     // Cargo sets CARGO_BIN_EXE_<name> for integration tests.
-    PathBuf::from(env!("CARGO_BIN_EXE_toksave-rs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_toksave"))
 }
 
 fn run_hook(args: &[&str], stdin: &str, dir: Option<&std::path::Path>) -> (i32, String, String) {
@@ -18,11 +18,11 @@ fn run_hook(args: &[&str], stdin: &str, dir: Option<&std::path::Path>) -> (i32, 
     if let Some(d) = dir {
         cmd.current_dir(d);
     }
-    let mut child = cmd.spawn().expect("spawn toksave-rs");
+    let mut child = cmd.spawn().expect("spawn toksave");
     if let Some(mut s) = child.stdin.take() {
         let _ = s.write_all(stdin.as_bytes());
     }
-    let out = child.wait_with_output().expect("wait toksave-rs");
+    let out = child.wait_with_output().expect("wait toksave");
     (
         out.status.code().unwrap_or(-1),
         String::from_utf8_lossy(&out.stdout).into_owned(),

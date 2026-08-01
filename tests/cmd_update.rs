@@ -1,8 +1,8 @@
 mod common;
 
 use common::setup;
-use toksave_rs::cli::{parse_cli, CommandType};
-use toksave_rs::commands::update::run_update;
+use toksave::cli::{parse_cli, CommandType};
+use toksave::commands::update::run_update;
 
 #[tokio::test]
 async fn update_yes_runs_cleanly() {

@@ -1,9 +1,9 @@
 mod common;
 
 use common::setup;
-use toksave_rs::cli::{parse_cli, CommandType};
-use toksave_rs::commands::uninstall::run_uninstall;
-use toksave_rs::util::manifest::{read_manifest, record_wire, was_wired_by_us};
+use toksave::cli::{parse_cli, CommandType};
+use toksave::commands::uninstall::run_uninstall;
+use toksave::util::manifest::{read_manifest, record_wire, was_wired_by_us};
 
 #[tokio::test]
 async fn uninstall_dry_run_makes_no_changes() {

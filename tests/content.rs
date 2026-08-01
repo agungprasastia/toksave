@@ -1,4 +1,4 @@
-use toksave_rs::content;
+use toksave::content;
 
 #[test]
 fn test_managed_content_constants_not_empty() {

@@ -1,10 +1,10 @@
 mod common;
 
 use common::setup;
-use toksave_rs::cli::{parse_cli, CommandType};
-use toksave_rs::commands::disable::run_disable;
-use toksave_rs::util::manifest::{read_manifest, record_wire, was_wired_by_us};
-use toksave_rs::util::paths::local_bin;
+use toksave::cli::{parse_cli, CommandType};
+use toksave::commands::disable::run_disable;
+use toksave::util::manifest::{read_manifest, record_wire, was_wired_by_us};
+use toksave::util::paths::local_bin;
 
 #[tokio::test]
 async fn disable_parses_command() {

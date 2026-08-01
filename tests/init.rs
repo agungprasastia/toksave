@@ -2,11 +2,11 @@ mod common;
 
 use common::setup;
 use std::fs;
-use toksave_rs::cli::{parse_cli, CommandType};
-use toksave_rs::commands::init::run_init;
-use toksave_rs::util::json::read_json_file;
-use toksave_rs::util::manifest::was_wired_by_us;
-use toksave_rs::util::paths::claude_paths;
+use toksave::cli::{parse_cli, CommandType};
+use toksave::commands::init::run_init;
+use toksave::util::json::read_json_file;
+use toksave::util::manifest::was_wired_by_us;
+use toksave::util::paths::claude_paths;
 
 #[tokio::test]
 async fn init_wires_claude_rtk_and_records_manifest() {

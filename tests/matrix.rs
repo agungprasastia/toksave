@@ -1,11 +1,11 @@
-use toksave_rs::registry::{unwire_tool, verify_tool, wire_tool, ALL_AGENTS, ALL_TOOLS};
+use toksave::registry::{unwire_tool, verify_tool, wire_tool, ALL_AGENTS, ALL_TOOLS};
 
 mod common;
 
 #[tokio::test]
 async fn test_full_8x6_agent_tool_matrix() {
     let _env = common::setup();
-    let opts = toksave_rs::registry::RunOpts::default();
+    let opts = toksave::registry::RunOpts::default();
 
     for agent in ALL_AGENTS {
         for tool in ALL_TOOLS {

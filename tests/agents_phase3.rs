@@ -1,6 +1,6 @@
-use toksave_rs::registry::{parse_agent_id, parse_tool_id, AgentId, RunOpts, ToolId};
-use toksave_rs::util::errors::ToksaveErrorKind;
-use toksave_rs::util::paths::{warp_paths, write_file};
+use toksave::registry::{parse_agent_id, parse_tool_id, AgentId, RunOpts, ToolId};
+use toksave::util::errors::ToksaveErrorKind;
+use toksave::util::paths::{warp_paths, write_file};
 
 mod common;
 
@@ -10,8 +10,7 @@ async fn test_warp_corrupted_config_fails() {
     let p = warp_paths();
     write_file(&p.hooks_file, "{ invalid json ").unwrap();
 
-    let res =
-        toksave_rs::registry::wire_tool(AgentId::Warp, ToolId::Rtk, &RunOpts::default()).await;
+    let res = toksave::registry::wire_tool(AgentId::Warp, ToolId::Rtk, &RunOpts::default()).await;
     assert!(res.is_err());
     let err = res.unwrap_err();
     assert!(matches!(err.kind, ToksaveErrorKind::Config));

@@ -1,5 +1,5 @@
 #[allow(unused_imports)]
-pub use toksave_rs::util::paths as ts_paths;
+pub use toksave::util::paths as ts_paths;
 
 use std::ffi::OsString;
 use std::path::PathBuf;

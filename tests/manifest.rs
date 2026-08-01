@@ -2,7 +2,7 @@ mod common;
 
 use common::setup;
 use std::fs;
-use toksave_rs::util::manifest::{read_manifest, record_wire, remove_wire, was_wired_by_us};
+use toksave::util::manifest::{read_manifest, record_wire, remove_wire, was_wired_by_us};
 
 #[test]
 fn read_manifest_empty_for_fresh() {

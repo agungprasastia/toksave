@@ -9,48 +9,16 @@ on:
 jobs:
   check:
     name: Check (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - run: bun install
-
-      - run: bun run typecheck
-        name: Type check
-
-      - run: bun run lint
-        name: Lint
-
-      - run: bun test
-        name: Test
-
-      - run: bun build ./src/index.ts --compile --outfile toksave-test
-        name: Compile binary
-
-  rust-check:
-    name: Rust Check (${{ matrix.os }})
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        working-directory: rust
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
       - name: Format check
         run: cargo fmt --check
       - name: Clippy

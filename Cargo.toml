@@ -1,5 +1,5 @@
 [package]
-name = "toksave-rs"
+name = "toksave"
 version = "0.8.5"
 edition = "2021"
 description = "Zero-config token-saver for AI coding agents (Rust rewrite)"

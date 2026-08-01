@@ -4,10 +4,10 @@ use common::setup;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use toksave_rs::cli::{parse_cli, CommandType};
+use toksave::cli::{parse_cli, CommandType};
 
 fn bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_toksave-rs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_toksave"))
 }
 
 fn run_cmd(args: &[&str], stdin: &str, dir: Option<&std::path::Path>) -> (i32, String, String) {
@@ -19,11 +19,11 @@ fn run_cmd(args: &[&str], stdin: &str, dir: Option<&std::path::Path>) -> (i32, S
     if let Some(d) = dir {
         cmd.current_dir(d);
     }
-    let mut child = cmd.spawn().expect("spawn toksave-rs");
+    let mut child = cmd.spawn().expect("spawn toksave");
     if let Some(mut s) = child.stdin.take() {
         let _ = s.write_all(stdin.as_bytes());
     }
-    let out = child.wait_with_output().expect("wait toksave-rs");
+    let out = child.wait_with_output().expect("wait toksave");
     (
         out.status.code().unwrap_or(-1),
         String::from_utf8_lossy(&out.stdout).into_owned(),
@@ -124,7 +124,7 @@ fn runmcp_executes_echo_like_command() {
 
 #[test]
 fn runmcp_parses_agent_flag_in_library_impl() {
-    let (agent, rest) = toksave_rs::commands::runmcp::parse_agent_flag(&[
+    let (agent, rest) = toksave::commands::runmcp::parse_agent_flag(&[
         "--agent".into(),
         "codex".into(),
         "codegraph".into(),
@@ -144,10 +144,10 @@ fn runmcp_is_node_shebang_script_detects_env_node() {
     std::fs::write(&win, "#!node.exe\n").unwrap();
     let no = tmp.join("tool-no.sh");
     std::fs::write(&no, "#!/bin/sh\n").unwrap();
-    assert!(toksave_rs::commands::runmcp::is_node_shebang_script(&yes));
-    assert!(toksave_rs::commands::runmcp::is_node_shebang_script(&win));
-    assert!(!toksave_rs::commands::runmcp::is_node_shebang_script(&no));
-    assert!(!toksave_rs::commands::runmcp::is_node_shebang_script(
+    assert!(toksave::commands::runmcp::is_node_shebang_script(&yes));
+    assert!(toksave::commands::runmcp::is_node_shebang_script(&win));
+    assert!(!toksave::commands::runmcp::is_node_shebang_script(&no));
+    assert!(!toksave::commands::runmcp::is_node_shebang_script(
         &tmp.join("missing.js")
     ));
     std::fs::remove_dir_all(&tmp).ok();
@@ -167,7 +167,7 @@ fn index_auto_silent_skip_when_no_project() {
             .as_nanos()
     ));
     std::fs::create_dir_all(&tmp).unwrap();
-    let code = toksave_rs::commands::index::run_index_with(true, &tmp);
+    let code = toksave::commands::index::run_index_with(true, &tmp);
     assert_eq!(code, 0);
     std::fs::remove_dir_all(&tmp).ok();
 }
@@ -187,7 +187,7 @@ fn index_manual_reports_missing_codegraph() {
             .as_nanos()
     ));
     std::fs::create_dir_all(tmp.join(".git")).unwrap();
-    let code = toksave_rs::commands::index::run_index_with(false, &tmp);
+    let code = toksave::commands::index::run_index_with(false, &tmp);
     assert!(code == 0 || code == 1);
     std::fs::remove_dir_all(&tmp).ok();
 }

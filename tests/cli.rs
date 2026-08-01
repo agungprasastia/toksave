@@ -1,7 +1,7 @@
-use toksave_rs::cli::{parse_cli, CommandType};
-use toksave_rs::registry::{AgentId, ToolId};
+use toksave::cli::{parse_cli, CommandType};
+use toksave::registry::{AgentId, ToolId};
 
-fn parse(args: &[&str]) -> toksave_rs::cli::ParsedCli {
+fn parse(args: &[&str]) -> toksave::cli::ParsedCli {
     let mut v = vec!["toksave".to_string()];
     v.extend(args.iter().map(|s| s.to_string()));
     parse_cli(v)

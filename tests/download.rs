@@ -1,7 +1,7 @@
 use sha2::{Digest, Sha256};
 use std::io::Write;
 use std::path::PathBuf;
-use toksave_rs::util::download::{
+use toksave::util::download::{
     download_zip, fetch_json, fetch_with_retry, is_safe_archive_path, DownloadOptions,
 };
 

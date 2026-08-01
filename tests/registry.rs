@@ -1,4 +1,4 @@
-use toksave_rs::registry::{
+use toksave::registry::{
     agent_info, parse_agent_id, parse_tool_id, tool_info, AgentId, ToolId, ALL_AGENTS, ALL_TOOLS,
 };
 

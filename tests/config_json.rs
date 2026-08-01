@@ -1,10 +1,10 @@
 use std::fs;
 use std::path::PathBuf;
-use toksave_rs::util::json::{
+use toksave::util::json::{
     add_to_array_if_missing, get_or_create_object, read_json_file, remove_from_array,
     write_json_file,
 };
-use toksave_rs::util::paths::write_file;
+use toksave::util::paths::write_file;
 
 fn tmp_dir() -> PathBuf {
     std::env::temp_dir().join(format!("toksave-config-test-{}", std::process::id()))

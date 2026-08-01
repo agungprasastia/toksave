@@ -1,10 +1,10 @@
 mod common;
 
 use common::setup;
-use toksave_rs::registry::RunOpts;
-use toksave_rs::tools::rtk::{asset_name, is_installed_but_unreachable, local_rtk_path, RtkTool};
-use toksave_rs::tools::Tool;
-use toksave_rs::util::paths::{ensure_dir, local_bin};
+use toksave::registry::RunOpts;
+use toksave::tools::rtk::{asset_name, is_installed_but_unreachable, local_rtk_path, RtkTool};
+use toksave::tools::Tool;
+use toksave::util::paths::{ensure_dir, local_bin};
 
 #[test]
 fn asset_name_matches_platform() {
