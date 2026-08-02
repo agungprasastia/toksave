@@ -62,7 +62,9 @@ jobs:
 
       - name: Package (Windows)
         if: matrix.ext == '.exe'
-        run: 7z a toksave-${{ matrix.target }}.zip target\${{ matrix.rust-target }}\release\toksave.exe
+        run: |
+          cd target\${{ matrix.rust-target }}\release
+          7z a ..\..\..\toksave-${{ matrix.target }}.zip toksave.exe
         shell: pwsh
 
       - uses: actions/upload-artifact@v7

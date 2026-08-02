@@ -24,7 +24,11 @@ Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
 
 # Install
 New-Item -ItemType Directory -Path $installDir -Force | Out-Null
-Copy-Item -Path (Join-Path $tmpDir "toksave.exe") -Destination (Join-Path $installDir "toksave.exe") -Force
+$exeFile = Get-ChildItem -Path $tmpDir -Filter "toksave.exe" -Recurse | Select-Object -First 1
+if (-not $exeFile) {
+    throw "toksave.exe not found in downloaded archive"
+}
+Copy-Item -Path $exeFile.FullName -Destination (Join-Path $installDir "toksave.exe") -Force
 
 # Clean up
 Remove-Item -Recurse -Force $tmpDir
