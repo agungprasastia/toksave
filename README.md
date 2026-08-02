@@ -143,6 +143,17 @@ toksave                    # detects agents, installs tools, wires everything
 
 ---
 
+## 📚 Documentation
+
+For in-depth guides, architecture specifications, and troubleshooting:
+
+- **[CLI & Command Reference](docs/CLI.md)** — Complete breakdown of commands, flags, environment variables, and exit codes.
+- **[Agent & Tool Matrix](docs/AGENTS_AND_TOOLS.md)** — Technical reference on agent file locations, hooks, plugins, and instruction block formats.
+- **[Architecture & Stability](docs/ARCHITECTURE_AND_STABILITY.md)** — Core design principles, smart config pruning, and E2E test verification results.
+- **[Troubleshooting & FAQ](docs/TROUBLESHOOTING.md)** — Common solutions for Windows PATHEXT, Node.js versions, and rate limits.
+
+---
+
 ## 🛠️ Development
 
 Built with Rust.

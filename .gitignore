@@ -28,8 +28,10 @@ Thumbs.db
 # toksave cache
 .cache/
 
-.superpowers/
-
+# Internal docs & archive
+docs/archive/
+docs/plans/
+docs/specs/
 docs/superpowers/
 .github/copilot-instructions.md
 .github/hooks
