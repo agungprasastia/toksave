@@ -32,7 +32,7 @@ impl Tool for ContextModeTool {
                         4,
                     )
                 ),
-                Some("Check your npm registry or network, then run: toksave install context-mode"),
+                Some("Check your npm registry or network, then run: toksave init -t context-mode"),
             ));
         }
         opts.reportf("ready", 1.0);
@@ -85,7 +85,7 @@ pub fn health_check() -> HealthStatus {
             version: None,
             issues: vec![HealthIssue::error(
                 "Context-Mode is not installed",
-                "Run: toksave install context-mode",
+                "Run: toksave init -t context-mode",
             )],
         };
     };

@@ -47,7 +47,47 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         .map(|t| t.id)
         .collect();
 
-    // Preflight dep check: node for npm-channel tools, git for github-channel ones.
+    // ── Step 2: Detect agents (before install, so a first-run with no agent
+    // installed doesn't install global tools for nothing) ──
+    let mut detected: Vec<(AgentId, String)> = vec![];
+    for a in crate::registry::ALL_AGENTS {
+        let d = detect_agent(a.id);
+        if d.installed {
+            detected.push((a.id, d.source));
+        }
+    }
+
+    // ── Step 3: Pick agents ──
+    let detected_ids: Vec<AgentId> = detected.iter().map(|(id, _)| *id).collect();
+    let requested: Vec<AgentId> = if !parsed.agents.is_empty() {
+        parsed.agents.clone()
+    } else if parsed.opts.yes || !is_interactive() {
+        detected_ids
+    } else {
+        let select_options: Vec<crate::util::ui::SelectOption> = crate::registry::ALL_AGENTS
+            .iter()
+            .map(|a| {
+                let det = detected.iter().find(|(id, _)| *id == a.id);
+                crate::util::ui::SelectOption {
+                    value: a.id,
+                    label: a.label.to_string(),
+                    disabled: det.is_none(),
+                    hint: det
+                        .map(|(_, src)| src.clone())
+                        .unwrap_or_else(|| a.homepage.to_string()),
+                    selected: false,
+                }
+            })
+            .collect();
+        crate::util::ui::multi_select("Select agents to wire toksave into", select_options)
+    };
+
+    if requested.is_empty() {
+        println!("  Nothing selected.");
+        return 0;
+    }
+
+    // ── Step 4: Preflight dep check ──
     let has_npm_tools = tools
         .iter()
         .any(|t| tool_info(*t).channel == crate::registry::Channel::Npm);
@@ -71,7 +111,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         );
     }
 
-    // ── Step 2: Install tools ──
+    // ── Step 5: Install tools ──
     let mut installed_tools = std::collections::HashSet::new();
     let prog = Prog::new();
     prog.start_section("Tools");
@@ -138,48 +178,9 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         crate::util::download::clear_download_progress_bar();
     }
 
-    // ── Step 3: Detect agents ──
-    let mut detected: Vec<(AgentId, String)> = vec![];
-    for a in crate::registry::ALL_AGENTS {
-        let d = detect_agent(a.id);
-        if d.installed {
-            detected.push((a.id, d.source));
-        }
-    }
-
-    // ── Step 4: Pick agents ──
-    let detected_ids: Vec<AgentId> = detected.iter().map(|(id, _)| *id).collect();
-    let requested: Vec<AgentId> = if !parsed.agents.is_empty() {
-        parsed.agents.clone()
-    } else if parsed.opts.yes || !is_interactive() {
-        detected_ids
-    } else {
-        let select_options: Vec<crate::util::ui::SelectOption> = crate::registry::ALL_AGENTS
-            .iter()
-            .map(|a| {
-                let det = detected.iter().find(|(id, _)| *id == a.id);
-                crate::util::ui::SelectOption {
-                    value: a.id,
-                    label: a.label.to_string(),
-                    disabled: det.is_none(),
-                    hint: det
-                        .map(|(_, src)| src.clone())
-                        .unwrap_or_else(|| a.homepage.to_string()),
-                    selected: false,
-                }
-            })
-            .collect();
-        crate::util::ui::multi_select("Select agents to wire toksave into", select_options)
-    };
-
-    if requested.is_empty() {
-        println!("  Nothing selected.");
-        return 0;
-    }
-
     let detected_by_id: std::collections::HashMap<AgentId, String> = detected.into_iter().collect();
 
-    // ── Step 5: Wire tools into agents ──
+    // ── Step 6: Wire tools into agents ──
     let mut failures: Vec<(AgentId, Vec<String>)> = vec![];
     let prog = Prog::new();
     prog.start_section("Agents");
@@ -250,7 +251,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         }
     }
 
-    // ── Step 6: Summary ──
+    // ── Step 7: Summary ──
     let wired: Vec<&str> = requested
         .iter()
         .filter(|id| !failures.iter().any(|(fid, _)| fid == *id))

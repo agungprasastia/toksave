@@ -73,10 +73,15 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
                 format!("{label}{inst_str} → {lat_str} → install").yellow()
             );
         } else if installed.is_some() {
+            let state = if latest.is_some() {
+                "(up to date)"
+            } else {
+                "(latest unknown — could not check)"
+            };
             println!(
                 "  {} {}",
                 colors::CHECK.green(),
-                format!("{label}{inst_str} → {lat_str} (up to date)").dimmed()
+                format!("{label}{inst_str} → {lat_str} {state}").dimmed()
             );
         } else {
             println!(

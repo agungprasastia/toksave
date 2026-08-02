@@ -35,7 +35,7 @@ impl Tool for CodegraphTool {
                         4,
                     )
                 ),
-                Some("Check your npm registry or network, then run: toksave install codegraph"),
+                Some("Check your npm registry or network, then run: toksave init -t codegraph"),
             ));
         }
         opts.reportf("ready", 1.0);
@@ -200,7 +200,7 @@ pub fn health_check() -> HealthStatus {
             version: None,
             issues: vec![HealthIssue::error(
                 "CodeGraph is not installed",
-                "Run: toksave install codegraph",
+                "Run: toksave init -t codegraph",
             )],
         };
     };

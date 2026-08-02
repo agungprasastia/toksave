@@ -41,7 +41,7 @@ impl Tool for PonytailTool {
                         4,
                     )
                 ),
-                Some("Check your npm registry or network, then run: toksave install ponytail"),
+                Some("Check your npm registry or network, then run: toksave init -t ponytail"),
             ));
         }
         opts.reportf("ready", 1.0);
@@ -94,7 +94,7 @@ pub fn health_check() -> HealthStatus {
             version: None,
             issues: vec![HealthIssue::error(
                 "Ponytail not installed",
-                "Run: toksave --tools ponytail",
+                "Run: toksave init -t ponytail",
             )],
         };
     };

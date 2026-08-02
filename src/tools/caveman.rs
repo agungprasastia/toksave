@@ -63,7 +63,7 @@ impl Tool for CavemanTool {
                         4,
                     )
                 ),
-                Some("Check your npm registry or network, then run: toksave install caveman"),
+                Some("Check your npm registry or network, then run: toksave init -t caveman"),
             ));
         }
         opts.reportf("ready", 1.0);
@@ -447,7 +447,7 @@ pub fn health_check() -> HealthStatus {
             version: None,
             issues: vec![HealthIssue::error(
                 "Caveman skill not found",
-                "Run: toksave install caveman",
+                "Run: toksave init -t caveman",
             )],
         };
     };
@@ -472,7 +472,7 @@ pub async fn repair(_opts: &RunOpts) -> RepairResult {
 
     RepairResult {
         success: false,
-        message: "Caveman repair requires running: toksave init caveman".to_string(),
+        message: "Caveman repair requires running: toksave init -t caveman".to_string(),
         health_after_repair: None,
     }
 }

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`init` detects agents before installing tools**: Agent detection and selection now run before any tool installation. When no agent is detected, `toksave init` prints "Nothing selected." and exits without touching the filesystem (previously tools were installed and wired first, then "Nothing selected."). Selection options (all/high/leave-all) apply to upgrade runs; a fresh machine with no agents short-circuits cleanly.
 - **Rust edition `2021` → `2024`**: Upgraded the crate to the 2024 edition. `env::set_var`/`remove_var` became `unsafe` in 2024; call sites in `runmcp`/`detect` got `unsafe` blocks with inlined safety comments (main-thread before thread spawn), and env-mutating tests got `unsafe` blocks guarded by `env_test_lock`/`ENV_LOCK`.
 
 ### Fixed
@@ -31,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`update` installs missing npm tools**: `latest_version()` read `.version` from the full npm registry document, which only exists on the `/latest` and versioned endpoints — so every npm tool resolved as "up to date" and `toksave update` never installed missing tools. Now fetched via `registry.npmjs.org/<pkg>/latest`; missing tools are reported as `(not installed)` and installed.
 - **Env race in unit tests**: `env::set_var` is process-global while cargo unit tests run multi-threaded — tests mutating `HOME`/`PATH`/caches could poison parallel tests. Added `env_test_lock()` (static mutex) serializing the 5 affected tests (paths, detect, unified-block).
 - **Uninstall drops empty config files and ghost keys**: After uninstall, agents left empty `{}` JSON configs, empty `[mcp_servers]` TOML tables, and empty `hooks`/`mcpServers` objects behind (opencode `config.json`, codex `config.toml`+`hooks.json`, copilot/droid/devin/warp `mcp.json`+`hooks.json`, `.claude.json`, `.claude/settings.json`). Unwire now prunes empty top-level JSON containers (`write_json_pruned`), prunes empty TOML tables recursively (`prune_empty_tables`) and deletes the file when it serializes to `{}`/empty (`write_toml_pruned` / `write_json_pruned`), while preserving user-owned keys like opencode's `$schema`.
+- **Invalid `toksave install <tool>` remediation hints**: Health-check and repair hints referenced `toksave install <tool>`, but `install` is not a clap subcommand (error: unrecognized subcommand). All hints now point to the real command `toksave init -t <tool>`.
+- **`update` mislabeled "up to date" when latest couldn't be resolved**: A tool that resolved its installed version but failed to fetch the latest (offline / GitHub rate limit) printed `→ ? (up to date)`, silently claiming freshness. It now prints `? (latest unknown — could not check)`.
 - **Env race in unit tests**: `env::set_var` is process-global while cargo unit tests run multi-threaded — tests mutating `HOME`/`PATH`/caches could poison parallel tests. Added `env_test_lock()` (static mutex) serializing the 5 affected tests (paths, detect, unified-block).
 
 ## [0.8.5] - 2026-07-28

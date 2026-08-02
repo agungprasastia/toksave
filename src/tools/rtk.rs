@@ -165,7 +165,7 @@ impl Tool for RtkTool {
                 version: None,
                 issues: vec![HealthIssue::error(
                     "RTK is not installed",
-                    "Run: toksave install rtk",
+                    "Run: toksave init -t rtk",
                 )],
             };
         };
