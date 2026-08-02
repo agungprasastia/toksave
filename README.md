@@ -145,20 +145,18 @@ toksave                    # detects agents, installs tools, wires everything
 
 ## 🛠️ Development
 
-Built with TypeScript + [Bun](https://bun.sh). Compiles to a standalone binary.
+Built with Rust.
 
 ```bash
 git clone https://github.com/agungprasastia/toksave.git
 cd toksave
-bun install
 
-bun run src/index.ts       # Run CLI in dev mode
-bun run typecheck          # TypeScript checks
-bun test                   # 151 unit tests
-bun run lint               # Biome lint
-bun run build              # Local binary
-
-bash scripts/build-release.sh  # Cross-platform release build
+cargo run -- --help        # Run CLI in dev mode
+cargo check                # Compiler check
+cargo test                 # Unit & integration tests
+cargo clippy               # Linter check
+cargo fmt --check          # Code formatting check
+cargo build --release      # Local release binary
 ```
 
 ---
