@@ -100,7 +100,7 @@ impl Agent for DevinAgent {
                     "matcher": "Execute",
                     "hooks": [{ "type": "command", "command": format!("{} rtk-hook devin", toksave_abs()), "timeout": 10 }]
                 });
-                cfg["PreToolUse"] = serde_json::json!([hook_entry]);
+                crate::util::json::merge_pretool_use(&mut cfg, hook_entry, "rtk-hook devin");
                 write_json_file(&p.hooks_file, &cfg)?;
                 Ok(true)
             }
@@ -144,9 +144,7 @@ impl Agent for DevinAgent {
             }
             ToolId::Rtk => {
                 if let Some(mut cfg) = read_json_file(&p.hooks_file)? {
-                    if let Some(obj) = cfg.as_object_mut() {
-                        obj.remove("PreToolUse");
-                    }
+                    crate::util::json::remove_pretool_use(&mut cfg, "rtk-hook devin");
                     write_json_file(&p.hooks_file, &cfg)?;
                 }
                 Ok(true)
@@ -181,7 +179,9 @@ impl Agent for DevinAgent {
             ToolId::Caveman => Some(has_owner("devin", "caveman")),
             ToolId::Rtk => {
                 let hcfg = read_json_file(&p.hooks_file).ok().flatten();
-                Some(hcfg.as_ref().and_then(|c| c.get("PreToolUse")).is_some())
+                Some(hcfg.as_ref().is_some_and(|c| {
+                    crate::util::json::has_pretool_with_command_marker(c, "rtk-hook devin")
+                }))
             }
             ToolId::Ponytail => Some(has_owner("devin", "ponytail")),
             ToolId::Principles => Some(has_owner("devin", "principles")),

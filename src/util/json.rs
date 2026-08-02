@@ -155,3 +155,117 @@ pub fn remove_from_array(arr: &mut Vec<serde_json::Value>, entry: &serde_json::V
 pub fn has_key(obj: &serde_json::Value, key: &str) -> bool {
     obj.is_object() && obj.get(key).is_some()
 }
+
+/// Merge a toksave-managed hook entry into a flat `PreToolUse` array at the
+/// top level of a JSON hook config (warp/droid/devin/antigravity shape).
+/// Drops existing toksave-managed entries (matched by `matched_by` substring on
+/// `hooks[0].command`) and keeps user entries untouched, appending the new one.
+pub fn merge_pretool_use(
+    cfg: &mut serde_json::Value,
+    entry: serde_json::Value,
+    managed_marker: &str,
+) {
+    let arr = cfg
+        .as_object_mut()
+        .expect("config object")
+        .entry("PreToolUse")
+        .or_insert_with(|| serde_json::json!([]));
+    let Some(items) = arr.as_array_mut() else {
+        return;
+    };
+    items.retain(|e| !is_managed_hook(e, managed_marker));
+    items.push(entry);
+}
+
+/// True when `entry` is a hook group whose inner `hooks[].command` contains `managed_marker`.
+fn is_managed_hook(entry: &serde_json::Value, managed_marker: &str) -> bool {
+    entry
+        .get("hooks")
+        .and_then(|h| h.as_array())
+        .map(|hooks| {
+            hooks.iter().any(|h| {
+                h.get("command")
+                    .and_then(|c| c.as_str())
+                    .is_some_and(|c| c.contains(managed_marker))
+            })
+        })
+        .unwrap_or(false)
+}
+
+/// Remove toksave-managed entries from `cfg["PreToolUse"]`, dropping the key
+/// when the array becomes empty.
+pub fn remove_pretool_use(cfg: &mut serde_json::Value, managed_marker: &str) {
+    let Some(obj) = cfg.as_object_mut() else {
+        return;
+    };
+    let Some(arr) = obj.get_mut("PreToolUse").and_then(|v| v.as_array_mut()) else {
+        return;
+    };
+    arr.retain(|e| !is_managed_hook(e, managed_marker));
+    if arr.is_empty() {
+        obj.remove("PreToolUse");
+    }
+}
+
+/// True when `cfg["PreToolUse"]` has at least one entry whose inner
+/// `hooks[].command` contains `managed_marker`.
+pub fn has_pretool_with_command_marker(cfg: &serde_json::Value, managed_marker: &str) -> bool {
+    cfg.get("PreToolUse")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().any(|e| is_managed_hook(e, managed_marker)))
+        .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod pretool_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn merge_pretool_use_keeps_user_entries_and_drops_ours() {
+        let mut cfg = json!({
+            "PreToolUse": [
+                { "matcher": "Bash", "hooks": [{ "type": "command", "command": "echo user" }] },
+                { "matcher": "Bash", "hooks": [{ "type": "command", "command": "/toksave rtk-hook warp" }] }
+            ]
+        });
+        let entry = json!({
+            "matcher": "Execute",
+            "hooks": [{ "type": "command", "command": "/toksave rtk-hook warp v2" }]
+        });
+        merge_pretool_use(&mut cfg, entry, "toksave rtk-hook");
+        let arr = cfg["PreToolUse"].as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["hooks"][0]["command"].as_str().unwrap(), "echo user");
+        assert_eq!(
+            arr[1]["hooks"][0]["command"].as_str().unwrap(),
+            "/toksave rtk-hook warp v2"
+        );
+    }
+
+    #[test]
+    fn merge_pretool_use_creates_key_when_absent() {
+        let mut cfg = json!({});
+        merge_pretool_use(&mut cfg, json!({ "hooks": [] }), "toksave");
+        assert!(cfg["PreToolUse"].is_array());
+    }
+
+    #[test]
+    fn remove_pretool_use_keeps_user_entries_and_drops_key_when_empty() {
+        let mut cfg = json!({
+            "PreToolUse": [
+                { "matcher": "X", "hooks": [{ "type": "command", "command": "echo user" }] }
+            ]
+        });
+        remove_pretool_use(&mut cfg, "toksave rtk-hook");
+        assert_eq!(cfg["PreToolUse"].as_array().unwrap().len(), 1);
+
+        let mut cfg2 = json!({
+            "PreToolUse": [
+                { "hooks": [{ "type": "command", "command": "/toksave rtk-hook warp" }] }
+            ]
+        });
+        remove_pretool_use(&mut cfg2, "toksave rtk-hook");
+        assert!(cfg2.get("PreToolUse").is_none());
+    }
+}

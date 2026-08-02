@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **RTK hook no longer clobbers user PreToolUse hooks**: Warp, Devin, and Droid wire/unwire used to replace the whole `PreToolUse` array or drop the key outright, destroying user-owned hooks. Now wire keeps existing entries, replace only toksave-managed ones (matched by command marker), and unwire drops only ours — removing the key only when it becomes empty.
 - **Env race in unit tests**: `env::set_var` is process-global while cargo unit tests run multi-threaded — tests mutating `HOME`/`PATH`/caches could poison parallel tests. Added `env_test_lock()` (static mutex) serializing the 5 affected tests (paths, detect, unified-block).
 
 ## [0.8.5] - 2026-07-28
