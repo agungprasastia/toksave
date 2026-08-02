@@ -86,10 +86,10 @@ impl Tool for CavemanTool {
 pub fn installed_version() -> Option<String> {
     let instruction_files = [opencode_paths().agents_md, codex_paths().instructions];
     for instruction_file in &instruction_files {
-        if let Some(content) = read_file(instruction_file) {
-            if content.contains("CAVEMAN_START") {
-                return Some(CAVEMAN_SKILL_VERSION.to_string());
-            }
+        if let Some(content) = read_file(instruction_file)
+            && content.contains("CAVEMAN_START")
+        {
+            return Some(CAVEMAN_SKILL_VERSION.to_string());
         }
     }
 
@@ -101,18 +101,18 @@ pub fn installed_version() -> Option<String> {
     ];
 
     for skill_path in &skill_paths {
-        if skill_path.exists() {
-            if let Ok(content) = fs::read_to_string(skill_path) {
-                for line in content.lines() {
-                    if line.starts_with("version:") {
-                        let ver = line.trim_start_matches("version:").trim();
-                        if !ver.is_empty() {
-                            return Some(ver.to_string());
-                        }
+        if skill_path.exists()
+            && let Ok(content) = fs::read_to_string(skill_path)
+        {
+            for line in content.lines() {
+                if line.starts_with("version:") {
+                    let ver = line.trim_start_matches("version:").trim();
+                    if !ver.is_empty() {
+                        return Some(ver.to_string());
                     }
                 }
-                return Some(CAVEMAN_SKILL_VERSION.to_string());
             }
+            return Some(CAVEMAN_SKILL_VERSION.to_string());
         }
     }
 
@@ -293,10 +293,10 @@ pub fn register_caveman_opencode() {
 
     if let Some(mcp) = cfg.get_mut("mcp").and_then(|m| m.as_object_mut()) {
         mcp.remove("caveman-shrink");
-        if mcp.is_empty() {
-            if let Some(obj) = cfg.as_object_mut() {
-                obj.remove("mcp");
-            }
+        if mcp.is_empty()
+            && let Some(obj) = cfg.as_object_mut()
+        {
+            obj.remove("mcp");
         }
     }
 
@@ -344,10 +344,10 @@ pub fn unregister_caveman_opencode() {
 
     if let Some(mcp) = cfg.get_mut("mcp").and_then(|m| m.as_object_mut()) {
         mcp.remove("caveman-shrink");
-        if mcp.is_empty() {
-            if let Some(obj) = cfg.as_object_mut() {
-                obj.remove("mcp");
-            }
+        if mcp.is_empty()
+            && let Some(obj) = cfg.as_object_mut()
+        {
+            obj.remove("mcp");
         }
     }
 
@@ -420,11 +420,11 @@ pub fn relocate_caveman_skills(dst_dir: &Path) {
         if let Ok(entries) = fs::read_dir(&s) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.is_file() {
-                    if let Ok(content) = fs::read_to_string(&path) {
-                        let file_name = entry.file_name();
-                        let _ = write_file(&d.join(file_name), &content);
-                    }
+                if path.is_file()
+                    && let Ok(content) = fs::read_to_string(&path)
+                {
+                    let file_name = entry.file_name();
+                    let _ = write_file(&d.join(file_name), &content);
                 }
             }
             let _ = fs::remove_dir_all(&s);

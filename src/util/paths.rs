@@ -84,10 +84,12 @@ pub fn opencode_known_bin_dirs() -> Vec<PathBuf> {
 pub fn opencode_desktop_paths() -> Vec<PathBuf> {
     if cfg!(windows) {
         if let Some(local) = env::var_os("LOCALAPPDATA") {
-            return vec![PathBuf::from(local)
-                .join("Programs")
-                .join("OpenCode")
-                .join("OpenCode.exe")];
+            return vec![
+                PathBuf::from(local)
+                    .join("Programs")
+                    .join("OpenCode")
+                    .join("OpenCode.exe"),
+            ];
         }
         vec![]
     } else if cfg!(target_os = "macos") {
@@ -140,10 +142,10 @@ pub fn antigravity_paths() -> AntigravityPaths {
 
 pub fn antigravity_known_bin_dirs() -> Vec<PathBuf> {
     let mut v = vec![home().join(".local").join("bin")];
-    if cfg!(windows) {
-        if let Some(local) = env::var_os("LOCALAPPDATA") {
-            v.push(PathBuf::from(local).join("agy").join("bin"));
-        }
+    if cfg!(windows)
+        && let Some(local) = env::var_os("LOCALAPPDATA")
+    {
+        v.push(PathBuf::from(local).join("agy").join("bin"));
     }
     v
 }
@@ -241,10 +243,12 @@ pub fn droid_known_bin_dirs() -> Vec<PathBuf> {
 pub fn droid_desktop_paths() -> Vec<PathBuf> {
     if cfg!(windows) {
         if let Some(local) = env::var_os("LOCALAPPDATA") {
-            return vec![PathBuf::from(local)
-                .join("Programs")
-                .join("Factory Droid")
-                .join("Factory Droid.exe")];
+            return vec![
+                PathBuf::from(local)
+                    .join("Programs")
+                    .join("Factory Droid")
+                    .join("Factory Droid.exe"),
+            ];
         }
         vec![]
     } else if cfg!(target_os = "macos") {
@@ -277,10 +281,12 @@ pub fn devin_known_bin_dirs() -> Vec<PathBuf> {
 pub fn devin_desktop_paths() -> Vec<PathBuf> {
     if cfg!(windows) {
         if let Some(local) = env::var_os("LOCALAPPDATA") {
-            return vec![PathBuf::from(local)
-                .join("Programs")
-                .join("Devin")
-                .join("Devin.exe")];
+            return vec![
+                PathBuf::from(local)
+                    .join("Programs")
+                    .join("Devin")
+                    .join("Devin.exe"),
+            ];
         }
         vec![]
     } else if cfg!(target_os = "macos") {
@@ -313,10 +319,12 @@ pub fn warp_known_bin_dirs() -> Vec<PathBuf> {
 pub fn warp_desktop_paths() -> Vec<PathBuf> {
     if cfg!(windows) {
         if let Some(local) = env::var_os("LOCALAPPDATA") {
-            return vec![PathBuf::from(local)
-                .join("Programs")
-                .join("Warp")
-                .join("Warp.exe")];
+            return vec![
+                PathBuf::from(local)
+                    .join("Programs")
+                    .join("Warp")
+                    .join("Warp.exe"),
+            ];
         }
         vec![]
     } else if cfg!(target_os = "macos") {
@@ -393,12 +401,17 @@ mod tests {
         let tmp = env::temp_dir().join("toksave-paths-test-home");
         fs::create_dir_all(&tmp).unwrap();
         let old = env::var_os("HOME");
-        env::set_var("HOME", &tmp);
+        // Safe: serialized by env_test_lock against other env-mutating tests.
+        unsafe {
+            env::set_var("HOME", &tmp);
+        }
         assert_eq!(home(), tmp);
-        if let Some(o) = old {
-            env::set_var("HOME", o);
-        } else {
-            env::remove_var("HOME");
+        unsafe {
+            if let Some(o) = old {
+                env::set_var("HOME", o);
+            } else {
+                env::remove_var("HOME");
+            }
         }
     }
 
@@ -407,12 +420,17 @@ mod tests {
         let _g = crate::util::env_test_lock();
         let tmp = env::temp_dir().join("toksave-cache-test");
         let old = env::var_os("TOKSAVE_CACHE_DIR");
-        env::set_var("TOKSAVE_CACHE_DIR", &tmp);
+        // Safe: serialized by env_test_lock against other env-mutating tests.
+        unsafe {
+            env::set_var("TOKSAVE_CACHE_DIR", &tmp);
+        }
         assert_eq!(cache_dir(), tmp);
-        if let Some(o) = old {
-            env::set_var("TOKSAVE_CACHE_DIR", o);
-        } else {
-            env::remove_var("TOKSAVE_CACHE_DIR");
+        unsafe {
+            if let Some(o) = old {
+                env::set_var("TOKSAVE_CACHE_DIR", o);
+            } else {
+                env::remove_var("TOKSAVE_CACHE_DIR");
+            }
         }
     }
 
@@ -429,14 +447,19 @@ mod tests {
         let _g = crate::util::env_test_lock();
         let tmp = env::temp_dir().join("toksave-claude-test");
         let old = env::var_os("HOME");
-        env::set_var("HOME", &tmp);
+        // Safe: serialized by env_test_lock against other env-mutating tests.
+        unsafe {
+            env::set_var("HOME", &tmp);
+        }
         let cp = claude_paths();
         assert_eq!(cp.dir, tmp.join(".claude"));
         assert_eq!(cp.global_json, tmp.join(".claude.json"));
-        if let Some(o) = old {
-            env::set_var("HOME", o);
-        } else {
-            env::remove_var("HOME");
+        unsafe {
+            if let Some(o) = old {
+                env::set_var("HOME", o);
+            } else {
+                env::remove_var("HOME");
+            }
         }
     }
 }

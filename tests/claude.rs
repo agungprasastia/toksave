@@ -2,8 +2,8 @@ mod common;
 
 use common::setup;
 use std::fs;
-use toksave::agents::claude::ClaudeAgent;
 use toksave::agents::Agent;
+use toksave::agents::claude::ClaudeAgent;
 use toksave::registry::{RunOpts, ToolId};
 use toksave::util::json::read_json_file;
 use toksave::util::paths::claude_paths;

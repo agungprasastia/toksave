@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Legacy fence cleanup**: Old TokSave instruction fences (non-toksave markers) are stripped when regenerating `AGENTS.md` blocks.
 - **Owner-consolidated `AGENTS.md` updates**: Rewrites group existing agent/RTK owners into one TokSave block instead of appending duplicates; a full-file `write_owner` no longer overwrites the entire `AGENTS.md`.
 
+### Changed
+
+- **Rust edition `2021` → `2024`**: Upgraded the crate to the 2024 edition. `env::set_var`/`remove_var` became `unsafe` in 2024; call sites in `runmcp`/`detect` got `unsafe` blocks with inlined safety comments (main-thread before thread spawn), and env-mutating tests got `unsafe` blocks guarded by `env_test_lock`/`ENV_LOCK`.
+
 ### Fixed
 
 - **Env race in unit tests**: `env::set_var` is process-global while cargo unit tests run multi-threaded — tests mutating `HOME`/`PATH`/caches could poison parallel tests. Added `env_test_lock()` (static mutex) serializing the 5 affected tests (paths, detect, unified-block).

@@ -1,4 +1,4 @@
-use toksave::cli::{parse_cli, CommandType};
+use toksave::cli::{CommandType, parse_cli};
 use toksave::registry::{AgentId, ToolId};
 
 fn parse(args: &[&str]) -> toksave::cli::ParsedCli {

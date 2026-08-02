@@ -69,11 +69,10 @@ pub fn set_table_array(doc: &mut DocumentMut, key_path: &str, key: &str, args: &
 
 pub fn remove_table(doc: &mut DocumentMut, key_path: &str) {
     let parts: Vec<&str> = key_path.split('.').collect();
-    if parts.len() == 2 {
-        if let Some(parent) = doc.get_mut(parts[0]) {
-            if let Some(table) = parent.as_table_mut() {
-                table.remove(parts[1]);
-            }
-        }
+    if parts.len() == 2
+        && let Some(parent) = doc.get_mut(parts[0])
+        && let Some(table) = parent.as_table_mut()
+    {
+        table.remove(parts[1]);
     }
 }

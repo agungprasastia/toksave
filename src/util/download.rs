@@ -25,13 +25,13 @@ pub fn clear_download_progress_bar() {
 }
 
 fn report_progress(done: u64, total: Option<u64>) {
-    if let Ok(g) = PROGRESS_BAR.lock() {
-        if let Some(bar) = g.as_ref() {
-            if let Some(total) = total {
-                bar.set_length(total);
-            }
-            bar.set_position(done);
+    if let Ok(g) = PROGRESS_BAR.lock()
+        && let Some(bar) = g.as_ref()
+    {
+        if let Some(total) = total {
+            bar.set_length(total);
         }
+        bar.set_position(done);
     }
 }
 
@@ -85,7 +85,9 @@ async fn fetch_with_retry_inner(url: &str, opts: &DownloadOptions) -> Result<Vec
                         "download",
                         "HTTP 404 Not Found",
                         url,
-                        Some("URL not found. Check if the resource exists or try a different version."),
+                        Some(
+                            "URL not found. Check if the resource exists or try a different version.",
+                        ),
                     ));
                 }
                 last_err = Some(ToksaveError::download(
@@ -268,7 +270,9 @@ fn verify_checksum_sha256(bytes: &[u8], expected: &str, url: &str) -> Result<()>
         return Err(ToksaveError::integrity(
             "downloaded file",
             &format!("Checksum mismatch for {url} (expected {expected}, got {actual})"),
-            Some("The downloaded file may be corrupted or tampered with. Try again or verify the source."),
+            Some(
+                "The downloaded file may be corrupted or tampered with. Try again or verify the source.",
+            ),
         ));
     }
     Ok(())

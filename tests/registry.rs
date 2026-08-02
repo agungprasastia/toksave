@@ -1,5 +1,5 @@
 use toksave::registry::{
-    agent_info, parse_agent_id, parse_tool_id, tool_info, AgentId, ToolId, ALL_AGENTS, ALL_TOOLS,
+    ALL_AGENTS, ALL_TOOLS, AgentId, ToolId, agent_info, parse_agent_id, parse_tool_id, tool_info,
 };
 
 #[test]

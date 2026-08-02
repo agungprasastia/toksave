@@ -74,13 +74,12 @@ fn with_manifest_lock<T>(f: impl FnOnce() -> Result<T>) -> Result<T> {
         match fs::create_dir(&lock) {
             Ok(()) => break,
             Err(_) => {
-                if let Ok(meta) = fs::metadata(&lock) {
-                    if let Ok(modified) = meta.modified() {
-                        if modified.elapsed().unwrap_or_default() > stale_lock_age() {
-                            let _ = fs::remove_dir_all(&lock);
-                            continue;
-                        }
-                    }
+                if let Ok(meta) = fs::metadata(&lock)
+                    && let Ok(modified) = meta.modified()
+                    && modified.elapsed().unwrap_or_default() > stale_lock_age()
+                {
+                    let _ = fs::remove_dir_all(&lock);
+                    continue;
                 }
                 if started.elapsed().unwrap_or_default() > Duration::from_secs(5) {
                     return Err(ToksaveError::tool(

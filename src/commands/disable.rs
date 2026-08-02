@@ -1,6 +1,6 @@
 use crate::cli::ParsedCli;
 use crate::registry::{
-    agent_info, detect_agent, tool_info, unwire_tool, AgentId, ToolId, ALL_AGENTS, ALL_TOOLS,
+    ALL_AGENTS, ALL_TOOLS, AgentId, ToolId, agent_info, detect_agent, tool_info, unwire_tool,
 };
 use crate::util::colors;
 use crate::util::manifest::mark_disabled;

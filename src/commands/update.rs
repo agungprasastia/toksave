@@ -1,7 +1,7 @@
 use crate::cli::ParsedCli;
 use crate::registry::{
-    detect_agent, install_tool, tool_info, tool_installed_version, verify_tool, wire_tool, ToolId,
-    ALL_AGENTS, ALL_TOOLS,
+    ALL_AGENTS, ALL_TOOLS, ToolId, detect_agent, install_tool, tool_info, tool_installed_version,
+    verify_tool, wire_tool,
 };
 use crate::tools::tool_latest_version;
 use crate::util::colors;
@@ -163,11 +163,7 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
     }
     println!();
 
-    if failed.is_empty() {
-        0
-    } else {
-        1
-    }
+    if failed.is_empty() { 0 } else { 1 }
 }
 
 fn tool_name(t: ToolId) -> &'static str {

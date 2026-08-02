@@ -73,10 +73,10 @@ pub fn find_binary_in(name: &str, extra_dirs: &[PathBuf]) -> Option<String> {
 pub fn expected_bin_dirs() -> Vec<PathBuf> {
     let h = crate::util::paths::home();
     let mut v = vec![h.join(".local").join("bin"), h.join(".bun").join("bin")];
-    if cfg!(windows) {
-        if let Some(local) = env::var_os("LOCALAPPDATA") {
-            v.push(PathBuf::from(local).join("Programs").join("toksave"));
-        }
+    if cfg!(windows)
+        && let Some(local) = env::var_os("LOCALAPPDATA")
+    {
+        v.push(PathBuf::from(local).join("Programs").join("toksave"));
     }
     v
 }
@@ -95,10 +95,9 @@ pub fn ensure_process_path() {
             changed = true;
         }
     }
-    if changed {
-        if let Ok(p) = env::join_paths(&parts) {
-            env::set_var("PATH", p);
-        }
+    if changed && let Ok(p) = env::join_paths(&parts) {
+        // Safe: called once at CLI startup (main thread, no other threads yet).
+        unsafe { env::set_var("PATH", p) };
     }
 }
 
@@ -159,23 +158,28 @@ mod tests {
         fs::create_dir_all(&local_bin).unwrap();
         let old_home = env::var_os("HOME");
         let old_path = env::var_os("PATH");
-        env::set_var("HOME", &tmp);
-        env::set_var("PATH", tmp.join("other"));
+        // Safe: serialized by env_test_lock against other env-mutating tests.
+        unsafe {
+            env::set_var("HOME", &tmp);
+            env::set_var("PATH", tmp.join("other"));
+        }
         ensure_process_path();
         let parts: Vec<_> = env::split_paths(&env::var_os("PATH").unwrap()).collect();
         assert!(parts.contains(&local_bin));
         let i_lb = parts.iter().position(|p| p == &local_bin).unwrap();
         let i_other = parts.iter().position(|p| p.ends_with("other")).unwrap();
         assert!(i_lb < i_other);
-        if let Some(o) = old_home {
-            env::set_var("HOME", o);
-        } else {
-            env::remove_var("HOME");
-        }
-        if let Some(o) = old_path {
-            env::set_var("PATH", o);
-        } else {
-            env::remove_var("PATH");
+        unsafe {
+            if let Some(o) = old_home {
+                env::set_var("HOME", o);
+            } else {
+                env::remove_var("HOME");
+            }
+            if let Some(o) = old_path {
+                env::set_var("PATH", o);
+            } else {
+                env::remove_var("PATH");
+            }
         }
         fs::remove_dir_all(&tmp).ok();
     }

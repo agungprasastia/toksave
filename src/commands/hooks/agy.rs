@@ -32,19 +32,19 @@ pub fn find_project_dir(start: &Path) -> PathBuf {
 }
 
 fn resolve_project_dir(input: &str) -> Option<PathBuf> {
-    if !input.is_empty() {
-        if let Ok(req) = serde_json::from_str::<serde_json::Value>(input) {
-            if let Some(p) = req
-                .get("workspacePaths")
-                .and_then(|w| w.as_array())
-                .and_then(|a| a.first())
-                .and_then(|p| p.as_str())
-            {
-                return Some(find_project_dir(Path::new(p)));
-            }
-            if let Some(cwd) = req.get("cwd").and_then(|c| c.as_str()) {
-                return Some(find_project_dir(Path::new(cwd)));
-            }
+    if !input.is_empty()
+        && let Ok(req) = serde_json::from_str::<serde_json::Value>(input)
+    {
+        if let Some(p) = req
+            .get("workspacePaths")
+            .and_then(|w| w.as_array())
+            .and_then(|a| a.first())
+            .and_then(|p| p.as_str())
+        {
+            return Some(find_project_dir(Path::new(p)));
+        }
+        if let Some(cwd) = req.get("cwd").and_then(|c| c.as_str()) {
+            return Some(find_project_dir(Path::new(cwd)));
         }
     }
     std::env::current_dir().ok().map(|d| find_project_dir(&d))

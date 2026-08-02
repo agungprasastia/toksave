@@ -1,13 +1,14 @@
 mod common;
 
 use common::setup;
-use toksave::cli::{parse_cli, CommandType};
+use toksave::cli::{CommandType, parse_cli};
 use toksave::commands::update::run_update;
 
 #[tokio::test]
 async fn update_yes_runs_cleanly() {
     let _env = setup();
-    std::env::set_var("TOKSAVE_TEST_RTK_INSTALL", "1");
+    // Safe: serialized by common::ENV_LOCK via setup().
+    unsafe { std::env::set_var("TOKSAVE_TEST_RTK_INSTALL", "1") };
 
     let parsed = parse_cli(vec![
         "toksave".to_string(),

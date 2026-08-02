@@ -2,7 +2,7 @@ mod common;
 
 use common::setup;
 use std::fs;
-use toksave::cli::{parse_cli, CommandType};
+use toksave::cli::{CommandType, parse_cli};
 use toksave::commands::init::run_init;
 use toksave::util::json::read_json_file;
 use toksave::util::manifest::was_wired_by_us;
@@ -11,7 +11,8 @@ use toksave::util::paths::claude_paths;
 #[tokio::test]
 async fn init_wires_claude_rtk_and_records_manifest() {
     let _env = setup();
-    std::env::set_var("TOKSAVE_TEST_RTK_INSTALL", "1");
+    // Safe: serialized by common::ENV_LOCK via setup().
+    unsafe { std::env::set_var("TOKSAVE_TEST_RTK_INSTALL", "1") };
 
     // Simulate Claude installed via config dir (test mode detect)
     fs::create_dir_all(claude_paths().dir).unwrap();

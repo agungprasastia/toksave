@@ -11,7 +11,7 @@ pub use crate::tools::codegraph::CodegraphTool;
 pub use crate::tools::context_mode::ContextModeTool;
 pub use crate::tools::ponytail::PonytailTool;
 pub use crate::tools::principles::PrinciplesTool;
-pub use crate::tools::rtk::{installed_version as rtk_installed_version, RtkTool};
+pub use crate::tools::rtk::{RtkTool, installed_version as rtk_installed_version};
 use crate::util::errors::Result;
 use crate::util::health::{HealthStatus, RepairResult};
 

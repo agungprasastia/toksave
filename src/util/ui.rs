@@ -1,13 +1,13 @@
 use crate::registry::AgentId;
 use colored::Colorize;
 use crossterm::{
+    ExecutableCommand,
     cursor::{Hide, MoveToPreviousLine, Show},
     event::{self, Event, KeyCode, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode},
-    ExecutableCommand,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use std::io::{stdout, IsTerminal};
+use std::io::{IsTerminal, stdout};
 use std::time::Duration;
 
 const BAR_COL: usize = 40; // bar/percent column start (fixed alignment)

@@ -18,10 +18,10 @@ impl Tool for PonytailTool {
             return Ok(true);
         }
 
-        if !opts.upgrade {
-            if let Some(_v) = installed_version() {
-                return Ok(true);
-            }
+        if !opts.upgrade
+            && let Some(_v) = installed_version()
+        {
+            return Ok(true);
         }
 
         let npm = crate::util::exec::npm_cmd();
@@ -63,20 +63,16 @@ impl Tool for PonytailTool {
 
 pub fn installed_version() -> Option<String> {
     let npm = crate::util::exec::npm_cmd();
-    if is_on_path(npm) {
-        if let Some(stdout) = run_stdout(npm, &["list", "-g", PONYTAIL_PKG, "--depth=0", "--json"])
-        {
-            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
-                if let Some(ver) = json
-                    .get("dependencies")
-                    .and_then(|d| d.get(PONYTAIL_PKG))
-                    .and_then(|entry| entry.get("version"))
-                    .and_then(|v| v.as_str())
-                {
-                    return Some(ver.to_string());
-                }
-            }
-        }
+    if is_on_path(npm)
+        && let Some(stdout) = run_stdout(npm, &["list", "-g", PONYTAIL_PKG, "--depth=0", "--json"])
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout)
+        && let Some(ver) = json
+            .get("dependencies")
+            .and_then(|d| d.get(PONYTAIL_PKG))
+            .and_then(|entry| entry.get("version"))
+            .and_then(|v| v.as_str())
+    {
+        return Some(ver.to_string());
     }
 
     if ponytail_plugin_installed() {
@@ -173,13 +169,12 @@ pub fn register_opencode_plugin() {
     let mut inserted = false;
     let mut out = Vec::new();
     for pl in plugins {
-        if !inserted {
-            if let Some(s) = pl.as_str() {
-                if s == "context-mode" || s.starts_with("context-mode@") {
-                    out.push(serde_json::json!(PONYTAIL_PKG));
-                    inserted = true;
-                }
-            }
+        if !inserted
+            && let Some(s) = pl.as_str()
+            && (s == "context-mode" || s.starts_with("context-mode@"))
+        {
+            out.push(serde_json::json!(PONYTAIL_PKG));
+            inserted = true;
         }
         out.push(pl);
     }

@@ -1,4 +1,4 @@
-use crate::registry::{parse_agent_id, parse_tool_id, AgentId, RunOpts, ToolId};
+use crate::registry::{AgentId, RunOpts, ToolId, parse_agent_id, parse_tool_id};
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]

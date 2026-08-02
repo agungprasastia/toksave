@@ -27,7 +27,7 @@ fn run_with_timeout(cmd: &str, args: &[&str], timeout: Duration) -> RunResult {
                 code: -1,
                 stdout: String::new(),
                 stderr: format!("Failed to execute {cmd}: {e}"),
-            }
+            };
         }
     };
 
@@ -61,7 +61,7 @@ fn run_with_timeout(cmd: &str, args: &[&str], timeout: Duration) -> RunResult {
                     code: -1,
                     stdout: String::new(),
                     stderr: format!("Failed to execute {cmd}: {e}"),
-                }
+                };
             }
         }
     };
@@ -99,27 +99,15 @@ pub fn run_ok(cmd: &str, args: &[&str]) -> bool {
 
 pub fn run_stdout(cmd: &str, args: &[&str]) -> Option<String> {
     let r = run(cmd, args);
-    if r.code == 0 {
-        Some(r.stdout)
-    } else {
-        None
-    }
+    if r.code == 0 { Some(r.stdout) } else { None }
 }
 
 pub fn npm_cmd() -> &'static str {
-    if cfg!(windows) {
-        "npm.cmd"
-    } else {
-        "npm"
-    }
+    if cfg!(windows) { "npm.cmd" } else { "npm" }
 }
 
 pub fn npx_cmd() -> &'static str {
-    if cfg!(windows) {
-        "npx.cmd"
-    } else {
-        "npx"
-    }
+    if cfg!(windows) { "npx.cmd" } else { "npx" }
 }
 
 /// Up to `n` most recent non-empty lines of a command's output, joined with

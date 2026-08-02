@@ -4,7 +4,7 @@ use common::setup;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use toksave::cli::{parse_cli, CommandType};
+use toksave::cli::{CommandType, parse_cli};
 
 fn bin() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_toksave"))

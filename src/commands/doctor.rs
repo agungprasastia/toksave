@@ -1,5 +1,5 @@
 use crate::cli::ParsedCli;
-use crate::registry::{detect_agent, verify_tool, ALL_AGENTS, ALL_TOOLS};
+use crate::registry::{ALL_AGENTS, ALL_TOOLS, detect_agent, verify_tool};
 use crate::tools::{tool_health_check, tool_installed_version, tool_latest_version, tool_repair};
 use crate::util::colors;
 use crate::util::health::{HealthStatus, Severity};
@@ -133,11 +133,7 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
         .iter()
         .filter_map(|t| {
             let h = tool_health_check(t.id);
-            if h.healthy {
-                None
-            } else {
-                Some((t, h))
-            }
+            if h.healthy { None } else { Some((t, h)) }
         })
         .collect();
 

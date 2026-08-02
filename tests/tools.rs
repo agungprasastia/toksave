@@ -1,14 +1,14 @@
 mod common;
 
 use common::setup;
-use toksave::registry::{tool_installed_version, RunOpts, ToolId, ALL_TOOLS};
+use toksave::registry::{ALL_TOOLS, RunOpts, ToolId, tool_installed_version};
 use toksave::tools::caveman::CavemanTool;
 use toksave::tools::codegraph::CodegraphTool;
 use toksave::tools::context_mode::ContextModeTool;
 use toksave::tools::ponytail::PonytailTool;
 use toksave::tools::principles::PrinciplesTool;
 use toksave::tools::rtk::RtkTool;
-use toksave::tools::{install_tool, tool_health_check, Tool};
+use toksave::tools::{Tool, install_tool, tool_health_check};
 
 #[test]
 fn all_tools_registered_in_registry() {

@@ -25,10 +25,13 @@ impl TestEnvGuard {
 
 impl Drop for TestEnvGuard {
     fn drop(&mut self) {
-        for (k, v) in &self.old {
-            match v {
-                Some(v) => std::env::set_var(k, v),
-                None => std::env::remove_var(k),
+        // Safe: serialized by ENV_LOCK against setup().
+        unsafe {
+            for (k, v) in &self.old {
+                match v {
+                    Some(v) => std::env::set_var(k, v),
+                    None => std::env::remove_var(k),
+                }
             }
         }
         let _ = std::fs::remove_dir_all(&self.root);
@@ -67,14 +70,17 @@ pub fn setup() -> TestEnvGuard {
     ] {
         old.push((k.to_string(), std::env::var_os(k)));
     }
-    std::env::set_var("HOME", &home);
-    std::env::set_var("USERPROFILE", &home);
-    std::env::set_var("APPDATA", root.join("AppData").join("Roaming"));
-    std::env::set_var("LOCALAPPDATA", root.join("AppData").join("Local"));
-    std::env::set_var("TOKSAVE_CACHE_DIR", &cache);
-    std::env::set_var("PATH", &empty_bin);
-    std::env::set_var("TOKSAVE_TEST", "1");
-    std::env::remove_var("TOKSAVE_TEST_RTK_INSTALL");
+    // Safe: serialized by ENV_LOCK; restored in Drop under the same lock.
+    unsafe {
+        std::env::set_var("HOME", &home);
+        std::env::set_var("USERPROFILE", &home);
+        std::env::set_var("APPDATA", root.join("AppData").join("Roaming"));
+        std::env::set_var("LOCALAPPDATA", root.join("AppData").join("Local"));
+        std::env::set_var("TOKSAVE_CACHE_DIR", &cache);
+        std::env::set_var("PATH", &empty_bin);
+        std::env::set_var("TOKSAVE_TEST", "1");
+        std::env::remove_var("TOKSAVE_TEST_RTK_INSTALL");
+    }
 
     TestEnvGuard {
         root,

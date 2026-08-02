@@ -268,39 +268,40 @@ fn override_claude_rtk_hook() -> Result<()> {
     let new_cmd = format!("{tok} rtk-hook claude");
     let mut changed = false;
 
-    if let Some(hooks) = cfg.get_mut("hooks").and_then(|h| h.as_object_mut()) {
-        if let Some(pre) = hooks.get_mut("PreToolUse").and_then(|p| p.as_array_mut()) {
-            for g in pre.iter_mut() {
-                let Some(inner) = g.get_mut("hooks").and_then(|h| h.as_array_mut()) else {
-                    continue;
-                };
-                for h in inner.iter_mut() {
-                    // Read command immutably first to avoid borrow conflict with *h = ...
-                    let should_replace = h
-                        .get("command")
-                        .and_then(|c| c.as_str())
-                        .map(|c| c.contains("rtk hook claude") && !c.contains("rtk-hook claude"))
-                        .unwrap_or(false);
-                    if should_replace {
-                        *h = serde_json::json!({ "type": "command", "command": new_cmd, "timeout": 10 });
-                        changed = true;
-                    }
+    if let Some(hooks) = cfg.get_mut("hooks").and_then(|h| h.as_object_mut())
+        && let Some(pre) = hooks.get_mut("PreToolUse").and_then(|p| p.as_array_mut())
+    {
+        for g in pre.iter_mut() {
+            let Some(inner) = g.get_mut("hooks").and_then(|h| h.as_array_mut()) else {
+                continue;
+            };
+            for h in inner.iter_mut() {
+                // Read command immutably first to avoid borrow conflict with *h = ...
+                let should_replace = h
+                    .get("command")
+                    .and_then(|c| c.as_str())
+                    .map(|c| c.contains("rtk hook claude") && !c.contains("rtk-hook claude"))
+                    .unwrap_or(false);
+                if should_replace {
+                    *h =
+                        serde_json::json!({ "type": "command", "command": new_cmd, "timeout": 10 });
+                    changed = true;
                 }
             }
-            // Deduplicate groups with same first hook command
-            if pre.len() > 1 {
-                let mut seen = std::collections::HashSet::new();
-                let mut dedup: Vec<serde_json::Value> = Vec::new();
-                for g in pre.iter() {
-                    let first = first_hook_command(g);
-                    if seen.insert(first.clone()) {
-                        dedup.push(g.clone());
-                    } else {
-                        changed = true;
-                    }
+        }
+        // Deduplicate groups with same first hook command
+        if pre.len() > 1 {
+            let mut seen = std::collections::HashSet::new();
+            let mut dedup: Vec<serde_json::Value> = Vec::new();
+            for g in pre.iter() {
+                let first = first_hook_command(g);
+                if seen.insert(first.clone()) {
+                    dedup.push(g.clone());
+                } else {
+                    changed = true;
                 }
-                *pre = dedup;
             }
+            *pre = dedup;
         }
     }
 

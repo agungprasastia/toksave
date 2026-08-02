@@ -2,8 +2,8 @@ mod common;
 
 use common::setup;
 use toksave::registry::RunOpts;
-use toksave::tools::rtk::{asset_name, is_installed_but_unreachable, local_rtk_path, RtkTool};
 use toksave::tools::Tool;
+use toksave::tools::rtk::{RtkTool, asset_name, is_installed_but_unreachable, local_rtk_path};
 use toksave::util::paths::{ensure_dir, local_bin};
 
 #[test]

@@ -1,4 +1,4 @@
-use toksave::registry::{parse_agent_id, parse_tool_id, AgentId, RunOpts, ToolId};
+use toksave::registry::{AgentId, RunOpts, ToolId, parse_agent_id, parse_tool_id};
 use toksave::util::errors::ToksaveErrorKind;
 use toksave::util::paths::{warp_paths, write_file};
 

@@ -1,7 +1,7 @@
 mod common;
 
 use common::setup;
-use toksave::cli::{parse_cli, CommandType};
+use toksave::cli::{CommandType, parse_cli};
 use toksave::commands::disable::run_disable;
 use toksave::util::manifest::{read_manifest, record_wire, was_wired_by_us};
 use toksave::util::paths::local_bin;

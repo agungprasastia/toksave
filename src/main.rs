@@ -1,4 +1,4 @@
-use toksave::cli::{parse_cli, CommandType};
+use toksave::cli::{CommandType, parse_cli};
 
 fn main() {
     toksave::util::detect::ensure_process_path();

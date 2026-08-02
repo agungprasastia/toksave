@@ -1,7 +1,7 @@
 use crate::cli::ParsedCli;
 use crate::registry::{
-    agent_info, detect_agent, install_tool, tool_info, tool_installed_version, verify_tool,
-    wire_tool, AgentId, ToolId, ALL_TOOLS,
+    ALL_TOOLS, AgentId, ToolId, agent_info, detect_agent, install_tool, tool_info,
+    tool_installed_version, verify_tool, wire_tool,
 };
 use crate::util::colors;
 use crate::util::exec::run_stdout;

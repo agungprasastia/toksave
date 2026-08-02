@@ -83,7 +83,8 @@ pub fn ensure_tool_path() -> String {
         .unwrap_or_default()
         .to_string_lossy()
         .into_owned();
-    env::set_var("PATH", &next);
+    // Safe: called on the main thread before any worker threads spawn the child.
+    unsafe { env::set_var("PATH", &next) };
     next
 }
 
@@ -178,10 +179,12 @@ pub fn run(args: &[String]) -> i32 {
 
     // Bare name lookup fallback when resolution returned the raw name.
     let p = Path::new(&exe);
-    if !p.is_absolute() && !exe.contains('/') && !exe.contains('\\') {
-        if let Some(found) = find_binary(&exe).or_else(|| find_binary_in(&exe, &[])) {
-            exe = found;
-        }
+    if !p.is_absolute()
+        && !exe.contains('/')
+        && !exe.contains('\\')
+        && let Some(found) = find_binary(&exe).or_else(|| find_binary_in(&exe, &[]))
+    {
+        exe = found;
     }
 
     if !Path::new(&exe).exists() && find_binary(&exe).is_none() {

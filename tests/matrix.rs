@@ -1,4 +1,4 @@
-use toksave::registry::{unwire_tool, verify_tool, wire_tool, ALL_AGENTS, ALL_TOOLS};
+use toksave::registry::{ALL_AGENTS, ALL_TOOLS, unwire_tool, verify_tool, wire_tool};
 
 mod common;
 

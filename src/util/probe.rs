@@ -169,12 +169,12 @@ fn probe_command(exe: &str, args: &[String], managed: bool) -> Option<String> {
     if managed {
         return live_hook(exe, args);
     }
-    if args.first().map(String::as_str) == Some("runmcp") {
-        if let Some(inner) = args.get(1) {
-            if !resolve_runnable(inner) && (inner.contains('/') || inner.contains('\\')) {
-                return Some(format!("mcp target not found: {}", short_path(inner)));
-            }
-        }
+    if args.first().map(String::as_str) == Some("runmcp")
+        && let Some(inner) = args.get(1)
+        && !resolve_runnable(inner)
+        && (inner.contains('/') || inner.contains('\\'))
+    {
+        return Some(format!("mcp target not found: {}", short_path(inner)));
     }
     None
 }

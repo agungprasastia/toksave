@@ -1,7 +1,7 @@
 use crate::registry::RunOpts;
 use crate::tools::Tool;
 use crate::util::detect::is_on_path;
-use crate::util::download::{download_tar_gz, download_zip, make_executable, DownloadOptions};
+use crate::util::download::{DownloadOptions, download_tar_gz, download_zip, make_executable};
 use crate::util::errors::{Result, ToksaveError};
 use crate::util::exec::{run, run_stdout};
 use crate::util::health::{HealthIssue, HealthStatus};
@@ -34,11 +34,7 @@ pub fn asset_name() -> Option<&'static str> {
 }
 
 pub fn rtk_bin_name() -> &'static str {
-    if cfg!(windows) {
-        "rtk.exe"
-    } else {
-        "rtk"
-    }
+    if cfg!(windows) { "rtk.exe" } else { "rtk" }
 }
 
 pub fn local_rtk_path() -> PathBuf {

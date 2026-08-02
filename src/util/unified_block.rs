@@ -158,11 +158,11 @@ pub fn strip_legacy_fences(content: &str) -> String {
     let mut end_marker: Option<&str> = None;
     for line in content.lines() {
         if skipping {
-            if let Some(end) = end_marker {
-                if line.contains(end) {
-                    skipping = false;
-                    end_marker = None;
-                }
+            if let Some(end) = end_marker
+                && line.contains(end)
+            {
+                skipping = false;
+                end_marker = None;
             }
             continue;
         }
@@ -267,7 +267,10 @@ mod tests {
         std::fs::create_dir_all(&claude_dir).unwrap();
         let path = claude_dir.join("AGENTS.md");
         let old_home = std::env::var_os("HOME");
-        std::env::set_var("HOME", &tmp);
+        // Safe: serialized by env_test_lock against other env-mutating tests.
+        unsafe {
+            std::env::set_var("HOME", &tmp);
+        }
         let block = agent_instructions::agent_instructions();
         let mut first = String::from("# My file\n\nuser content\n\n");
         first.push_str("<!-- TOKSAVE:codegraph:START -->\n");
@@ -291,10 +294,12 @@ mod tests {
         assert!(!out.contains("TOKSAVE:"));
         assert!(out.contains("user content"));
 
-        if let Some(h) = old_home {
-            std::env::set_var("HOME", h);
-        } else {
-            std::env::remove_var("HOME");
+        unsafe {
+            if let Some(h) = old_home {
+                std::env::set_var("HOME", h);
+            } else {
+                std::env::remove_var("HOME");
+            }
         }
         std::fs::remove_dir_all(&tmp).ok();
     }
