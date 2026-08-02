@@ -37,9 +37,10 @@ Write-Host ""
 Write-Host "  ✔ Installed to $installDir\toksave.exe" -ForegroundColor Green
 
 # Add to PATH
-$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+$userPath = [Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User)
 if ($userPath -notlike "*$installDir*") {
-    [Environment]::SetEnvironmentVariable("Path", "$installDir;$userPath", "User")
+    $newPath = "$installDir;$userPath"
+    [Environment]::SetEnvironmentVariable("Path", $newPath, [System.EnvironmentVariableTarget]::User)
     Write-Host "  ✔ Added $installDir to user PATH" -ForegroundColor Green
     Write-Host "  ⚠ Restart your terminal for PATH changes to take effect." -ForegroundColor Yellow
 }
