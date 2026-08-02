@@ -5,13 +5,13 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-08-02
 
 ### Added
 
+- **100% Native Rust Core**: Complete rewrite from TypeScript/Bun to Rust 2024 edition — delivering zero-runtime dependency, faster execution, memory safety, and standalone cross-platform binaries.
 - **Explicit `init` subcommand**: `toksave init` now accepted explicitly (was default-only).
 - **Preflight git/node dep warning**: Before `init`, toksave warns when github-channel tools need git or npm-channel tools need a minimum Node version, and skips those tools with a remediation hint instead of failing mid-install.
-- **Rust port (in progress)**: TokSave is being rewritten from TypeScript to Rust (`src/`), with the agent & tool matrix consolidated in `src/registry.rs`.
 - **Install failure diagnostics**: Failed tool installation now reports which command failed, its exit code, captured stderr tail, and remediation hints (ensure Node 18+ / npm / deno are on PATH, check proxy, retry).
 - **Per-tool phase progress**: `toksave install <agent>` shows per-tool progress phases (resolve, install, wire) instead of one indeterminate spinner.
 - **Runtime probe in `toksave doctor`**: Probes each agent's installed binaries and hooks at runtime — detects missing binaries, Windows backslash paths that break Git Bash hooks, and hooks that fail to run (3s live-run check); reports `hooks.json`/`config.toml`/`mcp.json` MCP server entries pointing at missing binaries. No hooks are modified.
@@ -30,11 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **RTK hook no longer clobbers user PreToolUse hooks**: Warp, Devin, and Droid wire/unwire used to replace the whole `PreToolUse` array or drop the key outright, destroying user-owned hooks. Wire now keeps existing entries, replacing only toksave-managed ones (matched by command marker), and unwire drops only ours — removing the key only when it becomes empty.
 - **Windows: bare npm shims now spawn correctly**: Tools installed by npm ship an extensionless POSIX shell shim (`context-mode`) next to a `.cmd` twin. TokSave used to prefer/resolve the bare shim and spawn it directly, failing with `os error 193 (%1 is not a valid Win32 application)`. Command resolution now prefers PATHEXT-qualified candidates on Windows, and `runmcp`/process spawning picks the `.cmd` twin — fixing `toksave runmcp <npm-tool>`, `toksave index`, and version probes on Windows.
 - **`update` installs missing npm tools**: `latest_version()` read `.version` from the full npm registry document, which only exists on the `/latest` and versioned endpoints — so every npm tool resolved as "up to date" and `toksave update` never installed missing tools. Now fetched via `registry.npmjs.org/<pkg>/latest`; missing tools are reported as `(not installed)` and installed.
-- **Env race in unit tests**: `env::set_var` is process-global while cargo unit tests run multi-threaded — tests mutating `HOME`/`PATH`/caches could poison parallel tests. Added `env_test_lock()` (static mutex) serializing the 5 affected tests (paths, detect, unified-block).
 - **Uninstall drops empty config files and ghost keys**: After uninstall, agents left empty `{}` JSON configs, empty `[mcp_servers]` TOML tables, and empty `hooks`/`mcpServers` objects behind (opencode `config.json`, codex `config.toml`+`hooks.json`, copilot/droid/devin/warp `mcp.json`+`hooks.json`, `.claude.json`, `.claude/settings.json`). Unwire now prunes empty top-level JSON containers (`write_json_pruned`), prunes empty TOML tables recursively (`prune_empty_tables`) and deletes the file when it serializes to `{}`/empty (`write_toml_pruned` / `write_json_pruned`), while preserving user-owned keys like opencode's `$schema`.
 - **Invalid `toksave install <tool>` remediation hints**: Health-check and repair hints referenced `toksave install <tool>`, but `install` is not a clap subcommand (error: unrecognized subcommand). All hints now point to the real command `toksave init -t <tool>`.
 - **`update` mislabeled "up to date" when latest couldn't be resolved**: A tool that resolved its installed version but failed to fetch the latest (offline / GitHub rate limit) printed `→ ? (up to date)`, silently claiming freshness. It now prints `? (latest unknown — could not check)`.
-- **Env race in unit tests**: `env::set_var` is process-global while cargo unit tests run multi-threaded — tests mutating `HOME`/`PATH`/caches could poison parallel tests. Added `env_test_lock()` (static mutex) serializing the 5 affected tests (paths, detect, unified-block).
 
 ## [0.8.5] - 2026-07-28
 
