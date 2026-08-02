@@ -141,7 +141,9 @@ mod tests {
         } else {
             "fakebin"
         };
-        fs::write(tmp.join(exe), "x").unwrap();
+        let p = tmp.join(exe);
+        fs::write(&p, "x").unwrap();
+        let _ = crate::util::download::make_executable(&p);
         let found = find_binary_in("fakebin", std::slice::from_ref(&tmp));
         assert!(found.is_some());
         fs::remove_dir_all(&tmp).ok();
