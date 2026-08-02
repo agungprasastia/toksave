@@ -31,9 +31,27 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
             .copied()
             .filter(|id| detected_set.contains(id))
             .collect()
-    } else {
-        // Non-interactive assumed (CLI binary has no TTY prompt); mirror --yes/CI behavior.
+    } else if parsed.opts.yes || !is_interactive() {
         detected.clone()
+    } else {
+        let select_options: Vec<crate::util::ui::SelectOption> = crate::registry::ALL_AGENTS
+            .iter()
+            .map(|a| {
+                let is_det = detected.contains(&a.id);
+                crate::util::ui::SelectOption {
+                    value: a.id,
+                    label: a.label.to_string(),
+                    disabled: !is_det,
+                    hint: if is_det {
+                        "installed".to_string()
+                    } else {
+                        a.homepage.to_string()
+                    },
+                    selected: false,
+                }
+            })
+            .collect();
+        crate::util::ui::multi_select("Select agents to uninstall toksave from", select_options)
     };
 
     if agent_ids.is_empty() {
@@ -86,6 +104,11 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
     ));
     println!();
     0
+}
+
+fn is_interactive() -> bool {
+    use std::io::IsTerminal;
+    std::io::stdin().is_terminal()
 }
 
 fn tool_name(t: ToolId) -> &'static str {
