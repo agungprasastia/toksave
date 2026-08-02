@@ -133,6 +133,7 @@ mod tests {
 
     #[test]
     fn run_ok_true_for_echo() {
+        let _g = crate::util::env_test_lock();
         let r = if cfg!(windows) {
             run_ok("cmd", &["/c", "echo", "hi"])
         } else {
@@ -143,6 +144,7 @@ mod tests {
 
     #[test]
     fn run_stdout_echo() {
+        let _g = crate::util::env_test_lock();
         if cfg!(windows) {
             assert!(run_stdout("cmd", &["/c", "echo", "hi"]).is_some());
         } else {
@@ -158,6 +160,7 @@ mod tests {
 
     #[test]
     fn run_times_out() {
+        let _g = crate::util::env_test_lock();
         let r = if cfg!(windows) {
             run_with_timeout("ping", &["-n", "30", "127.0.0.1"], Duration::from_secs(2))
         } else {
