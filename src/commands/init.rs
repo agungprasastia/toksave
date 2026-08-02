@@ -47,7 +47,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         .map(|t| t.id)
         .collect();
 
-    // Node dep check for npm-channel tools (port of ensureDeps)
+    // Preflight dep check: node for npm-channel tools, git for github-channel ones.
     let has_npm_tools = tools
         .iter()
         .any(|t| tool_info(*t).channel == crate::registry::Channel::Npm);
@@ -56,7 +56,20 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         .map(|t| tool_info(*t).min_node_major)
         .max()
         .unwrap_or(0);
-    let deps_ok = check_deps(has_npm_tools, min_node);
+    let node_ok = check_deps(has_npm_tools, min_node);
+    let needs_git = tools
+        .iter()
+        .any(|t| tool_info(*t).channel == crate::registry::Channel::Github);
+    let git_ok = if needs_git && std::env::var("TOKSAVE_TEST").is_err() {
+        crate::util::detect::is_on_path("git")
+    } else {
+        true
+    };
+    if needs_git && !git_ok {
+        colors::warn(
+            "git not found — github-channel tools (rtk) will be skipped. Install: https://git-scm.com",
+        );
+    }
 
     // ── Step 2: Install tools ──
     let mut installed_tools = std::collections::HashSet::new();
@@ -65,8 +78,12 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
     for t in &tools {
         let info = tool_info(*t);
         let is_npm = info.channel == crate::registry::Channel::Npm;
-        if is_npm && !deps_ok {
+        if is_npm && !node_ok {
             colors::warn(&format!("{} — needs Node.js", info.label));
+            continue;
+        }
+        let is_github = info.channel == crate::registry::Channel::Github;
+        if is_github && !git_ok {
             continue;
         }
         prog.start(&format!("Installing {}", info.label));

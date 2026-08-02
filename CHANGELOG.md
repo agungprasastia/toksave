@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Preflight git/node dep warning**: Before `init`, toksave warns when github-channel tools need git or npm-channel tools need a minimum Node version, and skips those tools with a remediation hint instead of failing mid-install.
 - **Rust port (in progress)**: TokSave is being rewritten from TypeScript to Rust (`src/`), with the agent & tool matrix consolidated in `src/registry.rs`.
 - **Install failure diagnostics**: Failed tool installation now reports which command failed, its exit code, captured stderr tail, and remediation hints (ensure Node 18+ / npm / deno are on PATH, check proxy, retry).
 - **Per-tool phase progress**: `toksave install <agent>` shows per-tool progress phases (resolve, install, wire) instead of one indeterminate spinner.
