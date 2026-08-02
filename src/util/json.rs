@@ -122,6 +122,34 @@ pub fn write_json_file(path: &Path, value: &serde_json::Value) -> Result<()> {
     crate::util::paths::write_file(path, &format!("{s}\n"))
 }
 
+/// Write a JSON config, pruning empty top-level containers first and removing
+/// the file entirely when the result is an empty object (or has no object
+/// members). Keeps user-owned scalar/array keys like `$schema` or
+/// `hooks.version`.
+pub fn write_json_pruned(path: &Path, value: &serde_json::Value) -> Result<()> {
+    let mut value = value.clone();
+    if let Some(obj) = value.as_object_mut() {
+        let empty: Vec<String> = obj
+            .iter()
+            .filter(|(_, v)| {
+                v.as_object().is_some_and(|o| o.is_empty())
+                    || v.as_array().is_some_and(|a| a.is_empty())
+            })
+            .map(|(k, _)| k.clone())
+            .collect();
+        for k in empty {
+            obj.remove(&k);
+        }
+    }
+    if value.is_object() && value.as_object().is_some_and(|o| o.is_empty()) {
+        if path.exists() {
+            std::fs::remove_file(path).map_err(crate::util::errors::ToksaveError::from)?;
+        }
+        return Ok(());
+    }
+    write_json_file(path, &value)
+}
+
 pub fn get_or_create_object<'a>(
     parent: &'a mut serde_json::Value,
     key: &str,
@@ -267,5 +295,26 @@ mod pretool_tests {
         });
         remove_pretool_use(&mut cfg2, "toksave rtk-hook");
         assert!(cfg2.get("PreToolUse").is_none());
+    }
+
+    #[test]
+    fn write_json_pruned_removes_empty_container_and_deletes_empty_object() {
+        let dir = std::env::temp_dir().join(format!("toksave-prune-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("hooks.json");
+
+        write_json_pruned(
+            &path,
+            &json!({ "mcpServers": {}, "PreToolUse": [], "version": 1 }),
+        )
+        .unwrap();
+        let kept: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(kept, json!({ "version": 1 }));
+
+        write_json_pruned(&path, &json!({ "mcpServers": {} })).unwrap();
+        assert!(!path.exists(), "empty object config should delete the file");
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

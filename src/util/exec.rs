@@ -10,7 +10,17 @@ pub struct RunResult {
 }
 
 fn cmd_std(cmd: &str, args: &[&str]) -> RunResult {
-    run_with_timeout(cmd, args, Duration::from_secs(120))
+    run_with_timeout(&resolve_windows_cmd(cmd), args, Duration::from_secs(120))
+}
+
+/// On Windows, spawn the PATHEXT-qualified twin (`.cmd`/`.exe`) rather than a
+/// bare name: spawning a bare npm shim (a POSIX shell script) fails with
+/// os error 193. Non-Windows and already-qualified names pass through.
+fn resolve_windows_cmd(cmd: &str) -> String {
+    if !cfg!(windows) || cmd.contains('/') || cmd.contains('\\') || cmd.contains('.') {
+        return cmd.to_string();
+    }
+    crate::util::detect::find_binary(cmd).unwrap_or_else(|| cmd.to_string())
 }
 
 fn run_with_timeout(cmd: &str, args: &[&str], timeout: Duration) -> RunResult {

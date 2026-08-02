@@ -8,12 +8,17 @@ fn path_var() -> Vec<PathBuf> {
 fn exe_candidates(name: &str) -> Vec<String> {
     if cfg!(windows) {
         let pathext = env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string());
-        let mut v = vec![name.to_string()];
-        for ext in pathext.split(';') {
-            if !ext.is_empty() {
-                v.push(format!("{name}{}", ext.to_lowercase()));
-            }
-        }
+        let exts: Vec<String> = pathext
+            .split(';')
+            .filter(|e| !e.is_empty())
+            .map(|e| format!("{name}{}", e.to_lowercase()))
+            .collect();
+        let mut v = Vec::with_capacity(exts.len() + 1);
+        // Prefer PATHEXT-qualified files (`.cmd`/`.exe`) over the bare name:
+        // npm installs an extensionless POSIX shell shim next to its `.cmd`
+        // twin, and spawning that bare shim fails on Windows (os error 193).
+        v.extend(exts);
+        v.push(name.to_string());
         v
     } else {
         vec![name.to_string()]

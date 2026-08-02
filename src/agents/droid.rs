@@ -2,7 +2,7 @@ use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
-use crate::util::json::{get_or_create_object, read_json_file, write_json_file};
+use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
 use crate::util::paths::{droid_desktop_paths, droid_known_bin_dirs, droid_paths, toksave_abs};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
@@ -120,7 +120,7 @@ impl Agent for DroidAgent {
                     if let Some(mcp) = cfg.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
                         mcp.remove("codegraph");
                     }
-                    write_json_file(&p.mcp_config, &cfg)?;
+                    write_json_pruned(&p.mcp_config, &cfg)?;
                 }
                 remove_owner("droid", "codegraph")?;
                 Ok(true)
@@ -130,7 +130,7 @@ impl Agent for DroidAgent {
                     if let Some(mcp) = cfg.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
                         mcp.remove("context-mode");
                     }
-                    write_json_file(&p.mcp_config, &cfg)?;
+                    write_json_pruned(&p.mcp_config, &cfg)?;
                 }
                 remove_owner("droid", "context-mode")?;
                 Ok(true)
@@ -142,7 +142,7 @@ impl Agent for DroidAgent {
             ToolId::Rtk => {
                 if let Some(mut cfg) = read_json_file(&p.hooks_file)? {
                     crate::util::json::remove_pretool_use(&mut cfg, "rtk-hook droid");
-                    write_json_file(&p.hooks_file, &cfg)?;
+                    write_json_pruned(&p.hooks_file, &cfg)?;
                 }
                 Ok(true)
             }

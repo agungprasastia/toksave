@@ -240,7 +240,7 @@ pub async fn repair(opts: &RunOpts) -> crate::util::health::RepairResult {
 
 pub fn installed_version() -> Option<String> {
     let path_version = run_stdout("rtk", &["--version"])?;
-    let pv = path_version.trim();
+    let pv = path_version.trim().trim_start_matches("rtk ").trim();
     if !pv.is_empty() {
         return Some(pv.to_string());
     }

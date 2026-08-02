@@ -2,7 +2,7 @@ use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
-use crate::util::json::{get_or_create_object, read_json_file, write_json_file};
+use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
 use crate::util::paths::{
     antigravity_desktop_paths, antigravity_known_bin_dirs, antigravity_mcp_files,
     antigravity_paths, toksave_abs,
@@ -131,7 +131,7 @@ impl Agent for AntigravityAgent {
                         {
                             mcp.remove("codegraph");
                         }
-                        write_json_file(&mcp_file, &cfg)?;
+                        write_json_pruned(&mcp_file, &cfg)?;
                     }
                 }
                 remove_owner("antigravity", "codegraph")?;
@@ -144,7 +144,7 @@ impl Agent for AntigravityAgent {
                         {
                             mcp.remove("context-mode");
                         }
-                        write_json_file(&mcp_file, &cfg)?;
+                        write_json_pruned(&mcp_file, &cfg)?;
                     }
                 }
                 remove_owner("antigravity", "context-mode")?;
@@ -165,7 +165,7 @@ impl Agent for AntigravityAgent {
                     if empty {
                         std::fs::remove_file(&p.hooks).ok();
                     } else {
-                        write_json_file(&p.hooks, &cfg)?;
+                        write_json_pruned(&p.hooks, &cfg)?;
                     }
                 }
                 Ok(true)

@@ -72,17 +72,7 @@ pub fn installed_version() -> Option<String> {
 }
 
 pub async fn latest_version() -> Result<Option<String>> {
-    let url = format!(
-        "https://registry.npmjs.org/{}",
-        urlencoding::encode(PACKAGE)
-    );
-    match crate::util::download::fetch_json(&url).await {
-        Ok(json) => Ok(json
-            .get("version")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())),
-        Err(_) => Ok(None),
-    }
+    Ok(crate::util::download::latest_npm_version(PACKAGE).await)
 }
 
 pub fn health_check() -> HealthStatus {

@@ -2,7 +2,9 @@ use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
-use crate::util::json::{get_or_create_object, has_key, read_json_file, write_json_file};
+use crate::util::json::{
+    get_or_create_object, has_key, read_json_file, write_json_file, write_json_pruned,
+};
 use crate::util::paths::{
     opencode_desktop_paths, opencode_known_bin_dirs, opencode_paths, write_file,
 };
@@ -143,7 +145,7 @@ export const Plugin = async () => ({
                     if let Some(mcp) = cfg.get_mut("mcp").and_then(|v| v.as_object_mut()) {
                         mcp.remove("codegraph");
                     }
-                    write_json_file(&p.config, &cfg)?;
+                    write_json_pruned(&p.config, &cfg)?;
                 }
                 let _ = fs::remove_file(p.plugins_dir.join("toksave-autoindex.js"));
                 remove_owner("opencode", "codegraph")?;
@@ -154,7 +156,7 @@ export const Plugin = async () => ({
                     if let Some(plugins) = cfg.get_mut("plugin").and_then(|v| v.as_array_mut()) {
                         plugins.retain(|v| v != "context-mode");
                     }
-                    write_json_file(&p.config, &cfg)?;
+                    write_json_pruned(&p.config, &cfg)?;
                 }
                 remove_owner("opencode", "context-mode")?;
                 Ok(true)

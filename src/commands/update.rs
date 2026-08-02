@@ -46,11 +46,11 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
         let label = format!("{:<width$}", info.label, width = pad);
         let inst_str = installed
             .as_deref()
-            .map(|v| format!("v{v}"))
+            .map(display_version)
             .unwrap_or_else(|| "not on PATH".to_string());
         let lat_str = latest
             .as_deref()
-            .map(|v| format!("v{v}"))
+            .map(display_version)
             .unwrap_or_else(|| "?".to_string());
 
         let needs_upgrade = installed.is_some()
@@ -72,11 +72,17 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
                 "+".yellow(),
                 format!("{label}{inst_str} → {lat_str} → install").yellow()
             );
-        } else {
+        } else if installed.is_some() {
             println!(
                 "  {} {}",
                 colors::CHECK.green(),
                 format!("{label}{inst_str} → {lat_str} (up to date)").dimmed()
+            );
+        } else {
+            println!(
+                "  {} {}",
+                "•".yellow(),
+                format!("{label}{inst_str} → {lat_str} (not installed)").dimmed()
             );
         }
     }
@@ -164,6 +170,18 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
     println!();
 
     if failed.is_empty() { 0 } else { 1 }
+}
+
+/// Render a version string: keep semantic versions as-is, prefix `v` only when
+/// it looks like a plain number/version (so labels like "installed" or
+/// "instruction-only" aren't mangled into "vinstalled").
+fn display_version(v: &str) -> String {
+    let trimmed = v.trim().trim_start_matches('v');
+    if trimmed.chars().next().is_some_and(|c| c.is_numeric()) || trimmed.contains('.') {
+        format!("v{trimmed}")
+    } else {
+        v.to_string()
+    }
 }
 
 fn tool_name(t: ToolId) -> &'static str {

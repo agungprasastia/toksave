@@ -2,9 +2,12 @@ use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
-use crate::util::json::{get_or_create_object, read_json_file, write_json_file};
+use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
 use crate::util::paths::{codex_known_bin_dirs, codex_paths, toksave_abs};
-use crate::util::toml::{has_table, read_toml_file, remove_table, upsert_table, write_toml_file};
+use crate::util::toml::{
+    has_table, prune_empty_tables, read_toml_file, remove_table, upsert_table, write_toml_file,
+    write_toml_pruned,
+};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
 pub struct CodexAgent;
@@ -99,14 +102,16 @@ impl Agent for CodexAgent {
             ToolId::Codegraph => {
                 let mut doc = read_toml_file(&p.config)?;
                 remove_table(&mut doc, "mcp_servers.codegraph");
-                write_toml_file(&p.config, &doc)?;
+                prune_empty_tables(&mut doc);
+                write_toml_pruned(&p.config, &doc)?;
                 remove_owner("codex", "codegraph")?;
                 Ok(true)
             }
             ToolId::ContextMode => {
                 let mut doc = read_toml_file(&p.config)?;
                 remove_table(&mut doc, "mcp_servers.context-mode");
-                write_toml_file(&p.config, &doc)?;
+                prune_empty_tables(&mut doc);
+                write_toml_pruned(&p.config, &doc)?;
                 remove_owner("codex", "context-mode")?;
                 Ok(true)
             }
@@ -122,7 +127,7 @@ impl Agent for CodexAgent {
                             cfg.as_object_mut().expect("object").remove("hooks");
                         }
                     }
-                    write_json_file(&p.hooks, &cfg)?;
+                    write_json_pruned(&p.hooks, &cfg)?;
                 }
                 Ok(true)
             }

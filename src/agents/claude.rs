@@ -4,7 +4,7 @@ use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{
     add_to_array_if_missing, get_or_create_object, read_json_file, remove_from_array,
-    write_json_file,
+    write_json_file, write_json_pruned,
 };
 use crate::util::paths::{
     claude_desktop_paths, claude_known_bin_dirs, claude_paths, read_file, toksave_abs, write_file,
@@ -233,7 +233,7 @@ fn remove_rtk_hook() -> Result<()> {
             cfg.as_object_mut().expect("object").remove("permissions");
         }
     }
-    write_json_file(&p.settings, &cfg)
+    write_json_pruned(&p.settings, &cfg)
 }
 
 fn hook_group_contains_marker(group: &serde_json::Value, marker: &str) -> bool {
@@ -318,7 +318,7 @@ fn override_claude_rtk_hook() -> Result<()> {
     }
 
     if changed {
-        write_json_file(&p.settings, &cfg)?;
+        write_json_pruned(&p.settings, &cfg)?;
     }
     allow_bash_pattern("Bash(rtk *)")?;
 
@@ -379,8 +379,11 @@ fn remove_mcp(name: &str) -> Result<()> {
     if let Some(mut cfg) = read_json_file(&p.global_json)? {
         if let Some(mcp) = cfg.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
             mcp.remove(name);
+            if mcp.is_empty() {
+                cfg.as_object_mut().expect("object").remove("mcpServers");
+            }
         }
-        write_json_file(&p.global_json, &cfg)?;
+        write_json_pruned(&p.global_json, &cfg)?;
     }
     Ok(())
 }

@@ -137,6 +137,20 @@ pub async fn fetch_json(url: &str) -> Result<serde_json::Value> {
         .map_err(|e| ToksaveError::network("json", &format!("invalid JSON: {e}"), url, None))
 }
 
+/// Latest published version of an npm package via the registry `latest`
+/// endpoint (cheap, single small doc). Returns None on any failure so callers
+/// can degrade gracefully (e.g. offline).
+pub async fn latest_npm_version(package: &str) -> Option<String> {
+    let url = format!(
+        "https://registry.npmjs.org/{}/latest",
+        urlencoding::encode(package)
+    );
+    match fetch_json(&url).await {
+        Ok(json) => Some(json.get("version").and_then(|v| v.as_str())?.to_string()),
+        Err(_) => None,
+    }
+}
+
 pub fn is_safe_archive_path(entry_path: &str, dest_dir: &Path) -> bool {
     let p = Path::new(entry_path);
     if p.is_absolute() {
