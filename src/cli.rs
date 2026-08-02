@@ -24,23 +24,23 @@ pub enum CommandType {
 #[command(about = "Zero-config token-saver for AI coding agents")]
 struct Cli {
     /// Target specific agents (claude,opencode,codex,antigravity,copilot,droid,devin,warp)
-    #[arg(short = 'a', long = "agents", num_args = 1.., value_delimiter = ',')]
+    #[arg(short = 'a', long = "agents", num_args = 1.., value_delimiter = ',', global = true)]
     agents: Vec<String>,
 
     /// Target specific tools (rtk,caveman,codegraph,context-mode,ponytail,principles)
-    #[arg(short = 't', long = "tools", num_args = 1.., value_delimiter = ',')]
+    #[arg(short = 't', long = "tools", num_args = 1.., value_delimiter = ',', global = true)]
     tools: Vec<String>,
 
     /// Show what would happen without making changes
-    #[arg(short = 'n', long = "dry-run")]
+    #[arg(short = 'n', long = "dry-run", global = true)]
     dry_run: bool,
 
     /// Print detailed output
-    #[arg(short = 'v', long = "verbose")]
+    #[arg(short = 'v', long = "verbose", global = true)]
     verbose: bool,
 
     /// Skip interactive prompts, auto-select detected agents
-    #[arg(short = 'y', long = "yes")]
+    #[arg(short = 'y', long = "yes", global = true)]
     yes: bool,
 
     #[command(subcommand)]
@@ -49,6 +49,8 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Wire token-saving tools into your agents (default command)
+    Init,
     /// Health check — show what is wired and what is broken
     Doctor {
         /// Skip remote version checks
@@ -170,6 +172,7 @@ pub fn parse_cli(args: Vec<String>) -> ParsedCli {
 
     match cli.command.take() {
         None => parsed.command = CommandType::Init,
+        Some(Command::Init) => parsed.command = CommandType::Init,
         Some(Command::Doctor { offline, fix }) => {
             parsed.command = CommandType::Doctor;
             parsed.offline = offline;

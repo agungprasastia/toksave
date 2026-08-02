@@ -156,10 +156,17 @@ impl Agent for AntigravityAgent {
             }
             ToolId::Rtk => {
                 if let Some(mut cfg) = read_json_file(&p.hooks)? {
-                    if let Some(obj) = cfg.as_object_mut() {
+                    let empty = if let Some(obj) = cfg.as_object_mut() {
                         obj.remove("rtk");
+                        obj.is_empty()
+                    } else {
+                        false
+                    };
+                    if empty {
+                        std::fs::remove_file(&p.hooks).ok();
+                    } else {
+                        write_json_file(&p.hooks, &cfg)?;
                     }
-                    write_json_file(&p.hooks, &cfg)?;
                 }
                 Ok(true)
             }

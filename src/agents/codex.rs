@@ -118,6 +118,9 @@ impl Agent for CodexAgent {
                 if let Some(mut cfg) = read_json_file(&p.hooks)? {
                     if let Some(hooks) = cfg.get_mut("hooks").and_then(|v| v.as_object_mut()) {
                         hooks.remove("PreToolUse");
+                        if hooks.is_empty() {
+                            cfg.as_object_mut().expect("object").remove("hooks");
+                        }
                     }
                     write_json_file(&p.hooks, &cfg)?;
                 }

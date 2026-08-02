@@ -13,6 +13,11 @@ fn default_command_is_init() {
 }
 
 #[test]
+fn explicit_init_command() {
+    assert_eq!(parse(&["init"]).command, CommandType::Init);
+}
+
+#[test]
 fn doctor_command() {
     assert_eq!(parse(&["doctor"]).command, CommandType::Doctor);
 }

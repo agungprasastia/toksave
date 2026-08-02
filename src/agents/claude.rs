@@ -3,7 +3,8 @@ use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{
-    add_to_array_if_missing, get_or_create_object, read_json_file, write_json_file,
+    add_to_array_if_missing, get_or_create_object, read_json_file, remove_from_array,
+    write_json_file,
 };
 use crate::util::paths::{
     claude_desktop_paths, claude_known_bin_dirs, claude_paths, read_file, toksave_abs, write_file,
@@ -219,6 +220,17 @@ fn remove_rtk_hook() -> Result<()> {
         }
         if hooks.is_empty() {
             cfg.as_object_mut().expect("object").remove("hooks");
+        }
+    }
+    if let Some(perms) = cfg.get_mut("permissions").and_then(|p| p.as_object_mut()) {
+        if let Some(allow) = perms.get_mut("allow").and_then(|a| a.as_array_mut()) {
+            remove_from_array(allow, &serde_json::json!("Bash(rtk *)"));
+            if allow.is_empty() {
+                perms.remove("allow");
+            }
+        }
+        if perms.is_empty() {
+            cfg.as_object_mut().expect("object").remove("permissions");
         }
     }
     write_json_file(&p.settings, &cfg)
