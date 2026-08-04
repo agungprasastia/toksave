@@ -310,7 +310,8 @@ fn override_claude_rtk_hook() -> Result<()> {
             let mut dedup: Vec<serde_json::Value> = Vec::new();
             for g in pre.iter() {
                 let first = first_hook_command(g);
-                let key = if first.contains("rtk-hook claude") || first.contains("rtk hook claude") {
+                let key = if first.contains("rtk-hook claude") || first.contains("rtk hook claude")
+                {
                     "rtk-hook claude".to_string()
                 } else {
                     first
