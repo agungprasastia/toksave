@@ -221,7 +221,11 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
         let _ = out.execute(MoveTo(0, 0));
 
         // Title line matching original TS tokless/toksave UI
-        println!("{} {}\x1b[K", "●".magenta().bold(), title.magenta().bold());
+        println!(
+            "\r{} {}\x1b[K",
+            "●".magenta().bold(),
+            title.magenta().bold()
+        );
 
         // Options
         let terminal_width = size().map(|(width, _)| width as usize).unwrap_or(80);
@@ -261,18 +265,18 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
                 .dimmed()
                 .to_string();
 
-            println!("{prefix}{icon}{display_label}    {tag}  {hint}\x1b[K");
+            println!("\r{prefix}{icon}{display_label}    {tag}  {hint}\x1b[K");
         }
 
         // Footer rule
         println!(
-            "{}",
+            "\r{}",
             "──────────────────────────────────────────────────────────".dimmed()
         );
 
         // Controls
         println!(
-            "{} {}  ·  {} {}  ·  {} {}  ·  {} {}",
+            "\r{} {}  ·  {} {}  ·  {} {}  ·  {} {}",
             "↑/↓".yellow(),
             "move".dimmed(),
             "<space>".yellow(),
