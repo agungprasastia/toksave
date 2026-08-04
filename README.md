@@ -80,6 +80,15 @@ toksave --agents claude,opencode,antigravity # or any combination
 
 ### Wiring Matrix
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/wiring-matrix-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/wiring-matrix-light.svg">
+  <img alt="toksave wiring matrix: color-coded heatmap of which mechanism (Hook, Plugin, Skill, MCP, or Instr.) wires each tool into each agent" src="assets/wiring-matrix-dark.svg">
+</picture>
+
+<details>
+<summary>Plain-text table (for screen readers)</summary>
+
 | Tool | Claude | OpenCode | Codex | Antigravity | Copilot | Droid | Devin | Warp |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **RTK** | Hook + Allow | Plugin | Hook | Hook + Allow | Hook + Allow | Hook | Hook | Hook |
@@ -87,6 +96,11 @@ toksave --agents claude,opencode,antigravity # or any combination
 | **Ponytail** | Plugin + Instr. | Plugin + Instr. | Plugin + Instr. | Plugin + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. |
 | **CodeGraph** | MCP + Allow + Instr. | MCP + Auto-index | MCP + Instr. | MCP + Hook + Instr. | MCP + Hook + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Instr. |
 | **Context-Mode** | MCP + Allow + Instr. | Plugin + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Instr. | MCP + Instr. |
+| **Principles** | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. |
+
+</details>
+
+> Regenerate the heatmap after editing the matrix: `python3 scripts/generate_wiring_heatmap.py`
 
 ---
 
