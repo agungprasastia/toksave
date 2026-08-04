@@ -4,7 +4,7 @@ use crossterm::{
     ExecutableCommand,
     cursor::{Hide, MoveToPreviousLine, Show},
     event::{self, Event, KeyCode, KeyModifiers},
-    terminal::{disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, size},
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{IsTerminal, stdout};
@@ -163,6 +163,16 @@ fn strip_ansi(s: &str) -> String {
     out
 }
 
+fn truncate_to_width(s: &str, width: usize) -> String {
+    if s.chars().count() <= width {
+        return s.to_string();
+    }
+    if width <= 3 {
+        return ".".repeat(width);
+    }
+    format!("{}...", s.chars().take(width - 3).collect::<String>())
+}
+
 /// boxen-style green summary box.
 pub fn green_box(title: &str) {
     let plain = strip_ansi(title);
@@ -216,6 +226,7 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
         println!("{} {}\x1b[K", "●".magenta().bold(), title.magenta().bold());
 
         // Options
+        let terminal_width = size().map(|(width, _)| width as usize).unwrap_or(80);
         for (i, opt) in options.iter().enumerate() {
             let is_hovered = i == cursor;
             let prefix = if is_hovered {
@@ -246,7 +257,11 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
                 format!("{:<11}", "[READY]".green())
             };
 
-            let hint = opt.hint.dimmed().to_string();
+            // Keep each option on one terminal row; redraw assumes a fixed height.
+            let hint_width = terminal_width.saturating_sub(37);
+            let hint = truncate_to_width(&opt.hint, hint_width)
+                .dimmed()
+                .to_string();
 
             println!("{prefix}{icon}{display_label}    {tag}  {hint}\x1b[K");
         }
@@ -363,5 +378,15 @@ mod tests {
             parse_label_and_tail("RTK 0.44.2"),
             ("RTK".to_string(), "0.44.2".to_string())
         );
+    }
+
+    #[test]
+    fn truncate_to_width_prevents_terminal_wrapping() {
+        assert_eq!(
+            truncate_to_width("https://github.com/openai/codex", 20),
+            "https://github.co..."
+        );
+        assert_eq!(truncate_to_width("abcd", 3), "...");
+        assert_eq!(truncate_to_width("abc", 3), "abc");
     }
 }
