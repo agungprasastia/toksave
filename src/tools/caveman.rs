@@ -66,6 +66,10 @@ impl Tool for CavemanTool {
                 Some("Check your npm registry or network, then run: toksave init -t caveman"),
             ));
         }
+        if let Ok(Some(latest)) = self.latest_version().await {
+            let cache = crate::util::paths::cache_dir();
+            let _ = crate::util::paths::write_file(&cache.join("caveman.version"), &latest);
+        }
         opts.reportf("ready", 1.0);
         Ok(true)
     }
@@ -84,12 +88,11 @@ impl Tool for CavemanTool {
 }
 
 pub fn installed_version() -> Option<String> {
-    let instruction_files = [opencode_paths().agents_md, codex_paths().instructions];
-    for instruction_file in &instruction_files {
-        if let Some(content) = read_file(instruction_file)
-            && content.contains("CAVEMAN_START")
-        {
-            return Some(CAVEMAN_SKILL_VERSION.to_string());
+    let cache_file = crate::util::paths::cache_dir().join("caveman.version");
+    if let Some(content) = read_file(&cache_file) {
+        let trimmed = content.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
         }
     }
 
@@ -98,6 +101,8 @@ pub fn installed_version() -> Option<String> {
         antigravity_paths()
             .dir
             .join("config/skills/caveman/SKILL.md"),
+        home_dir().join(".agents/skills/caveman/SKILL.md"),
+        opencode_paths().dir.join("skills/caveman/SKILL.md"),
     ];
 
     for skill_path in &skill_paths {
@@ -112,6 +117,14 @@ pub fn installed_version() -> Option<String> {
                     }
                 }
             }
+        }
+    }
+
+    let instruction_files = [opencode_paths().agents_md, codex_paths().instructions];
+    for instruction_file in &instruction_files {
+        if let Some(content) = read_file(instruction_file)
+            && content.contains("CAVEMAN_START")
+        {
             return Some(CAVEMAN_SKILL_VERSION.to_string());
         }
     }

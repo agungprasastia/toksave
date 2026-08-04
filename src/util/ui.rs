@@ -84,10 +84,7 @@ impl Progress {
             bar.finish_and_clear();
             self.label = None;
             // Split "Label tail..." → label + tail (version / note).
-            let (label, tail) = match clean.split_once(' ') {
-                Some((l, t)) => (l.to_string(), t.to_string()),
-                None => (clean.clone(), String::new()),
-            };
+            let (label, tail) = parse_label_and_tail(&clean);
             // 2 indent + ✔ + space + label(<40) + [bar] + 100% + tail
             let padded = format!("  {} {:<BAR_COL$}", "✔".green(), label.bold());
             let green_bar = "█".repeat(20).green();
@@ -118,6 +115,34 @@ impl Progress {
 impl Default for Progress {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+fn parse_label_and_tail(clean: &str) -> (String, String) {
+    let clean_str = clean.trim();
+    let mut known_labels: Vec<&'static str> = crate::registry::ALL_AGENTS
+        .iter()
+        .map(|a| a.label)
+        .chain(crate::registry::ALL_TOOLS.iter().map(|t| t.label))
+        .collect();
+    known_labels.sort_by_key(|l| std::cmp::Reverse(l.len()));
+
+    for known in known_labels {
+        if let Some(rest) = clean_str.strip_prefix(known) {
+            let rest = rest.trim();
+            if rest.is_empty() {
+                return (known.to_string(), String::new());
+            }
+            return (known.to_string(), rest.to_string());
+        }
+    }
+
+    if let Some((l, t)) = clean_str.split_once(" — ") {
+        (l.trim().to_string(), format!("— {}", t.trim()))
+    } else if let Some((l, t)) = clean_str.split_once(' ') {
+        (l.to_string(), t.to_string())
+    } else {
+        (clean_str.to_string(), String::new())
     }
 }
 
@@ -306,4 +331,37 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
         .filter(|o| o.selected && !o.disabled)
         .map(|o| o.value)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_label_and_tail_multi_word_agent_labels() {
+        assert_eq!(
+            parse_label_and_tail("Claude Code"),
+            ("Claude Code".to_string(), "".to_string())
+        );
+        assert_eq!(
+            parse_label_and_tail("GitHub Copilot"),
+            ("GitHub Copilot".to_string(), "".to_string())
+        );
+        assert_eq!(
+            parse_label_and_tail("Devin / Cascade"),
+            ("Devin / Cascade".to_string(), "".to_string())
+        );
+        assert_eq!(
+            parse_label_and_tail("Warp / Oz"),
+            ("Warp / Oz".to_string(), "".to_string())
+        );
+        assert_eq!(
+            parse_label_and_tail("Claude Code (dry run)"),
+            ("Claude Code".to_string(), "(dry run)".to_string())
+        );
+        assert_eq!(
+            parse_label_and_tail("RTK 0.44.2"),
+            ("RTK".to_string(), "0.44.2".to_string())
+        );
+    }
 }

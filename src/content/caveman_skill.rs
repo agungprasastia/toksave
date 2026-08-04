@@ -2,11 +2,11 @@ pub fn caveman_skill() -> &'static str {
     CAVEMAN_SKILL_MD
 }
 
-pub const CAVEMAN_SKILL_VERSION: &str = "1.9.1";
+pub const CAVEMAN_SKILL_VERSION: &str = "1.10.0";
 
 pub const CAVEMAN_SKILL_MD: &str = r#"---
 name: caveman
-version: 1.9.1
+version: 1.10.0
 description: Ultra-compressed communication mode. Cuts token usage ~75% by speaking like caveman while keeping full technical accuracy. Supports intensity levels.
 ---
 

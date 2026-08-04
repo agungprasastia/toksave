@@ -292,7 +292,10 @@ fn override_claude_rtk_hook() -> Result<()> {
                 let should_replace = h
                     .get("command")
                     .and_then(|c| c.as_str())
-                    .map(|c| c.contains("rtk hook claude") && !c.contains("rtk-hook claude"))
+                    .map(|c| {
+                        (c.contains("rtk hook claude") || c.contains("rtk-hook claude"))
+                            && c != new_cmd
+                    })
                     .unwrap_or(false);
                 if should_replace {
                     *h =
@@ -301,13 +304,19 @@ fn override_claude_rtk_hook() -> Result<()> {
                 }
             }
         }
-        // Deduplicate groups with same first hook command
+        // Deduplicate groups with same first hook command / marker
         if pre.len() > 1 {
             let mut seen = std::collections::HashSet::new();
             let mut dedup: Vec<serde_json::Value> = Vec::new();
             for g in pre.iter() {
                 let first = first_hook_command(g);
-                if seen.insert(first.clone()) {
+                let key = if first.contains("rtk-hook claude") || first.contains("rtk hook claude")
+                {
+                    "rtk-hook claude".to_string()
+                } else {
+                    first
+                };
+                if seen.insert(key) {
                     dedup.push(g.clone());
                 } else {
                     changed = true;

@@ -2,7 +2,9 @@ use crate::agents::Agent;
 use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
-use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
+use crate::util::json::{
+    get_or_create_object, merge_hook_group, read_json_file, write_json_file, write_json_pruned,
+};
 use crate::util::paths::{codex_known_bin_dirs, codex_paths, toksave_abs};
 use crate::util::toml::{
     has_table, prune_empty_tables, read_toml_file, remove_table, upsert_table, write_toml_file,
@@ -74,14 +76,12 @@ impl Agent for CodexAgent {
             }
             ToolId::Rtk => {
                 let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
-                let hooks = get_or_create_object(&mut cfg, "hooks");
                 let hook_entry = serde_json::json!({
                     "matcher": "Bash",
                     "hooks": [{ "type": "command", "command": format!("{} rtk-hook codex", toksave_abs()), "timeout": 10 }]
                 });
-                if !hooks.as_object().unwrap().contains_key("PreToolUse") {
-                    hooks["PreToolUse"] = serde_json::json!([hook_entry]);
-                }
+                let hooks = get_or_create_object(&mut cfg, "hooks");
+                merge_hook_group(hooks, "PreToolUse", hook_entry, "rtk-hook codex");
                 write_json_file(&p.hooks, &cfg)?;
                 Ok(true)
             }
@@ -91,6 +91,14 @@ impl Agent for CodexAgent {
             }
             ToolId::Principles => {
                 write_owner("codex", "principles")?;
+                let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
+                let perm_entry = serde_json::json!({
+                    "matcher": "",
+                    "hooks": [{ "type": "command", "command": format!("{} codex-perm-hook", toksave_abs()), "timeout": 5 }]
+                });
+                let hooks = get_or_create_object(&mut cfg, "hooks");
+                merge_hook_group(hooks, "PermissionRequest", perm_entry, "codex-perm-hook");
+                write_json_file(&p.hooks, &cfg)?;
                 Ok(true)
             }
         }

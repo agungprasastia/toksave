@@ -61,33 +61,40 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
         if needs_upgrade {
             changed.push(*t);
             println!(
-                "  {} {}",
+                "  {} {}{}{}",
                 "↑".yellow(),
-                format!("{label}{inst_str} → {lat_str} → upgrade").yellow()
+                label,
+                format!("{inst_str} ").yellow(),
+                format!("→ {lat_str} → upgrade").green()
             );
         } else if needs_install {
             changed.push(*t);
             println!(
-                "  {} {}",
+                "  {} {}{}{}",
                 "+".yellow(),
-                format!("{label}{inst_str} → {lat_str} → install").yellow()
+                label,
+                format!("{inst_str} ").red(),
+                format!("→ {lat_str} → install").green()
             );
         } else if installed.is_some() {
             let state = if latest.is_some() {
-                "(up to date)"
+                "(up to date)".dimmed()
             } else {
-                "(latest unknown — could not check)"
+                "(latest unknown — could not check)".dimmed()
             };
             println!(
-                "  {} {}",
+                "  {} {}{}{}",
                 colors::CHECK.green(),
-                format!("{label}{inst_str} → {lat_str} {state}").dimmed()
+                label,
+                format!("{inst_str} → {lat_str} ").green(),
+                state
             );
         } else {
             println!(
-                "  {} {}",
+                "  {} {}{}",
                 "•".yellow(),
-                format!("{label}{inst_str} → {lat_str} (not installed)").dimmed()
+                label,
+                format!("{inst_str} → {lat_str} (not installed)").red()
             );
         }
     }
