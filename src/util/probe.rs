@@ -17,7 +17,9 @@ use crate::util::toml::read_toml_file;
 
 const MANAGED_HOOKS: &[&str] = &[
     "rtk-hook",
+    "codex-perm-hook",
     "codex-perm",
+    "context-mode-hook",
     "agy-hook",
     "copilot-hook",
     "index",

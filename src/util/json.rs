@@ -193,10 +193,22 @@ pub fn merge_pretool_use(
     entry: serde_json::Value,
     managed_marker: &str,
 ) {
-    let arr = cfg
+    merge_hook_group(cfg, "PreToolUse", entry, managed_marker);
+}
+
+/// Merge a toksave-managed hook entry into a specified hook array (`PreToolUse`,
+/// `PermissionRequest`, etc.) in a JSON hook config. Drops existing entries
+/// containing `managed_marker` in `hooks[].command` and keeps user entries.
+pub fn merge_hook_group(
+    parent: &mut serde_json::Value,
+    key: &str,
+    entry: serde_json::Value,
+    managed_marker: &str,
+) {
+    let arr = parent
         .as_object_mut()
         .expect("config object")
-        .entry("PreToolUse")
+        .entry(key)
         .or_insert_with(|| serde_json::json!([]));
     let Some(items) = arr.as_array_mut() else {
         return;
