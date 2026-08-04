@@ -27,7 +27,7 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
                 "  {} {}{}",
                 colors::BULLET.dimmed(),
                 label,
-                "not installed".dimmed()
+                "not installed".red()
             );
             continue;
         }
@@ -43,7 +43,7 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
                 "  {} {}{}",
                 colors::CHECK.green(),
                 label,
-                "all tools wired".dimmed()
+                "all tools wired".green()
             );
         } else {
             let missing_str = format!("missing: {}", missing.join(", "));
@@ -96,9 +96,10 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
                             format!("v{lat}")
                         };
                         println!(
-                            "  {} {}{}",
+                            "  {} {}{}{}",
                             "↑ ".yellow(),
-                            format!("{label}{inst_str}").dimmed(),
+                            label.dimmed(),
+                            inst_str.yellow(),
                             format!(" → {lat_str}").green()
                         );
                     }
@@ -106,7 +107,7 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
                         "  {} {}{}",
                         colors::CHECK.green(),
                         label.dimmed(),
-                        inst_str.dimmed()
+                        inst_str.green()
                     ),
                 }
             } else {
@@ -114,7 +115,7 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
                     "  {} {}{}",
                     colors::BULLET.dimmed(),
                     label.dimmed(),
-                    "not installed".dimmed()
+                    "not installed".red()
                 );
             }
         }
