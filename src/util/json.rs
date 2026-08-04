@@ -232,18 +232,24 @@ fn is_managed_hook(entry: &serde_json::Value, managed_marker: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Remove toksave-managed entries from `cfg["PreToolUse"]`, dropping the key
+/// Remove toksave-managed entries from `cfg[\"PreToolUse\"]`, dropping the key
 /// when the array becomes empty.
 pub fn remove_pretool_use(cfg: &mut serde_json::Value, managed_marker: &str) {
-    let Some(obj) = cfg.as_object_mut() else {
+    remove_hook_group(cfg, "PreToolUse", managed_marker);
+}
+
+/// Remove toksave-managed entries from `parent[key]`, dropping the key
+/// when the array becomes empty.
+pub fn remove_hook_group(parent: &mut serde_json::Value, key: &str, managed_marker: &str) {
+    let Some(obj) = parent.as_object_mut() else {
         return;
     };
-    let Some(arr) = obj.get_mut("PreToolUse").and_then(|v| v.as_array_mut()) else {
+    let Some(arr) = obj.get_mut(key).and_then(|v| v.as_array_mut()) else {
         return;
     };
     arr.retain(|e| !is_managed_hook(e, managed_marker));
     if arr.is_empty() {
-        obj.remove("PreToolUse");
+        obj.remove(key);
     }
 }
 

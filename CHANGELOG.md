@@ -5,6 +5,31 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-04
+
+### Fixed
+
+- **UI progress bar splits multi-word agent names**: `Progress::stop` split status messages on the first space, causing multi-word agent labels (`Claude Code`, `GitHub Copilot`, `Devin / Cascade`, `Warp / Oz`) to wrap after the progress bar (`✔ Claude [████...] 100% Code`). Added `parse_label_and_tail` in `src/util/ui.rs` which matches against known agent/tool labels (sorted longest-first) before splitting. Unit tests added. ([@jondmarien](https://github.com/jondmarien) in [#23](https://github.com/agungprasastia/toksave/pull/23))
+- **Doctor probe misreports managed hooks as missing**: `MANAGED_HOOKS` in `src/util/probe.rs` did not list `codex-perm-hook` or `context-mode-hook`, causing `toksave doctor` to treat them as unmanaged external binaries and report "binary not found". Both now registered. ([@jondmarien](https://github.com/jondmarien) in [#23](https://github.com/agungprasastia/toksave/pull/23))
+- **Caveman version mismatch after update**: `installed_version()` always returned the hardcoded embedded fallback `1.9.1`, causing `toksave doctor` to perpetually report an upgrade available. Now writes the fetched release version to `cache_dir()/caveman.version` on install and reads it first. Bumped embedded `CAVEMAN_SKILL_VERSION` to `1.10.0`. ([@jondmarien](https://github.com/jondmarien) in [#23](https://github.com/agungprasastia/toksave/pull/23))
+- **Legacy Bun binary paths persist across upgrades**: Old `/$bunfs/root/toksave` virtual paths in `~/.claude/settings.json` and `~/.codex/hooks.json` persisted because rewiring logic was not stripping stale paths. Claude `override_claude_rtk_hook` now replaces any existing `rtk-hook claude` command (including legacy paths) with the active binary path. Codex RTK wiring uses `merge_hook_group` for deduplication. ([@jondmarien](https://github.com/jondmarien) in [#23](https://github.com/agungprasastia/toksave/pull/23))
+- **Codex `unwire(Principles)` leaves orphan `PermissionRequest` hook**: `wire(Principles)` added a `codex-perm-hook` to `PermissionRequest`, but `unwire(Principles)` only called `remove_owner` without cleaning the hook. Now removes managed `PermissionRequest` entries and prunes empty `hooks` object.
+
+### Changed
+
+- **Status coloring in `doctor` and `update`**: `all tools wired` and up-to-date versions now print in green; `not installed` / `not on PATH` in red; outdated versions in yellow. Consistent across both commands. ([@jondmarien](https://github.com/jondmarien) in [#23](https://github.com/agungprasastia/toksave/pull/23))
+- **Generic `merge_hook_group` / `remove_hook_group`**: Refactored `merge_pretool_use` and `remove_pretool_use` in `src/util/json.rs` to delegate to generic `merge_hook_group` / `remove_hook_group` that work with any hook key (`PreToolUse`, `PermissionRequest`, etc.). Backward-compatible — existing callers unchanged.
+- **CI `fail-fast: false`**: `.github/workflows/ci.yml` matrix strategy no longer cancels sibling OS jobs on single-job failures. ([@jondmarien](https://github.com/jondmarien) in [#23](https://github.com/agungprasastia/toksave/pull/23))
+
+### Added
+
+- **Wiring matrix heatmap**: Added `scripts/generate_wiring_heatmap.py` (stdlib-only) that generates color-coded SVG heatmaps (`assets/wiring-matrix-dark.svg`, `assets/wiring-matrix-light.svg`) of the tool x agent wiring matrix. README updated with `<picture>` element for light/dark theme support. ([@jondmarien](https://github.com/jondmarien) in [#23](https://github.com/agungprasastia/toksave/pull/23))
+
+### Contributors
+
+Thanks to community contributor:
+- **[@jondmarien](https://github.com/jondmarien)**: Fix UI label splitting, doctor probe hooks, Caveman update detection, legacy path cleanup, status coloring, CI matrix, wiring heatmap ([#23](https://github.com/agungprasastia/toksave/pull/23))
+
 ## [1.0.0] - 2026-08-02
 
 ### Added
