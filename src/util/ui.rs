@@ -2,9 +2,12 @@ use crate::registry::AgentId;
 use colored::Colorize;
 use crossterm::{
     ExecutableCommand,
-    cursor::{Hide, MoveToPreviousLine, Show},
+    cursor::{Hide, MoveTo, Show},
     event::{self, Event, KeyCode, KeyModifiers},
-    terminal::{disable_raw_mode, enable_raw_mode, size},
+    terminal::{
+        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
+        enable_raw_mode, size,
+    },
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{IsTerminal, stdout};
@@ -206,10 +209,7 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
     let _ = enable_raw_mode();
     let mut out = stdout();
     let _ = out.execute(Hide);
-
-    let num_lines = options.len() + 3; // Title + footer rule + controls
-
-    let mut first_render = true;
+    let _ = out.execute(EnterAlternateScreen);
 
     // Drain any leftover keys (e.g. Enter keypress from spawning command)
     while event::poll(Duration::from_millis(50)).unwrap_or(false) {
@@ -217,10 +217,8 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
     }
 
     loop {
-        if !first_render {
-            let _ = out.execute(MoveToPreviousLine(num_lines as u16));
-        }
-        first_render = false;
+        let _ = out.execute(Clear(ClearType::All));
+        let _ = out.execute(MoveTo(0, 0));
 
         // Title line matching original TS tokless/toksave UI
         println!("{} {}\x1b[K", "●".magenta().bold(), title.magenta().bold());
@@ -290,6 +288,7 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
                 continue;
             }
             if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+                let _ = out.execute(LeaveAlternateScreen);
                 let _ = out.execute(Show);
                 let _ = disable_raw_mode();
                 std::process::exit(1);
@@ -338,6 +337,7 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
         }
     }
 
+    let _ = out.execute(LeaveAlternateScreen);
     let _ = out.execute(Show);
     let _ = disable_raw_mode();
 
