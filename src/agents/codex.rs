@@ -145,6 +145,19 @@ impl Agent for CodexAgent {
             }
             ToolId::Principles => {
                 remove_owner("codex", "principles")?;
+                if let Some(mut cfg) = read_json_file(&p.hooks)? {
+                    if let Some(hooks) = cfg.get_mut("hooks") {
+                        crate::util::json::remove_hook_group(
+                            hooks,
+                            "PermissionRequest",
+                            "codex-perm-hook",
+                        );
+                        if hooks.as_object().is_some_and(|o| o.is_empty()) {
+                            cfg.as_object_mut().expect("object").remove("hooks");
+                        }
+                    }
+                    write_json_pruned(&p.hooks, &cfg)?;
+                }
                 Ok(true)
             }
         }
