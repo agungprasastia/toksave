@@ -12,6 +12,7 @@ use crossterm::{
 use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{IsTerminal, stdout};
 use std::time::Duration;
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 const BAR_COL: usize = 40; // bar/percent column start (fixed alignment)
 
@@ -167,13 +168,24 @@ fn strip_ansi(s: &str) -> String {
 }
 
 fn truncate_to_width(s: &str, width: usize) -> String {
-    if s.chars().count() <= width {
+    if s.width() <= width {
         return s.to_string();
     }
     if width <= 3 {
         return ".".repeat(width);
     }
-    format!("{}...", s.chars().take(width - 3).collect::<String>())
+    let limit = width - 3;
+    let mut result = String::new();
+    let mut used = 0;
+    for c in s.chars() {
+        let char_width = c.width().unwrap_or(0);
+        if used + char_width > limit {
+            break;
+        }
+        result.push(c);
+        used += char_width;
+    }
+    format!("{result}...")
 }
 
 /// boxen-style green summary box.
@@ -392,5 +404,6 @@ mod tests {
         );
         assert_eq!(truncate_to_width("abcd", 3), "...");
         assert_eq!(truncate_to_width("abc", 3), "abc");
+        assert_eq!(truncate_to_width("界界界", 5), "界...");
     }
 }

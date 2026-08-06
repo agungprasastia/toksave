@@ -3,7 +3,8 @@ use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{
-    get_or_create_object, merge_hook_group, read_json_file, write_json_file, write_json_pruned,
+    get_or_create_object, merge_hook_group, read_json_file, remove_hook_group, write_json_file,
+    write_json_pruned,
 };
 use crate::util::paths::{codex_known_bin_dirs, codex_paths, toksave_abs};
 use crate::util::toml::{
@@ -129,9 +130,9 @@ impl Agent for CodexAgent {
             }
             ToolId::Rtk => {
                 if let Some(mut cfg) = read_json_file(&p.hooks)? {
-                    if let Some(hooks) = cfg.get_mut("hooks").and_then(|v| v.as_object_mut()) {
-                        hooks.remove("PreToolUse");
-                        if hooks.is_empty() {
+                    if let Some(hooks) = cfg.get_mut("hooks") {
+                        remove_hook_group(hooks, "PreToolUse", "rtk-hook codex");
+                        if hooks.as_object().is_some_and(|o| o.is_empty()) {
                             cfg.as_object_mut().expect("object").remove("hooks");
                         }
                     }
@@ -144,20 +145,22 @@ impl Agent for CodexAgent {
                 Ok(true)
             }
             ToolId::Principles => {
-                remove_owner("codex", "principles")?;
                 if let Some(mut cfg) = read_json_file(&p.hooks)? {
                     if let Some(hooks) = cfg.get_mut("hooks") {
-                        crate::util::json::remove_hook_group(
-                            hooks,
-                            "PermissionRequest",
-                            "codex-perm-hook",
-                        );
+                        if !hooks.is_object() {
+                            return Err(crate::util::errors::ToksaveError::config(
+                                &p.hooks.to_string_lossy(),
+                                "Expected hooks to be an object",
+                            ));
+                        }
+                        remove_hook_group(hooks, "PermissionRequest", "codex-perm-hook");
                         if hooks.as_object().is_some_and(|o| o.is_empty()) {
                             cfg.as_object_mut().expect("object").remove("hooks");
                         }
                     }
                     write_json_pruned(&p.hooks, &cfg)?;
                 }
+                remove_owner("codex", "principles")?;
                 Ok(true)
             }
         }

@@ -5,6 +5,14 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-08-06
+
+### Fixed
+
+- **Codex RTK unwire deletes user `PreToolUse` hooks**: `unwire(Rtk)` removed the whole `PreToolUse` array, deleting user-owned hooks and potentially `hooks.json`. It now removes only the managed `rtk-hook codex` entry. Regression test added.
+- **Codex Principles unwire accepts malformed `hooks` config**: A non-object `hooks` value was silently left in place while ownership metadata was removed. Unwire now returns a config error without changing either file or manifest.
+- **Agent selector mismeasures Unicode hints**: Hint truncation counted Unicode characters instead of terminal display columns; wide CJK characters or emoji could still wrap a selector row. It now uses Unicode display width.
+
 ## [1.0.1] - 2026-08-04
 
 ### Fixed
