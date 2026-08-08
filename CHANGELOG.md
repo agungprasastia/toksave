@@ -5,6 +5,13 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-08-08
+
+### Fixed
+
+- **Windows: backslash paths break Git Bash hooks**: `toksave_abs()` returned native Windows paths (`C:\Users\...\toksave.exe`) which break in Git Bash (backslashes interpreted as escape characters). Now normalizes to forward slashes (`C:/Users/.../toksave.exe`) on Windows — valid in cmd.exe, PowerShell, and Git Bash. Users must re-run `toksave init` after upgrading to rewrite configs with safe paths. ([@jondmarien](https://github.com/jondmarien) in [#24](https://github.com/agungprasastia/toksave/issues/24))
+- **Doctor probe false positives on non-toksave MCP entries**: `toksave doctor` probed every `"command"` key in agent config files, including user-owned MCP servers (e.g. `node`, shell builtins `[`, `if`), reporting spurious `binary not found` warnings. Probe now filters to toksave-owned commands only via `is_toksave_exe()` check. ([@jondmarien](https://github.com/jondmarien) in [#24](https://github.com/agungprasastia/toksave/issues/24))
+
 ## [1.0.2] - 2026-08-06
 
 ### Fixed

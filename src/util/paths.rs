@@ -386,7 +386,16 @@ pub fn write_file(p: &Path, content: &str) -> Result<()> {
 
 pub fn toksave_abs() -> String {
     std::env::current_exe()
-        .map(|p| p.to_string_lossy().to_string())
+        .map(|p| {
+            let s = p.to_string_lossy().to_string();
+            // Forward slashes work in cmd.exe, PowerShell, and Git Bash;
+            // backslashes break Git Bash hooks (see #24).
+            if cfg!(windows) {
+                s.replace('\\', "/")
+            } else {
+                s
+            }
+        })
         .unwrap_or_else(|_| "toksave".to_string())
 }
 

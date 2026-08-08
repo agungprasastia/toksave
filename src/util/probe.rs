@@ -32,15 +32,20 @@ pub struct RuntimeIssue {
     pub detail: String,
 }
 
+/// True when the exe basename is `toksave` or `toksave.exe`.
+fn is_toksave_exe(exe: &str) -> bool {
+    let base = exe.replace('\\', "/");
+    let base = base.rsplit('/').next().unwrap_or(&base).to_lowercase();
+    base == "toksave" || base == "toksave.exe"
+}
+
 /// A command wired into an agent config is a toksave-managed hook when the
 /// exe is `toksave` and the subcommand is one we ship.
 pub fn is_managed_hook(fields: &[&str]) -> bool {
     if fields.len() < 2 {
         return false;
     }
-    let base = fields[0].replace('\\', "/");
-    let base = base.rsplit('/').next().unwrap_or(&base).to_lowercase();
-    if base != "toksave" && base != "toksave.exe" {
+    if !is_toksave_exe(fields[0]) {
         return false;
     }
     MANAGED_HOOKS.contains(&fields[1])
@@ -290,6 +295,10 @@ fn probe_files_of(files: &[PathBuf]) -> Vec<RuntimeIssue> {
             let Some(exe) = fields.first().copied() else {
                 continue;
             };
+            // Only probe toksave-managed commands; skip user's own MCP entries.
+            if !is_toksave_exe(exe) {
+                continue;
+            }
             let managed = is_managed_hook(&fields);
             let cmd_args: Vec<String> = if managed {
                 fields[1..].iter().map(|s| s.to_string()).collect()
@@ -395,6 +404,31 @@ args = ["runmcp", "codegraph", "serve", "--mcp"]
         assert!(
             issues.iter().any(|i| i.detail.contains("binary not found")),
             "expected issue for missing codex MCP binary, got: {issues:?}"
+        );
+        fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn probe_files_of_skips_non_toksave_mcp_entries() {
+        let tmp = env::temp_dir().join("toksave-probe-skip-test");
+        fs::create_dir_all(&tmp).unwrap();
+        let cfg = tmp.join("settings.json");
+        // Simulates a Claude config with non-toksave MCP entries (node, shell builtins)
+        fs::write(
+            &cfg,
+            r#"{
+                "mcpServers": {
+                    "user-tool": {"command": "node", "args": ["server.js"]},
+                    "shell-thing": {"command": "if", "args": ["true"]},
+                    "bracket": {"command": "[", "args": ["-f", "x"]}
+                }
+            }"#,
+        )
+        .unwrap();
+        let issues = probe_files_of(std::slice::from_ref(&cfg));
+        assert!(
+            issues.is_empty(),
+            "non-toksave MCP entries should not be probed, got: {issues:?}"
         );
         fs::remove_dir_all(&tmp).ok();
     }

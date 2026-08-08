@@ -1,6 +1,6 @@
 [package]
 name = "toksave"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2024"
 description = "Zero-config token-saver for AI coding agents"
 license = "MIT"
