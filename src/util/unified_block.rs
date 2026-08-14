@@ -1,8 +1,8 @@
 use crate::content::agent_instructions;
 use crate::util::errors::Result;
 use crate::util::paths::{
-    antigravity_paths, claude_paths, codex_paths, copilot_paths, devin_paths, droid_paths,
-    opencode_paths, read_file, warp_paths, write_file,
+    antigravity_paths, claude_paths, codex_paths, copilot_paths, cursor_paths, devin_paths,
+    droid_paths, opencode_paths, read_file, warp_paths, write_file,
 };
 use std::fs;
 use std::path::PathBuf;
@@ -17,6 +17,7 @@ pub fn instruction_path(agent: &str) -> Option<PathBuf> {
         "droid" => Some(droid_paths().dir.join("instructions.md")),
         "devin" => Some(devin_paths().dir.join("instructions.md")),
         "warp" => Some(warp_paths().dir.join("instructions.md")),
+        "cursor" => Some(cursor_paths().dir.join("AGENTS.md")),
         _ => None,
     }
 }

@@ -114,7 +114,7 @@ toksave index --auto               # Silent background mode (triggered by agent 
 
 | Flag | Long Flag | Description |
 | :--- | :--- | :--- |
-| `-a` | `--agents <list>` | Target specific agents (comma-separated: `claude,opencode,codex,antigravity,copilot,droid,devin,warp`). |
+| `-a` | `--agents <list>` | Target specific agents (comma-separated: `claude,opencode,codex,antigravity,copilot,droid,devin,warp,cursor`). |
 | `-t` | `--tools <list>` | Target specific tools (comma-separated: `rtk,caveman,codegraph,context-mode,ponytail,principles`). |
 | `-n` | `--dry-run` | Preview actions without modifying filesystem. |
 | `-y` | `--yes` | Non-interactive mode (auto-accept prompts). |

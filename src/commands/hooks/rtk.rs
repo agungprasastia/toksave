@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 use super::read_stdin;
 
 /// RTK PreToolUse hook: prefixes Bash-like tool commands with `rtk`.
-/// `agent` selects the payload key (`claude` uses `updatedInput`, others `modifiedToolInput`).
+/// `agent` selects the payload key (`claude`/`cursor` use `updatedInput`, others `modifiedToolInput`).
 pub fn run(agent: Option<&str>) -> i32 {
     let input = read_stdin();
     if input.is_empty() {
@@ -32,7 +32,10 @@ pub fn run(agent: Option<&str>) -> i32 {
     }
 
     let patch = json!({ "command": format!("rtk {trimmed}") });
-    let key = if agent.unwrap_or("").eq_ignore_ascii_case("claude") {
+    let key = if matches!(
+        agent.unwrap_or("").to_ascii_lowercase().as_str(),
+        "claude" | "cursor"
+    ) {
         "updatedInput"
     } else {
         "modifiedToolInput"
@@ -50,6 +53,6 @@ pub fn run(agent: Option<&str>) -> i32 {
 fn is_bash_tool(name: &str) -> bool {
     matches!(
         name.to_ascii_lowercase().as_str(),
-        "bash" | "run_command" | "execute_command" | "cmd" | "sh" | "pwsh"
+        "bash" | "shell" | "run_command" | "execute_command" | "cmd" | "sh" | "pwsh"
     )
 }

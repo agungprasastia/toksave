@@ -55,6 +55,18 @@ fn rtk_hook_uses_updated_input_for_claude() {
 }
 
 #[test]
+fn rtk_hook_uses_updated_input_for_cursor_shell() {
+    let input = r#"{"tool_name":"Shell","tool_input":{"command":"bun test"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "cursor"], input, None);
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    let out = &v["hookSpecificOutput"];
+    assert_eq!(out["hookEventName"], "PreToolUse");
+    assert_eq!(out["updatedInput"]["command"], "rtk bun test");
+    assert!(out.get("modifiedToolInput").is_none());
+}
+
+#[test]
 fn rtk_hook_skips_non_bash_tool() {
     let input = r#"{"tool_name":"Edit","tool_input":{"command":"ls"}}"#;
     let (code, stdout, _) = run_hook(&["rtk-hook", "agy"], input, None);

@@ -5,6 +5,12 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles.
+
 ## [1.0.3] - 2026-08-08
 
 ### Fixed

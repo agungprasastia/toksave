@@ -24,7 +24,7 @@ fn main() {
             // rtk-hook aliases: `agy-hook <variant>` routes to the RTK prefixer.
             if parsed.hook_args.first().is_some_and(|a| {
                 [
-                    "rtk", "agy", "claude", "codex", "copilot", "droid", "devin", "warp",
+                    "rtk", "agy", "claude", "codex", "copilot", "droid", "devin", "warp", "cursor",
                 ]
                 .contains(&a.as_str())
             }) {
@@ -57,7 +57,7 @@ fn early_hook_dispatch(args: &[String]) -> Option<i32> {
     }
     if a0 == "rtk-hook"
         && [
-            "agy", "codex", "claude", "copilot", "droid", "devin", "warp",
+            "agy", "codex", "claude", "copilot", "droid", "devin", "warp", "cursor",
         ]
         .contains(&a1)
     {

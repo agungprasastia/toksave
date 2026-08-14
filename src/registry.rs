@@ -1,7 +1,7 @@
 use crate::agents::Agent;
 use crate::agents::{
-    AntigravityAgent, ClaudeAgent, CodexAgent, CopilotAgent, DevinAgent, DroidAgent, OpencodeAgent,
-    WarpAgent,
+    AntigravityAgent, ClaudeAgent, CodexAgent, CopilotAgent, CursorAgent, DevinAgent, DroidAgent,
+    OpencodeAgent, WarpAgent,
 };
 pub use crate::tools::install_tool;
 use crate::util::errors::Result;
@@ -16,6 +16,7 @@ pub enum AgentId {
     Droid,
     Devin,
     Warp,
+    Cursor,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -141,6 +142,12 @@ pub const ALL_AGENTS: &[AgentInfo] = &[
         homepage: "https://warp.dev",
         cli_bin: "warp",
     },
+    AgentInfo {
+        id: AgentId::Cursor,
+        label: "Cursor CLI",
+        homepage: "https://cursor.com/docs/cli/overview",
+        cli_bin: "agent",
+    },
 ];
 
 pub const ALL_TOOLS: &[ToolInfo] = &[
@@ -226,6 +233,7 @@ pub fn parse_agent_id(s: &str) -> Option<AgentId> {
         "cascade" => Some(AgentId::Devin),
         "warp" => Some(AgentId::Warp),
         "oz" => Some(AgentId::Warp),
+        "cursor" | "cursor-cli" => Some(AgentId::Cursor),
         _ => None,
     }
 }
@@ -254,6 +262,7 @@ pub fn get_agent(id: AgentId) -> Box<dyn Agent> {
         AgentId::Droid => Box::new(DroidAgent),
         AgentId::Devin => Box::new(DevinAgent),
         AgentId::Warp => Box::new(WarpAgent),
+        AgentId::Cursor => Box::new(CursorAgent),
     }
 }
 

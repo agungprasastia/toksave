@@ -8,7 +8,7 @@
 
 ## Core Capabilities
 
-### Supported Agents (8)
+### Supported Agents (9)
 - **Claude Code** (`.claude.json`, `PreToolUse` hooks, skill directories)
 - **OpenCode** (`config.json`, plugin registrations, `AGENTS.md`)
 - **Codex** (`config.toml`, `hooks.json`, instructions)
@@ -17,6 +17,7 @@
 - **Factory Droid** (`mcp.json`, `hooks.json`, instructions)
 - **Devin / Cascade** (`mcp.json`, `hooks.json`, instructions)
 - **Warp / Oz** (`mcp_config.json`, `hooks_file`, instructions)
+- **Cursor CLI** (`~/.cursor/hooks.json`, `mcp.json`, `cli-config.json`, `AGENTS.md`)
 
 ### Supported Tools (6)
 - **RTK**: CLI proxy for compressing tool output (60-90% token savings).

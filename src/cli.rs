@@ -23,7 +23,7 @@ pub enum CommandType {
 #[command(version = crate::util::version::toksave_version())]
 #[command(about = "Zero-config token-saver for AI coding agents")]
 struct Cli {
-    /// Target specific agents (claude,opencode,codex,antigravity,copilot,droid,devin,warp)
+    /// Target specific agents (claude,opencode,codex,antigravity,copilot,droid,devin,warp,cursor)
     #[arg(short = 'a', long = "agents", num_args = 1.., value_delimiter = ',', global = true)]
     agents: Vec<String>,
 

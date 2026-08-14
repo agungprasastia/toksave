@@ -3,7 +3,7 @@ use toksave::registry::{ALL_AGENTS, ALL_TOOLS, unwire_tool, verify_tool, wire_to
 mod common;
 
 #[tokio::test]
-async fn test_full_8x6_agent_tool_matrix() {
+async fn test_full_9x6_agent_tool_matrix() {
     let _env = common::setup();
     let opts = toksave::registry::RunOpts::default();
 

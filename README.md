@@ -14,7 +14,7 @@
   </p>
 
   <p>
-    One command to install and wire <a href="#-what-gets-installed">token-saving tools</a> into <a href="#️-supported-agents">8 AI coding agents</a>.
+    One command to install and wire <a href="#-what-gets-installed">token-saving tools</a> into <a href="#️-supported-agents">9 AI coding agents</a>.
     No config editing. No manual setup. Just <strong>run, restart, go</strong>.
   </p>
 </div>
@@ -54,6 +54,9 @@ toksave handles the wiring so you can focus on the code.
       <td align="center" width="140"><img src="assets/agents/devin.jpg" width="56" alt="Devin" /><br/><b>Devin / Cascade</b><br/><sub>✅ Supported</sub></td>
       <td align="center" width="140"><img src="assets/agents/warp.png" width="56" alt="Warp" /><br/><b>Warp / Oz</b><br/><sub>✅ Supported</sub></td>
     </tr>
+    <tr>
+      <td align="center" width="140"><br/><b>Cursor CLI</b><br/><sub>✅ Supported</sub></td>
+    </tr>
   </table>
 </div>
 
@@ -89,14 +92,14 @@ toksave --agents claude,opencode,antigravity # or any combination
 <details>
 <summary>Plain-text table (for screen readers)</summary>
 
-| Tool | Claude | OpenCode | Codex | Antigravity | Copilot | Droid | Devin | Warp |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **RTK** | Hook + Allow | Plugin | Hook | Hook + Allow | Hook + Allow | Hook | Hook | Hook |
-| **Caveman** | Plugin + Instr. | Plugin + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. |
-| **Ponytail** | Plugin + Instr. | Plugin + Instr. | Plugin + Instr. | Plugin + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. |
-| **CodeGraph** | MCP + Allow + Instr. | MCP + Auto-index | MCP + Instr. | MCP + Hook + Instr. | MCP + Hook + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Instr. |
-| **Context-Mode** | MCP + Allow + Instr. | Plugin + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Instr. | MCP + Instr. |
-| **Principles** | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. |
+| Tool | Claude | OpenCode | Codex | Antigravity | Copilot | Droid | Devin | Warp | Cursor |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **RTK** | Hook + Allow | Plugin | Hook | Hook + Allow | Hook + Allow | Hook | Hook | Hook | Hook + Allow |
+| **Caveman** | Plugin + Instr. | Plugin + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. |
+| **Ponytail** | Plugin + Instr. | Plugin + Instr. | Plugin + Instr. | Plugin + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. |
+| **CodeGraph** | MCP + Allow + Instr. | MCP + Auto-index | MCP + Instr. | MCP + Hook + Instr. | MCP + Hook + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Instr. | MCP + Instr. |
+| **Context-Mode** | MCP + Allow + Instr. | Plugin + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Instr. | MCP + Instr. | MCP + Instr. |
+| **Principles** | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. |
 
 </details>
 

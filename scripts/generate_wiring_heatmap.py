@@ -24,6 +24,7 @@ AGENTS = [
     "Droid",
     "Devin",
     "Warp",
+    "Cursor",
 ]
 
 TOOLS = ["RTK", "Caveman", "Ponytail", "CodeGraph", "Context-Mode", "Principles"]
@@ -48,6 +49,7 @@ MATRIX: dict[str, dict[str, tuple[str, str]]] = {
         "Droid": ("hook", "Hook"),
         "Devin": ("hook", "Hook"),
         "Warp": ("hook", "Hook"),
+        "Cursor": ("hook", "Hook + Allow"),
     },
     "Caveman": {
         "Claude": ("plugin", "Plugin"),
@@ -58,6 +60,7 @@ MATRIX: dict[str, dict[str, tuple[str, str]]] = {
         "Droid": ("skill", "Skill"),
         "Devin": ("skill", "Skill"),
         "Warp": ("skill", "Skill"),
+        "Cursor": ("skill", "Skill"),
     },
     "Ponytail": {
         "Claude": ("plugin", "Plugin"),
@@ -68,6 +71,7 @@ MATRIX: dict[str, dict[str, tuple[str, str]]] = {
         "Droid": ("skill", "Skill"),
         "Devin": ("skill", "Skill"),
         "Warp": ("skill", "Skill"),
+        "Cursor": ("skill", "Skill"),
     },
     "CodeGraph": {
         "Claude": ("mcp", "MCP + Allow"),
@@ -78,6 +82,7 @@ MATRIX: dict[str, dict[str, tuple[str, str]]] = {
         "Droid": ("mcp", "MCP + Hook"),
         "Devin": ("mcp", "MCP"),
         "Warp": ("mcp", "MCP"),
+        "Cursor": ("mcp", "MCP"),
     },
     "Context-Mode": {
         "Claude": ("mcp", "MCP + Allow"),
@@ -88,6 +93,7 @@ MATRIX: dict[str, dict[str, tuple[str, str]]] = {
         "Droid": ("mcp", "MCP"),
         "Devin": ("mcp", "MCP"),
         "Warp": ("mcp", "MCP"),
+        "Cursor": ("mcp", "MCP"),
     },
     "Principles": {a: ("instr", "Instr.") for a in AGENTS},
 }

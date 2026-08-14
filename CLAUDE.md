@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-TokSave is a Rust CLI (`src/`) that installs and wires token-saving tools into AI coding agents. It targets 8 agents (Claude Code, OpenCode, Codex, Antigravity, GitHub Copilot, Droid, Devin, Warp) and wires RTK, Caveman, CodeGraph, Context-Mode, Ponytail, and Principles.
+TokSave is a Rust CLI (`src/`) that installs and wires token-saving tools into AI coding agents. It targets 9 agents (Claude Code, OpenCode, Codex, Antigravity, GitHub Copilot, Droid, Devin, Warp, Cursor CLI) and wires RTK, Caveman, CodeGraph, Context-Mode, Ponytail, and Principles.
 
 Node.js >= 22 is needed for full install flows involving npm-based tools (`context-mode`, `codegraph`, `ponytail`).
 

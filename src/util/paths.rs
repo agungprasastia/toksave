@@ -334,6 +334,55 @@ pub fn warp_desktop_paths() -> Vec<PathBuf> {
     }
 }
 
+pub struct CursorPaths {
+    pub dir: PathBuf,
+    pub hooks_file: PathBuf,
+    pub mcp_config: PathBuf,
+    pub cli_config: PathBuf,
+}
+
+pub fn cursor_paths() -> CursorPaths {
+    let dir = if let Some(d) = env::var_os("CURSOR_CONFIG_DIR") {
+        PathBuf::from(d)
+    } else if !cfg!(windows)
+        && let Some(xdg) = env::var_os("XDG_CONFIG_HOME")
+    {
+        PathBuf::from(xdg).join("cursor")
+    } else {
+        home().join(".cursor")
+    };
+    CursorPaths {
+        hooks_file: dir.join("hooks.json"),
+        mcp_config: dir.join("mcp.json"),
+        cli_config: dir.join("cli-config.json"),
+        dir,
+    }
+}
+
+pub fn cursor_known_bin_dirs() -> Vec<PathBuf> {
+    vec![
+        home().join(".local").join("bin"),
+        home().join(".cursor").join("bin"),
+    ]
+}
+
+pub fn cursor_desktop_paths() -> Vec<PathBuf> {
+    if cfg!(windows) {
+        if let Some(local) = env::var_os("LOCALAPPDATA") {
+            let base = PathBuf::from(local).join("Programs");
+            return vec![
+                base.join("cursor").join("Cursor.exe"),
+                base.join("Cursor").join("Cursor.exe"),
+            ];
+        }
+        vec![]
+    } else if cfg!(target_os = "macos") {
+        vec![PathBuf::from("/Applications/Cursor.app")]
+    } else {
+        vec![]
+    }
+}
+
 pub fn local_bin() -> PathBuf {
     if cfg!(windows) {
         if let Some(la) = env::var_os("LOCALAPPDATA") {
