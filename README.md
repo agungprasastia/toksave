@@ -55,7 +55,7 @@ toksave handles the wiring so you can focus on the code.
       <td align="center" width="140"><img src="assets/agents/warp.png" width="56" alt="Warp" /><br/><b>Warp / Oz</b><br/><sub>✅ Supported</sub></td>
     </tr>
     <tr>
-      <td align="center" width="140"><br/><b>Cursor CLI</b><br/><sub>✅ Supported</sub></td>
+      <td align="center" width="140"><img src="assets/agents/cursor.png" width="56" alt="Cursor CLI" /><br/><b>Cursor CLI</b><br/><sub>✅ Supported</sub></td>
     </tr>
   </table>
 </div>

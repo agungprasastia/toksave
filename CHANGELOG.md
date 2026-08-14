@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles.
+- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles, with official brand icon `assets/agents/cursor.png`.
 
 ## [1.0.3] - 2026-08-08
 
