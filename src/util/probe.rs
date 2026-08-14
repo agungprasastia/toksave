@@ -11,7 +11,7 @@ use crate::registry::AgentId;
 use crate::util::detect::find_binary;
 use crate::util::paths::{
     antigravity_mcp_files, antigravity_paths, claude_paths, codex_paths, copilot_paths,
-    cursor_paths, devin_paths, droid_paths, opencode_paths, warp_paths,
+    cursor_paths, devin_paths, droid_paths, opencode_paths, warp_mcp_files, warp_paths,
 };
 use crate::util::toml::read_toml_file;
 
@@ -261,7 +261,7 @@ fn probe_files(agent: AgentId) -> Vec<PathBuf> {
         AgentId::Warp => {
             let p = warp_paths();
             v.push(p.hooks_file);
-            v.push(p.mcp_config);
+            v.extend(warp_mcp_files());
         }
         AgentId::Cursor => {
             let p = cursor_paths();

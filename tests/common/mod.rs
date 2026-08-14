@@ -63,12 +63,12 @@ pub fn setup() -> TestEnvGuard {
         "USERPROFILE",
         "APPDATA",
         "LOCALAPPDATA",
+        "XDG_CONFIG_HOME",
         "TOKSAVE_CACHE_DIR",
         "PATH",
         "TOKSAVE_TEST",
         "TOKSAVE_TEST_RTK_INSTALL",
         "CURSOR_CONFIG_DIR",
-        "XDG_CONFIG_HOME",
     ] {
         old.push((k.to_string(), std::env::var_os(k)));
     }
@@ -78,12 +78,12 @@ pub fn setup() -> TestEnvGuard {
         std::env::set_var("USERPROFILE", &home);
         std::env::set_var("APPDATA", root.join("AppData").join("Roaming"));
         std::env::set_var("LOCALAPPDATA", root.join("AppData").join("Local"));
+        std::env::set_var("XDG_CONFIG_HOME", home.join(".config"));
         std::env::set_var("TOKSAVE_CACHE_DIR", &cache);
         std::env::set_var("PATH", &empty_bin);
         std::env::set_var("TOKSAVE_TEST", "1");
         std::env::remove_var("TOKSAVE_TEST_RTK_INSTALL");
         std::env::remove_var("CURSOR_CONFIG_DIR");
-        std::env::remove_var("XDG_CONFIG_HOME");
     }
 
     TestEnvGuard {

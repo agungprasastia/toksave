@@ -3,8 +3,13 @@ use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::{Result, ToksaveError};
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
-use crate::util::paths::{toksave_abs, warp_desktop_paths, warp_known_bin_dirs, warp_paths};
+use crate::util::paths::{
+    toksave_abs, warp_cli_paths, warp_desktop_paths, warp_known_bin_dirs, warp_mcp_files,
+    warp_paths,
+};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
+use serde_json::Value;
+use std::path::{Path, PathBuf};
 
 pub struct WarpAgent;
 
@@ -20,11 +25,104 @@ impl Default for WarpAgent {
     }
 }
 
+struct FileBackup {
+    path: PathBuf,
+    previous: Option<Vec<u8>>,
+    existed: bool,
+}
+
+fn restore_backups(backups: &[FileBackup]) {
+    for b in backups.iter().rev() {
+        if b.existed {
+            if let Some(bytes) = &b.previous {
+                let _ = std::fs::write(&b.path, bytes);
+            }
+        } else {
+            let _ = std::fs::remove_file(&b.path);
+        }
+    }
+}
+
+fn backup_file(path: &Path) -> FileBackup {
+    let existed = path.exists();
+    FileBackup {
+        path: path.to_path_buf(),
+        previous: if existed {
+            std::fs::read(path).ok()
+        } else {
+            None
+        },
+        existed,
+    }
+}
+
+fn mcp_file_has(path: &Path, tool: &str) -> bool {
+    read_json_file(path)
+        .ok()
+        .flatten()
+        .and_then(|c| c.get("mcpServers").cloned())
+        .and_then(|m| m.get(tool).cloned())
+        .is_some()
+}
+
+fn mcp_has_all(tool: &str) -> bool {
+    let files = warp_mcp_files();
+    !files.is_empty() && files.iter().all(|f| mcp_file_has(f, tool))
+}
+
+fn upsert_mcp_all(tool: &str, entry: Value) -> Result<()> {
+    let files = warp_mcp_files();
+    let mut backups = Vec::new();
+    for path in files {
+        backups.push(backup_file(&path));
+        let result = (|| {
+            let mut cfg = read_json_file(&path)?.unwrap_or_else(|| serde_json::json!({}));
+            let servers = get_or_create_object(&mut cfg, "mcpServers");
+            servers[tool] = entry.clone();
+            write_json_file(&path, &cfg)
+        })();
+        if let Err(e) = result {
+            restore_backups(&backups);
+            return Err(e);
+        }
+    }
+    Ok(())
+}
+
+fn remove_mcp_all(tool: &str) -> Result<()> {
+    let files = warp_mcp_files();
+    let mut backups = Vec::new();
+    for path in files {
+        if !path.exists() {
+            continue;
+        }
+        backups.push(backup_file(&path));
+        let result = (|| {
+            if let Some(mut cfg) = read_json_file(&path)? {
+                if let Some(mcp) = cfg.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
+                    mcp.remove(tool);
+                }
+                write_json_pruned(&path, &cfg)?;
+            }
+            Ok::<(), ToksaveError>(())
+        })();
+        if let Err(e) = result {
+            restore_backups(&backups);
+            return Err(e);
+        }
+    }
+    Ok(())
+}
+
 impl Agent for WarpAgent {
     fn detect(&self) -> Detection {
         let p = warp_paths();
-        let has_cli = find_binary_in("warp", &warp_known_bin_dirs()).is_some();
-        let has_desktop = warp_desktop_paths().iter().any(|p| p.exists());
+        let cli = warp_cli_paths();
+        let has_warp_bin = find_binary_in("warp", &warp_known_bin_dirs()).is_some();
+        let has_oz_bin = find_binary_in("oz", &warp_known_bin_dirs()).is_some();
+        let has_cli = has_warp_bin || has_oz_bin;
+        let has_desktop = std::env::var("TOKSAVE_TEST").is_err()
+            && warp_desktop_paths().iter().any(|p| p.exists());
         if has_cli && has_desktop {
             return Detection {
                 installed: true,
@@ -43,8 +141,9 @@ impl Agent for WarpAgent {
                 source: "desktop".to_string(),
             };
         }
-        let has_config = std::env::var("TOKSAVE_TEST").is_ok() && p.dir.exists();
-        let has_mcp = p.mcp_config.exists();
+        let has_config =
+            std::env::var("TOKSAVE_TEST").is_ok() && (p.dir.exists() || cli.dir.exists());
+        let has_mcp = warp_mcp_files().iter().any(|f| f.exists());
         if has_config || has_mcp {
             Detection {
                 installed: true,
@@ -66,26 +165,24 @@ impl Agent for WarpAgent {
 
         match tool {
             ToolId::Codegraph => {
-                let mut cfg =
-                    read_json_file(&p.mcp_config)?.unwrap_or_else(|| serde_json::json!({}));
-                let servers = get_or_create_object(&mut cfg, "mcpServers");
-                servers["codegraph"] = serde_json::json!({
-                    "command": toksave_abs(),
-                    "args": ["runmcp", "--agent", "warp", "codegraph", "serve", "--mcp"]
-                });
-                write_json_file(&p.mcp_config, &cfg)?;
+                upsert_mcp_all(
+                    "codegraph",
+                    serde_json::json!({
+                        "command": toksave_abs(),
+                        "args": ["runmcp", "--agent", "warp", "codegraph", "serve", "--mcp"]
+                    }),
+                )?;
                 write_owner("warp", "codegraph")?;
                 Ok(true)
             }
             ToolId::ContextMode => {
-                let mut cfg =
-                    read_json_file(&p.mcp_config)?.unwrap_or_else(|| serde_json::json!({}));
-                let servers = get_or_create_object(&mut cfg, "mcpServers");
-                servers["context-mode"] = serde_json::json!({
-                    "command": toksave_abs(),
-                    "args": ["runmcp", "--agent", "warp", "context-mode"]
-                });
-                write_json_file(&p.mcp_config, &cfg)?;
+                upsert_mcp_all(
+                    "context-mode",
+                    serde_json::json!({
+                        "command": toksave_abs(),
+                        "args": ["runmcp", "--agent", "warp", "context-mode"]
+                    }),
+                )?;
                 write_owner("warp", "context-mode")?;
                 Ok(true)
             }
@@ -131,22 +228,12 @@ impl Agent for WarpAgent {
         let p = warp_paths();
         match tool {
             ToolId::Codegraph => {
-                if let Some(mut cfg) = read_json_file(&p.mcp_config)? {
-                    if let Some(mcp) = cfg.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
-                        mcp.remove("codegraph");
-                    }
-                    write_json_pruned(&p.mcp_config, &cfg)?;
-                }
+                remove_mcp_all("codegraph")?;
                 remove_owner("warp", "codegraph")?;
                 Ok(true)
             }
             ToolId::ContextMode => {
-                if let Some(mut cfg) = read_json_file(&p.mcp_config)? {
-                    if let Some(mcp) = cfg.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
-                        mcp.remove("context-mode");
-                    }
-                    write_json_pruned(&p.mcp_config, &cfg)?;
-                }
+                remove_mcp_all("context-mode")?;
                 remove_owner("warp", "context-mode")?;
                 Ok(true)
             }
@@ -174,20 +261,9 @@ impl Agent for WarpAgent {
 
     fn verify(&self, tool: ToolId) -> Option<bool> {
         let p = warp_paths();
-        let cfg = read_json_file(&p.mcp_config).ok().flatten();
         match tool {
-            ToolId::Codegraph => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("codegraph"))
-                    .is_some(),
-            ),
-            ToolId::ContextMode => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("context-mode"))
-                    .is_some(),
-            ),
+            ToolId::Codegraph => Some(mcp_has_all("codegraph")),
+            ToolId::ContextMode => Some(mcp_has_all("context-mode")),
             ToolId::Caveman => Some(has_owner("warp", "caveman")),
             ToolId::Rtk => {
                 let hcfg = read_json_file(&p.hooks_file).ok().flatten();

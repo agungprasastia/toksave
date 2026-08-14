@@ -16,7 +16,7 @@
 - **GitHub Copilot** (`mcp.json`, `hooks.json`, instructions)
 - **Factory Droid** (`mcp.json`, `hooks.json`, instructions)
 - **Devin / Cascade** (`mcp.json`, `hooks.json`, instructions)
-- **Warp / Oz** (`mcp_config.json`, `hooks_file`, instructions)
+- **Warp / Oz** (desktop `mcp.json` + `.mcp.json`, Agent CLI `.mcp.json`, `hooks.json`, instructions)
 - **Cursor CLI** (`~/.cursor/hooks.json`, `mcp.json`, `cli-config.json`, `AGENTS.md`)
 
 ### Supported Tools (6)
