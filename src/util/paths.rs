@@ -20,6 +20,7 @@ pub struct ClaudePaths {
     pub settings: PathBuf,
     pub skills_dir: PathBuf,
     pub agents_md: PathBuf,
+    pub claude_md: PathBuf,
 }
 
 pub fn claude_paths() -> ClaudePaths {
@@ -30,6 +31,7 @@ pub fn claude_paths() -> ClaudePaths {
         settings: dir.join("settings.json"),
         skills_dir: dir.join("skills"),
         agents_md: dir.join("AGENTS.md"),
+        claude_md: dir.join("CLAUDE.md"),
         dir,
     }
 }
@@ -226,9 +228,12 @@ pub struct DroidPaths {
     pub mcp_config: PathBuf,
 }
 
+/// Factory Droid's real user-scoped config directory is `~/.factory` (confirmed
+/// by docs.factory.ai/harness/hooks and rtk-ai/rtk#912) -- not `~/.factory-droid`,
+/// which no version of the Droid CLI ever reads.
 pub fn droid_paths() -> DroidPaths {
     let h = home();
-    let dir = h.join(".factory-droid");
+    let dir = h.join(".factory");
     DroidPaths {
         hooks_file: dir.join("hooks.json"),
         mcp_config: dir.join("mcp.json"),
@@ -238,6 +243,12 @@ pub fn droid_paths() -> DroidPaths {
 
 pub fn droid_known_bin_dirs() -> Vec<PathBuf> {
     vec![home().join(".local").join("bin")]
+}
+
+/// Pre-fix location toksave wired Droid's RTK hook to (`~/.factory-droid/hooks.json`), which
+/// no Droid CLI version ever reads. Kept around only so wire/unwire can clean up the orphan.
+pub fn droid_legacy_hooks_file() -> PathBuf {
+    home().join(".factory-droid").join("hooks.json")
 }
 
 pub fn droid_desktop_paths() -> Vec<PathBuf> {
@@ -262,14 +273,31 @@ pub struct DevinPaths {
     pub dir: PathBuf,
     pub hooks_file: PathBuf,
     pub mcp_config: PathBuf,
+    /// Devin CLI's real user-level config file (docs.devin.ai/cli/extensibility/hooks/overview):
+    /// `~/.config/devin/config.json`, or `%APPDATA%\devin\config.json` on Windows. Hooks live
+    /// nested under this file's `"hooks"` key -- there is no standalone `~/.devin/hooks.json`.
+    pub config: PathBuf,
 }
 
 pub fn devin_paths() -> DevinPaths {
     let h = home();
     let dir = h.join(".devin");
+    let config = if cfg!(windows) {
+        env::var_os("APPDATA")
+            .map(|a| PathBuf::from(a).join("devin").join("config.json"))
+            .unwrap_or_else(|| {
+                h.join("AppData")
+                    .join("Roaming")
+                    .join("devin")
+                    .join("config.json")
+            })
+    } else {
+        xdg_config_home().join("devin").join("config.json")
+    };
     DevinPaths {
         hooks_file: dir.join("hooks.json"),
         mcp_config: dir.join("mcp.json"),
+        config,
         dir,
     }
 }
@@ -383,6 +411,14 @@ pub fn warp_mcp_files() -> Vec<PathBuf> {
 
 pub fn warp_known_bin_dirs() -> Vec<PathBuf> {
     vec![home().join(".local").join("bin")]
+}
+
+/// Legacy Linux Warp CLI config dir (`~/.config/warp`) from before the CLI moved to
+/// `~/.config/warp-terminal/cli`. toksave never wires here, but older installs may still
+/// have `hooks.json`/`mcp.json` here pointing at a dead `/$bunfs/root/toksave` binary path.
+pub fn warp_legacy_config_files() -> Vec<PathBuf> {
+    let dir = home().join(".config").join("warp");
+    vec![dir.join("hooks.json"), dir.join("mcp.json")]
 }
 
 pub fn warp_desktop_paths() -> Vec<PathBuf> {

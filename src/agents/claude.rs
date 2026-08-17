@@ -331,12 +331,14 @@ fn override_claude_rtk_hook() -> Result<()> {
     }
     allow_bash_pattern("Bash(rtk *)")?;
 
-    // Remove RTK.md + strip @RTK.md ref from AGENTS.md
+    // Remove RTK.md + strip dangling @RTK.md refs from both AGENTS.md and CLAUDE.md
+    // (older RTK versions injected the reference into CLAUDE.md instead of AGENTS.md).
     let rtk_md = p.dir.join("RTK.md");
     if rtk_md.exists() {
         let _ = std::fs::remove_file(&rtk_md);
     }
     strip_rtk_ref_from_md(&p.agents_md);
+    strip_rtk_ref_from_md(&p.claude_md);
     Ok(())
 }
 

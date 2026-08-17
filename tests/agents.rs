@@ -4,7 +4,10 @@ use toksave::registry::{
 };
 use toksave::util::errors::ToksaveErrorKind;
 use toksave::util::json::read_json_file;
-use toksave::util::paths::{cursor_paths, warp_cli_paths, warp_mcp_files, warp_paths, write_file};
+use toksave::util::paths::{
+    claude_paths, copilot_paths, cursor_paths, devin_paths, droid_paths, warp_cli_paths,
+    warp_mcp_files, warp_paths, write_file,
+};
 
 mod common;
 
@@ -204,6 +207,263 @@ fn test_warp_detect_oz_binary() {
     let d = detect_agent(AgentId::Warp);
     assert!(d.installed);
     assert_eq!(d.source, "cli");
+}
+
+#[tokio::test]
+async fn test_droid_rtk_wires_under_dot_factory_dir() {
+    let _env = common::setup();
+    let p = droid_paths();
+    assert!(
+        p.dir.ends_with(".factory"),
+        "Droid's real config dir is ~/.factory, not ~/.factory-droid, got {}",
+        p.dir.display()
+    );
+
+    wire_tool(AgentId::Droid, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+    let cfg = read_json_file(&p.hooks_file).unwrap().unwrap();
+    let arr = cfg["PreToolUse"].as_array().expect("PreToolUse");
+    assert!(arr.iter().any(|g| {
+        g.get("matcher").and_then(|m| m.as_str()) == Some("Execute")
+            && g.get("hooks")
+                .and_then(|h| h.as_array())
+                .is_some_and(|hooks| {
+                    hooks.iter().any(|h| {
+                        h.get("command")
+                            .and_then(|c| c.as_str())
+                            .is_some_and(|c| c.contains("rtk-hook droid"))
+                    })
+                })
+    }));
+
+    unwire_tool(AgentId::Droid, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+    assert_eq!(verify_tool(AgentId::Droid, ToolId::Rtk), Some(false));
+}
+
+#[tokio::test]
+async fn test_devin_rtk_wires_under_config_devin_with_exec_matcher() {
+    let _env = common::setup();
+    let p = devin_paths();
+
+    wire_tool(AgentId::Devin, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+    assert!(
+        !p.hooks_file.exists(),
+        "Devin CLI has no standalone hooks.json -- hooks live in config.json"
+    );
+    let cfg = read_json_file(&p.config).unwrap().unwrap();
+    let arr = cfg["hooks"]["PreToolUse"].as_array().expect("PreToolUse");
+    assert!(arr.iter().any(|g| {
+        g.get("matcher").and_then(|m| m.as_str()) == Some("exec")
+            && g.get("hooks")
+                .and_then(|h| h.as_array())
+                .is_some_and(|hooks| {
+                    hooks.iter().any(|h| {
+                        h.get("command")
+                            .and_then(|c| c.as_str())
+                            .is_some_and(|c| c.contains("rtk-hook devin"))
+                    })
+                })
+    }));
+    assert_eq!(verify_tool(AgentId::Devin, ToolId::Rtk), Some(true));
+
+    unwire_tool(AgentId::Devin, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+    assert_eq!(verify_tool(AgentId::Devin, ToolId::Rtk), Some(false));
+}
+
+#[tokio::test]
+async fn test_warp_rtk_wire_writes_no_hook_file() {
+    let _env = common::setup();
+    let p = warp_paths();
+
+    wire_tool(AgentId::Warp, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+    assert!(
+        !p.hooks_file.exists(),
+        "Warp has no confirmed hook engine to wire RTK against"
+    );
+    assert_eq!(verify_tool(AgentId::Warp, ToolId::Rtk), Some(true));
+
+    unwire_tool(AgentId::Warp, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+    assert_eq!(verify_tool(AgentId::Warp, ToolId::Rtk), Some(true));
+}
+
+#[tokio::test]
+async fn test_warp_rtk_wire_scrubs_legacy_bunfs_entries() {
+    let _env = common::setup();
+    let legacy_dir = _env.home().join(".config").join("warp");
+    std::fs::create_dir_all(&legacy_dir).unwrap();
+    write_file(
+        &legacy_dir.join("hooks.json"),
+        r#"{
+            "PreToolUse": [
+                { "matcher": "Bash", "hooks": [{ "type": "command", "command": "echo user-owned" }] },
+                { "matcher": "Execute", "hooks": [{ "type": "command", "command": "/$bunfs/root/toksave rtk-hook warp" }] }
+            ]
+        }"#,
+    )
+    .unwrap();
+    write_file(
+        &legacy_dir.join("mcp.json"),
+        r#"{
+            "mcpServers": {
+                "codegraph": { "command": "/$bunfs/root/toksave", "args": ["runmcp", "codegraph", "serve", "--mcp"] },
+                "other": { "command": "/usr/bin/other-mcp" }
+            }
+        }"#,
+    )
+    .unwrap();
+
+    wire_tool(AgentId::Warp, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+
+    let hooks_cfg = read_json_file(&legacy_dir.join("hooks.json"))
+        .unwrap()
+        .unwrap();
+    let arr = hooks_cfg["PreToolUse"].as_array().expect("PreToolUse");
+    assert_eq!(arr.len(), 1, "only the dead bunfs entry should be scrubbed");
+    assert_eq!(
+        arr[0]["hooks"][0]["command"].as_str().unwrap(),
+        "echo user-owned"
+    );
+
+    let mcp_cfg = read_json_file(&legacy_dir.join("mcp.json"))
+        .unwrap()
+        .unwrap();
+    let servers = mcp_cfg["mcpServers"].as_object().expect("mcpServers");
+    assert!(
+        !servers.contains_key("codegraph"),
+        "dead bunfs mcp entry should be scrubbed"
+    );
+    assert!(
+        servers.contains_key("other"),
+        "user-owned mcp entry should survive"
+    );
+}
+
+#[tokio::test]
+async fn test_copilot_rtk_writes_native_hooks_file() {
+    let _env = common::setup();
+    let p = copilot_paths();
+    // Simulate the pre-fix typo'd file to confirm it gets cleaned up on wire.
+    std::fs::create_dir_all(&p.hooks_dir).unwrap();
+    write_file(&p.hooks_dir.join("tokless-rtk.json"), "{}").unwrap();
+
+    wire_tool(AgentId::Copilot, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+
+    assert!(!p.hooks_dir.join("tokless-rtk.json").exists());
+    let cfg = read_json_file(&p.hooks_dir.join("toksave-rtk.json"))
+        .unwrap()
+        .unwrap();
+    let arr = cfg["hooks"]["preToolUse"].as_array().expect("preToolUse");
+    assert!(arr.iter().any(|h| {
+        h.get("matcher").and_then(|m| m.as_str()) == Some("bash")
+            && h.get("command")
+                .and_then(|c| c.as_str())
+                .is_some_and(|c| c.contains("rtk-hook copilot"))
+    }));
+
+    unwire_tool(AgentId::Copilot, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+    assert_eq!(verify_tool(AgentId::Copilot, ToolId::Rtk), Some(false));
+}
+
+#[tokio::test]
+async fn test_claude_rtk_strips_dangling_rtk_ref_from_claude_md() {
+    let _env = common::setup();
+    let p = claude_paths();
+    std::fs::create_dir_all(&p.dir).unwrap();
+    write_file(&p.claude_md, "# Notes\n\n@RTK.md\n").unwrap();
+
+    wire_tool(AgentId::Claude, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+
+    let contents = std::fs::read_to_string(&p.claude_md).unwrap();
+    assert!(
+        !contents.contains("@RTK.md"),
+        "dangling @RTK.md ref should be stripped from CLAUDE.md, got: {contents}"
+    );
+    assert!(contents.contains("# Notes"));
+}
+
+#[tokio::test]
+async fn test_droid_rtk_wire_cleans_up_legacy_factory_droid_dir() {
+    let _env = common::setup();
+    let legacy = toksave::util::paths::droid_legacy_hooks_file();
+    std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+    write_file(
+        &legacy,
+        r#"{
+            "PreToolUse": [
+                { "matcher": "Bash", "hooks": [{ "type": "command", "command": "echo user-owned" }] },
+                { "matcher": "Execute", "hooks": [{ "type": "command", "command": "/old/toksave rtk-hook droid" }] }
+            ]
+        }"#,
+    )
+    .unwrap();
+
+    wire_tool(AgentId::Droid, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+
+    let cfg = read_json_file(&legacy).unwrap().unwrap();
+    let arr = cfg["PreToolUse"].as_array().expect("PreToolUse");
+    assert_eq!(
+        arr.len(),
+        1,
+        "only the stale toksave entry should be scrubbed"
+    );
+    assert_eq!(
+        arr[0]["hooks"][0]["command"].as_str().unwrap(),
+        "echo user-owned"
+    );
+}
+
+#[tokio::test]
+async fn test_devin_rtk_wire_cleans_up_legacy_devin_hooks_file() {
+    let _env = common::setup();
+    let legacy = devin_paths().hooks_file;
+    std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+    write_file(
+        &legacy,
+        r#"{
+            "PreToolUse": [
+                { "matcher": "X", "hooks": [{ "type": "command", "command": "echo user-owned" }] },
+                { "matcher": "Execute", "hooks": [{ "type": "command", "command": "/old/toksave rtk-hook devin" }] }
+            ]
+        }"#,
+    )
+    .unwrap();
+
+    wire_tool(AgentId::Devin, ToolId::Rtk, &RunOpts::default())
+        .await
+        .unwrap();
+
+    let cfg = read_json_file(&legacy).unwrap().unwrap();
+    let arr = cfg["PreToolUse"].as_array().expect("PreToolUse");
+    assert_eq!(
+        arr.len(),
+        1,
+        "only the stale toksave entry should be scrubbed"
+    );
+    assert_eq!(
+        arr[0]["hooks"][0]["command"].as_str().unwrap(),
+        "echo user-owned"
+    );
 }
 
 #[tokio::test]

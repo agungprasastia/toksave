@@ -3,8 +3,27 @@ use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
-use crate::util::paths::{droid_desktop_paths, droid_known_bin_dirs, droid_paths, toksave_abs};
+use crate::util::paths::{
+    droid_desktop_paths, droid_known_bin_dirs, droid_legacy_hooks_file, droid_paths, toksave_abs,
+};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
+
+/// Scrub a stale RTK hook entry from the pre-fix `~/.factory-droid/hooks.json` location.
+/// Best-effort: a corrupted legacy file is left alone rather than failing the whole call.
+fn cleanup_legacy_droid_hooks() {
+    let path = droid_legacy_hooks_file();
+    if !path.exists() {
+        return;
+    }
+    let Ok(Some(mut cfg)) = read_json_file(&path) else {
+        return;
+    };
+    let before = cfg.clone();
+    crate::util::json::remove_pretool_use(&mut cfg, "rtk-hook droid");
+    if cfg != before {
+        let _ = write_json_pruned(&path, &cfg);
+    }
+}
 
 pub struct DroidAgent;
 
@@ -99,6 +118,7 @@ impl Agent for DroidAgent {
                 });
                 crate::util::json::merge_pretool_use(&mut cfg, hook_entry, "rtk-hook droid");
                 write_json_file(&p.hooks_file, &cfg)?;
+                cleanup_legacy_droid_hooks();
                 Ok(true)
             }
             ToolId::Ponytail => {
@@ -144,6 +164,7 @@ impl Agent for DroidAgent {
                     crate::util::json::remove_pretool_use(&mut cfg, "rtk-hook droid");
                     write_json_pruned(&p.hooks_file, &cfg)?;
                 }
+                cleanup_legacy_droid_hooks();
                 Ok(true)
             }
             ToolId::Ponytail => {

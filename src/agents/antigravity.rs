@@ -103,7 +103,7 @@ impl Agent for AntigravityAgent {
                 let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
                 cfg["rtk"] = serde_json::json!({
                     "PreToolUse": [{
-                        "matcher": "^(Bash|run_command|execute_command|cmd|sh|pwsh)$",
+                        "matcher": "^(Bash|run_command|execute_command|cmd|sh|pwsh|run_shell_command)$",
                         "hooks": [{ "type": "command", "command": format!("{} rtk-hook agy", toksave_abs()), "timeout": 10 }]
                     }]
                 });
