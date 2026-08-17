@@ -16,7 +16,7 @@
 - **GitHub Copilot** (`mcp.json`, `hooks.json`, instructions)
 - **Factory Droid** (`mcp.json`, `hooks.json`, instructions)
 - **Devin / Cascade** (`mcp.json`, `hooks.json`, instructions)
-- **Warp / Oz** (`mcp_config.json`, `hooks_file`, instructions)
+- **Warp / Oz** (desktop `mcp.json` + `.mcp.json`, Agent CLI `.mcp.json`, `hooks.json`, instructions)
 
 ### Supported Tools (6)
 - **RTK**: CLI proxy for compressing tool output (60-90% token savings).

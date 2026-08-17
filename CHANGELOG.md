@@ -5,6 +5,12 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Warp Agent CLI MCP wiring**: Warp / Oz now writes CodeGraph and Context-Mode to the official desktop file (`~/.warp/.mcp.json`) and the standalone Agent CLI MCP file, in addition to the existing `~/.warp/mcp.json`. Detection also treats the `oz` binary and CLI config dir as installed. Doctor probe includes the new MCP paths.
+
 ## [1.0.3] - 2026-08-08
 
 ### Fixed

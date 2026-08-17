@@ -68,8 +68,10 @@ This document provides a detailed technical reference on how **TokSave** wires e
 ---
 
 ### 8. Warp / Oz
-- **Configuration Path**: `~/.warp/`
-- **Wiring**: Updates `mcp_config.json` and `hooks_file`.
+- **Desktop**: `~/.warp/mcp.json` (legacy TokSave path) and official file-based MCP at `~/.warp/.mcp.json`.
+- **Warp Agent CLI**: platform MCP file (`~/.warp_cli/.mcp.json` on macOS; `${XDG_CONFIG_HOME:-~/.config}/warp-terminal/cli/.mcp.json` on Linux; `%LOCALAPPDATA%\warp\Warp\config\cli\.mcp.json` on Windows), plus the documented `~/.warp_cli/.mcp.json` path on every platform.
+- **Oz cloud**: same `warp` / `oz` agent id. Cloud MCP is per-run (`oz agent run --mcp` / agent YAML) and is not written by TokSave. Shared rules/skills still apply.
+- **Wiring**: MCP for CodeGraph and Context-Mode on every local Warp MCP file; RTK via `~/.warp/hooks.json`; instructions via `~/.warp/instructions.md`.
 
 ---
 
