@@ -83,14 +83,24 @@ impl Agent for CopilotAgent {
                 Ok(true)
             }
             ToolId::Rtk => {
-                let rtk_file = p.hooks_dir.join("tokless-rtk.json");
+                // GitHub Copilot CLI's own hook schema (docs.github.com/en/copilot/reference/
+                // hooks-reference): camelCase event key "preToolUse", each entry supports a
+                // `matcher` regex tested against `toolName` ("bash" for the shell tool) and a
+                // cross-platform `command` fallback field.
+                let rtk_file = p.hooks_dir.join("toksave-rtk.json");
                 let hook_content = serde_json::json!({
                     "version": 1,
                     "hooks": {
-                        "PreToolUse": [{ "type": "command", "command": format!("{} rtk-hook copilot", toksave_abs()), "timeout": 10 }]
+                        "preToolUse": [{
+                            "type": "command",
+                            "matcher": "bash",
+                            "command": format!("{} rtk-hook copilot", toksave_abs()),
+                            "timeoutSec": 10
+                        }]
                     }
                 });
                 write_json_file(&rtk_file, &hook_content)?;
+                let _ = std::fs::remove_file(p.hooks_dir.join("tokless-rtk.json"));
                 Ok(true)
             }
             ToolId::Ponytail => {
@@ -132,6 +142,7 @@ impl Agent for CopilotAgent {
                 Ok(true)
             }
             ToolId::Rtk => {
+                let _ = std::fs::remove_file(p.hooks_dir.join("toksave-rtk.json"));
                 let _ = std::fs::remove_file(p.hooks_dir.join("tokless-rtk.json"));
                 Ok(true)
             }
@@ -163,7 +174,7 @@ impl Agent for CopilotAgent {
                     .is_some(),
             ),
             ToolId::Caveman => Some(has_owner("copilot", "caveman")),
-            ToolId::Rtk => Some(p.hooks_dir.join("tokless-rtk.json").exists()),
+            ToolId::Rtk => Some(p.hooks_dir.join("toksave-rtk.json").exists()),
             ToolId::Ponytail => Some(has_owner("copilot", "ponytail")),
             ToolId::Principles => Some(has_owner("copilot", "principles")),
         }

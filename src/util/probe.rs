@@ -255,7 +255,9 @@ fn probe_files(agent: AgentId) -> Vec<PathBuf> {
         }
         AgentId::Devin => {
             let p = devin_paths();
-            v.push(p.hooks_file);
+            // Devin's real RTK hook lives nested under "hooks" in its own config.json
+            // (docs.devin.ai/cli/extensibility/hooks/overview); hooks_file is legacy/unused.
+            v.push(p.config);
             v.push(p.mcp_config);
         }
         AgentId::Warp => {

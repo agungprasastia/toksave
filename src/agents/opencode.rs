@@ -114,12 +114,23 @@ export const Plugin = async () => ({
             }
             ToolId::Rtk => {
                 let plugin_file = p.plugins_dir.join("toksave-rtk.js");
+                // Resolve rtk's absolute path the same way toksave's own hook does: a bare
+                // `rtk` prefix fails when OpenCode was launched before rtk's install dir was
+                // added to PATH (fresh install, GUI-launched session, stale shell PATH cache).
                 let rtk_plugin = r#"export const Plugin = async () => ({
   "tool.execute.before": async (input, output) => {
     if (input.tool !== "bash") return;
     const command = String(output.args.command ?? "").trim();
     if (!command || command === "rtk" || command.startsWith("rtk ")) return;
-    output.args.command = `rtk ${command}`;
+    const os = require("node:os");
+    const path = require("node:path");
+    const fs = require("node:fs");
+    let rtkBin = "rtk";
+    const localPath = process.platform === "win32"
+      ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "Programs", "toksave", "rtk.exe")
+      : path.join(os.homedir(), ".local", "bin", "rtk");
+    if (fs.existsSync(localPath)) rtkBin = localPath.replace(/\\/g, "/");
+    output.args.command = `${rtkBin} ${command}`;
   },
 });
 "#;
