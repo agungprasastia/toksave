@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles, with official brand icon `assets/agents/cursor.png`. ([@jondmarien](https://github.com/jondmarien) in [#26](https://github.com/agungprasastia/toksave/pull/26))
-- **Warp Agent CLI MCP wiring**: Warp / Oz now writes CodeGraph and Context-Mode to the official desktop file (`~/.warp/.mcp.json`) and the standalone Agent CLI MCP file, in addition to the existing `~/.warp/mcp.json`. Detection also treats the `oz` binary and CLI config dir as installed. Doctor probe includes the new MCP paths. ([@jondmarien](https://github.com/jondmarien) in [#25](https://github.com/agungprasastia/toksave/pull/25))
+- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles, with official brand icon `assets/agents/cursor.png`. Special thanks to [@jondmarien](https://github.com/jondmarien) in [#26](https://github.com/agungprasastia/toksave/pull/26).
+- **Warp Agent CLI MCP wiring**: Warp / Oz now writes CodeGraph and Context-Mode to the official desktop file (`~/.warp/.mcp.json`) and the standalone Agent CLI MCP file, in addition to the existing `~/.warp/mcp.json`. Detection also treats the `oz` binary and CLI config dir as installed. Doctor probe includes the new MCP paths. Special thanks to [@jondmarien](https://github.com/jondmarien) in [#25](https://github.com/agungprasastia/toksave/pull/25).
+
+### Contributors
+
+- Huge thanks to [@jondmarien](https://github.com/jondmarien) for contributing support for Cursor CLI and Warp Agent CLI!
 
 ## [1.0.3] - 2026-08-08
 
