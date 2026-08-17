@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles, with official brand icon `assets/agents/cursor.png`.
+- **Warp Agent CLI MCP wiring**: Warp / Oz now writes CodeGraph and Context-Mode to the official desktop file (`~/.warp/.mcp.json`) and the standalone Agent CLI MCP file, in addition to the existing `~/.warp/mcp.json`. Detection also treats the `oz` binary and CLI config dir as installed. Doctor probe includes the new MCP paths.
 
 ## [1.0.3] - 2026-08-08
 

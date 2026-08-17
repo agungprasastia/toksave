@@ -300,6 +300,7 @@ pub struct WarpPaths {
     pub dir: PathBuf,
     pub hooks_file: PathBuf,
     pub mcp_config: PathBuf,
+    pub mcp_config_official: PathBuf,
 }
 
 pub fn warp_paths() -> WarpPaths {
@@ -308,8 +309,76 @@ pub fn warp_paths() -> WarpPaths {
     WarpPaths {
         hooks_file: dir.join("hooks.json"),
         mcp_config: dir.join("mcp.json"),
+        mcp_config_official: dir.join(".mcp.json"),
         dir,
     }
+}
+
+pub struct WarpCliPaths {
+    pub dir: PathBuf,
+    pub settings: PathBuf,
+    pub mcp_config: PathBuf,
+}
+
+fn xdg_config_home() -> PathBuf {
+    env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home().join(".config"))
+}
+
+/// Warp Agent CLI settings/MCP directory. Separate from the desktop app.
+pub fn warp_cli_paths() -> WarpCliPaths {
+    if cfg!(windows) {
+        let dir = env::var_os("LOCALAPPDATA")
+            .map(|l| {
+                PathBuf::from(l)
+                    .join("warp")
+                    .join("Warp")
+                    .join("config")
+                    .join("cli")
+            })
+            .unwrap_or_else(|| {
+                home()
+                    .join("AppData")
+                    .join("Local")
+                    .join("warp")
+                    .join("Warp")
+                    .join("config")
+                    .join("cli")
+            });
+        WarpCliPaths {
+            settings: dir.join("settings.toml"),
+            mcp_config: dir.join(".mcp.json"),
+            dir,
+        }
+    } else if cfg!(target_os = "macos") {
+        let dir = home().join(".warp_cli");
+        WarpCliPaths {
+            settings: dir.join("settings.toml"),
+            mcp_config: dir.join(".mcp.json"),
+            dir,
+        }
+    } else {
+        let dir = xdg_config_home().join("warp-terminal").join("cli");
+        WarpCliPaths {
+            settings: dir.join("settings.toml"),
+            mcp_config: dir.join(".mcp.json"),
+            dir,
+        }
+    }
+}
+
+/// Every MCP file TokSave manages for Warp: legacy desktop, official desktop,
+/// platform CLI, and the documented `~/.warp_cli/.mcp.json` path.
+pub fn warp_mcp_files() -> Vec<PathBuf> {
+    let p = warp_paths();
+    let cli = warp_cli_paths();
+    let mut files = vec![p.mcp_config, p.mcp_config_official, cli.mcp_config];
+    let documented = home().join(".warp_cli").join(".mcp.json");
+    if !files.contains(&documented) {
+        files.push(documented);
+    }
+    files
 }
 
 pub fn warp_known_bin_dirs() -> Vec<PathBuf> {
@@ -517,6 +586,45 @@ mod tests {
                 env::set_var("HOME", o);
             } else {
                 env::remove_var("HOME");
+            }
+        }
+    }
+
+    #[test]
+    fn warp_paths_include_official_and_cli_mcp() {
+        let _g = crate::util::env_test_lock();
+        let tmp = env::temp_dir().join("toksave-warp-paths-test");
+        fs::create_dir_all(&tmp).unwrap();
+        let old_home = env::var_os("HOME");
+        let old_xdg = env::var_os("XDG_CONFIG_HOME");
+        let old_local = env::var_os("LOCALAPPDATA");
+        unsafe {
+            env::set_var("HOME", &tmp);
+            env::set_var("XDG_CONFIG_HOME", tmp.join("xdg"));
+            env::set_var("LOCALAPPDATA", tmp.join("Local"));
+        }
+        let p = warp_paths();
+        assert_eq!(p.mcp_config, tmp.join(".warp").join("mcp.json"));
+        assert_eq!(p.mcp_config_official, tmp.join(".warp").join(".mcp.json"));
+        let cli = warp_cli_paths();
+        assert_eq!(cli.mcp_config.file_name().unwrap(), ".mcp.json");
+        let files = warp_mcp_files();
+        assert!(files.contains(&p.mcp_config));
+        assert!(files.contains(&p.mcp_config_official));
+        assert!(files.contains(&cli.mcp_config));
+        assert!(files.len() >= 3);
+        unsafe {
+            match old_home {
+                Some(o) => env::set_var("HOME", o),
+                None => env::remove_var("HOME"),
+            }
+            match old_xdg {
+                Some(o) => env::set_var("XDG_CONFIG_HOME", o),
+                None => env::remove_var("XDG_CONFIG_HOME"),
+            }
+            match old_local {
+                Some(o) => env::set_var("LOCALAPPDATA", o),
+                None => env::remove_var("LOCALAPPDATA"),
             }
         }
     }

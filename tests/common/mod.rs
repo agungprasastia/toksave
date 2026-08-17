@@ -63,6 +63,7 @@ pub fn setup() -> TestEnvGuard {
         "USERPROFILE",
         "APPDATA",
         "LOCALAPPDATA",
+        "XDG_CONFIG_HOME",
         "TOKSAVE_CACHE_DIR",
         "PATH",
         "TOKSAVE_TEST",
@@ -78,6 +79,7 @@ pub fn setup() -> TestEnvGuard {
         std::env::set_var("USERPROFILE", &home);
         std::env::set_var("APPDATA", root.join("AppData").join("Roaming"));
         std::env::set_var("LOCALAPPDATA", root.join("AppData").join("Local"));
+        std::env::set_var("XDG_CONFIG_HOME", home.join(".config"));
         std::env::set_var("TOKSAVE_CACHE_DIR", &cache);
         std::env::set_var("PATH", &empty_bin);
         std::env::set_var("TOKSAVE_TEST", "1");
