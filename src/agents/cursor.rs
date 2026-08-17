@@ -216,19 +216,7 @@ fn remove_mcp(tool_id: &str) -> Result<()> {
 
 fn allow_shell_rtk() -> Result<()> {
     let p = cursor_paths();
-    let mut cfg = read_json_file(&p.cli_config)?.unwrap_or_else(|| {
-        json!({
-            "version": 1,
-            "editor": { "vimMode": false },
-            "permissions": { "allow": [], "deny": [] }
-        })
-    });
-    if cfg.get("version").is_none() {
-        cfg["version"] = json!(1);
-    }
-    if cfg.get("editor").is_none() {
-        cfg["editor"] = json!({ "vimMode": false });
-    }
+    let mut cfg = read_json_file(&p.cli_config)?.unwrap_or_else(|| json!({}));
     let perms = get_or_create_object(&mut cfg, "permissions");
     let allow = perms
         .as_object_mut()
@@ -248,9 +236,13 @@ fn remove_shell_rtk() -> Result<()> {
     if let Some(perms) = cfg.get_mut("permissions").and_then(|p| p.as_object_mut()) {
         if let Some(allow) = perms.get_mut("allow").and_then(|a| a.as_array_mut()) {
             remove_from_array(allow, &json!(RTK_ALLOW));
-            if allow.is_empty() {
-                perms.remove("allow");
-            }
+        }
+        if perms
+            .get("allow")
+            .and_then(|a| a.as_array())
+            .is_some_and(|a| a.is_empty())
+        {
+            perms.remove("allow");
         }
         if perms.is_empty() {
             cfg.as_object_mut().expect("object").remove("permissions");
@@ -299,6 +291,12 @@ fn remove_cursor_pretool(cfg: &mut Value, marker: &str) {
     }
     if hooks.is_empty() {
         cfg.as_object_mut().expect("object").remove("hooks");
+    }
+    if cfg.get("hooks").is_none()
+        && cfg.get("version") == Some(&json!(1))
+        && cfg.as_object().is_some_and(|o| o.len() == 1)
+    {
+        cfg.as_object_mut().expect("object").remove("version");
     }
 }
 

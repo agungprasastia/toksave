@@ -70,6 +70,18 @@ async fn test_cursor_rtk_writes_native_pretooluse() {
         allow.iter().any(|v| v.as_str() == Some("Shell(rtk *)")),
         "expected Shell(rtk *) allow, got {cli}"
     );
+
+    toksave::registry::unwire_tool(AgentId::Cursor, ToolId::Rtk, &opts)
+        .await
+        .unwrap();
+    assert!(
+        !p.cli_config.exists(),
+        "cli-config.json should be pruned after unwire"
+    );
+    assert!(
+        !p.hooks_file.exists(),
+        "hooks.json should be pruned after unwire"
+    );
 }
 
 #[test]
