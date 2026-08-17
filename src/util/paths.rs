@@ -128,14 +128,12 @@ pub struct AntigravityPaths {
     pub hooks: PathBuf,
 }
 
+/// Antigravity CLI (`agy`) preserves Gemini CLI's directory namespace even though Gemini CLI
+/// itself is being discontinued (Google's own migration guide + antigravity-cli's CHANGELOG
+/// both confirm shared config lives under `~/.gemini/config/`, not `~/.antigravity` -- that
+/// directory is never created or read by any version of Antigravity CLI).
 pub fn antigravity_paths() -> AntigravityPaths {
-    let h = home();
-    let gemini = h.join(".gemini");
-    let dir = if gemini.exists() {
-        gemini
-    } else {
-        h.join(".antigravity")
-    };
+    let dir = home().join(".gemini");
     AntigravityPaths {
         hooks: dir.join("config").join("hooks.json"),
         dir,
@@ -182,12 +180,12 @@ pub fn antigravity_desktop_paths() -> Vec<PathBuf> {
     }
 }
 
+/// Antigravity CLI's real, documented MCP config file is `mcp_config.json` (confirmed at
+/// antigravity.google/docs/cli/gcli-migration: "Global servers: `~/.gemini/config/mcp_config.json`")
+/// -- not `mcp.json`.
 pub fn antigravity_mcp_files() -> Vec<PathBuf> {
     let p = antigravity_paths();
-    vec![
-        p.dir.join("mcp.json"),
-        p.dir.join("config").join("mcp.json"),
-    ]
+    vec![p.dir.join("config").join("mcp_config.json")]
 }
 
 pub fn antigravity_settings_files() -> Vec<PathBuf> {
@@ -663,5 +661,47 @@ mod tests {
                 None => env::remove_var("LOCALAPPDATA"),
             }
         }
+    }
+
+    #[test]
+    fn antigravity_paths_always_use_gemini_namespace() {
+        // Antigravity CLI keeps Gemini CLI's ~/.gemini namespace even with Gemini CLI
+        // discontinued; it never creates or reads ~/.antigravity, so toksave must not
+        // fall back there even when ~/.gemini doesn't exist yet (fresh install).
+        let _g = crate::util::env_test_lock();
+        let tmp = env::temp_dir().join("toksave-antigravity-paths-test");
+        fs::create_dir_all(&tmp).unwrap();
+        let old_home = env::var_os("HOME");
+        unsafe {
+            env::set_var("HOME", &tmp);
+        }
+
+        let p = antigravity_paths();
+        assert_eq!(p.dir, tmp.join(".gemini"));
+        assert_eq!(
+            p.hooks,
+            tmp.join(".gemini").join("config").join("hooks.json")
+        );
+
+        // Even if a legacy ~/.antigravity dir happens to exist, it must still resolve to
+        // ~/.gemini -- there is no version of Antigravity CLI that reads the former.
+        fs::create_dir_all(tmp.join(".antigravity")).unwrap();
+        let p2 = antigravity_paths();
+        assert_eq!(p2.dir, tmp.join(".gemini"));
+
+        let files = antigravity_mcp_files();
+        assert_eq!(files.len(), 1);
+        assert_eq!(
+            files[0],
+            tmp.join(".gemini").join("config").join("mcp_config.json")
+        );
+
+        unsafe {
+            match old_home {
+                Some(o) => env::set_var("HOME", o),
+                None => env::remove_var("HOME"),
+            }
+        }
+        fs::remove_dir_all(&tmp).ok();
     }
 }
