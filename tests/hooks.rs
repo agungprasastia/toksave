@@ -194,7 +194,11 @@ fn rtk_hook_uses_absolute_path_when_rtk_locally_installed() {
     let cmd = v["hookSpecificOutput"]["updatedInput"]["command"]
         .as_str()
         .unwrap();
-    assert_eq!(cmd, format!("{} git status", rtk_path.to_string_lossy()));
+    // The hook always normalizes to forward slashes on Windows (Git Bash breaks on
+    // backslashes), so the expected path must be normalized the same way -- PathBuf's
+    // to_string_lossy() keeps native backslashes on Windows and would otherwise fail here.
+    let expected_prefix = rtk_path.to_string_lossy().replace('\\', "/");
+    assert_eq!(cmd, format!("{expected_prefix} git status"));
 }
 
 #[test]
