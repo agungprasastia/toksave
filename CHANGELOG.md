@@ -9,8 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles.
-- **Warp Agent CLI MCP wiring**: Warp / Oz now writes CodeGraph and Context-Mode to the official desktop file (`~/.warp/.mcp.json`) and the standalone Agent CLI MCP file, in addition to the existing `~/.warp/mcp.json`. Detection also treats the `oz` binary and CLI config dir as installed. Doctor probe includes the new MCP paths.
 - **`toksave doctor --fix` repairs broken agent wiring**: Previously `--fix` only reinstalled/repaired tool *binaries* (RTK, CodeGraph, ...); a hook or MCP entry reported as missing was never actually rewired — doctor just told you to re-run `toksave`. `--fix` now unwires and cleanly rewires every `(agent, tool)` pair `verify_tool` reports as not-wired, for all 9 agents × 6 tools, then re-verifies and records the manifest entry. Tools whose underlying binary was never installed are left alone rather than wiring a config that points at nothing. Plain `doctor` (no `--fix`) makes no changes, as before.
 - **`toksave uninstall` warns on residual wiring**: after `unwire_tool`, uninstall now re-checks `verify_tool` and warns if a hook/MCP entry survives instead of silently trusting the unwire succeeded.
 
@@ -26,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Warp has no confirmed hook engine**: extensive research against `docs.warp.dev` turned up no PreToolUse-style hook mechanism for the Warp Agent CLI or desktop app (unlike Claude, Cursor, Gemini CLI, Droid, and Devin, which all have documented hook contracts) — RTK itself doesn't list Warp as a supported agent either. toksave no longer writes a `~/.warp/hooks.json` RTK entry; it relies on `rtk` being on PATH instead, and opportunistically cleans up any hook file a pre-1.2 toksave wrote plus dead `/$bunfs/root/toksave` references left behind by very old Warp CLI installs.
 
 Minimum RTK version for the binary hook engine used by all of the above: **0.37+**.
+
+## [1.1.0] - 2026-08-17
+
+### Added
+
+- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles, with official brand icon `assets/agents/cursor.png`. Special thanks to [@jondmarien](https://github.com/jondmarien) in [#26](https://github.com/agungprasastia/toksave/pull/26).
+- **Warp Agent CLI MCP wiring**: Warp / Oz now writes CodeGraph and Context-Mode to the official desktop file (`~/.warp/.mcp.json`) and the standalone Agent CLI MCP file, in addition to the existing `~/.warp/mcp.json`. Detection also treats the `oz` binary and CLI config dir as installed. Doctor probe includes the new MCP paths. Special thanks to [@jondmarien](https://github.com/jondmarien) in [#25](https://github.com/agungprasastia/toksave/pull/25).
+
+### Contributors
+
+- Huge thanks to [@jondmarien](https://github.com/jondmarien) for contributing support for Cursor CLI and Warp Agent CLI!
 
 ## [1.0.3] - 2026-08-08
 
