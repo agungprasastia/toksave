@@ -5,12 +5,12 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-08-17
 
 ### Added
 
-- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles, with official brand icon `assets/agents/cursor.png`.
-- **Warp Agent CLI MCP wiring**: Warp / Oz now writes CodeGraph and Context-Mode to the official desktop file (`~/.warp/.mcp.json`) and the standalone Agent CLI MCP file, in addition to the existing `~/.warp/mcp.json`. Detection also treats the `oz` binary and CLI config dir as installed. Doctor probe includes the new MCP paths.
+- **Cursor CLI agent**: Full support for the Cursor Agent CLI (`cursor` / `cursor-cli`). Wires user-global `~/.cursor/` config shared with the Cursor editor: native `hooks.json` `preToolUse` + `cli-config.json` `Shell(rtk *)` allow for RTK, `mcp.json` for CodeGraph and Context-Mode, and `AGENTS.md` instruction owners for Caveman, Ponytail, and Principles, with official brand icon `assets/agents/cursor.png`. ([@jondmarien](https://github.com/jondmarien) in [#26](https://github.com/agungprasastia/toksave/pull/26))
+- **Warp Agent CLI MCP wiring**: Warp / Oz now writes CodeGraph and Context-Mode to the official desktop file (`~/.warp/.mcp.json`) and the standalone Agent CLI MCP file, in addition to the existing `~/.warp/mcp.json`. Detection also treats the `oz` binary and CLI config dir as installed. Doctor probe includes the new MCP paths. ([@jondmarien](https://github.com/jondmarien) in [#25](https://github.com/agungprasastia/toksave/pull/25))
 
 ## [1.0.3] - 2026-08-08
 
