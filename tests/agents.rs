@@ -5,8 +5,8 @@ use toksave::registry::{
 use toksave::util::errors::ToksaveErrorKind;
 use toksave::util::json::read_json_file;
 use toksave::util::paths::{
-    claude_paths, copilot_paths, cursor_paths, devin_paths, droid_paths, warp_cli_paths,
-    warp_mcp_files, warp_paths, write_file,
+    antigravity_paths, claude_paths, copilot_paths, cursor_paths, devin_paths, droid_paths,
+    warp_cli_paths, warp_mcp_files, warp_paths, write_file,
 };
 
 mod common;
@@ -207,6 +207,42 @@ fn test_warp_detect_oz_binary() {
     let d = detect_agent(AgentId::Warp);
     assert!(d.installed);
     assert_eq!(d.source, "cli");
+}
+
+#[tokio::test]
+async fn test_antigravity_codegraph_wires_mcp_config_json_under_gemini() {
+    let _env = common::setup();
+    let p = antigravity_paths();
+    assert!(
+        p.dir.ends_with(".gemini"),
+        "Antigravity CLI keeps the ~/.gemini namespace even with Gemini CLI discontinued, got {}",
+        p.dir.display()
+    );
+
+    wire_tool(AgentId::Antigravity, ToolId::Codegraph, &RunOpts::default())
+        .await
+        .unwrap();
+
+    let mcp_file = p.dir.join("config").join("mcp_config.json");
+    assert!(
+        mcp_file.exists(),
+        "expected Antigravity's real MCP file at {}",
+        mcp_file.display()
+    );
+    let cfg = read_json_file(&mcp_file).unwrap().unwrap();
+    assert!(cfg["mcpServers"]["codegraph"].is_object());
+    assert_eq!(
+        verify_tool(AgentId::Antigravity, ToolId::Codegraph),
+        Some(true)
+    );
+
+    unwire_tool(AgentId::Antigravity, ToolId::Codegraph, &RunOpts::default())
+        .await
+        .unwrap();
+    assert_eq!(
+        verify_tool(AgentId::Antigravity, ToolId::Codegraph),
+        Some(false)
+    );
 }
 
 #[tokio::test]
