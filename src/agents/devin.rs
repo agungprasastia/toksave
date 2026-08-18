@@ -3,7 +3,9 @@ use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
-use crate::util::paths::{devin_desktop_paths, devin_known_bin_dirs, devin_paths, toksave_abs};
+use crate::util::paths::{
+    devin_desktop_paths, devin_known_bin_dirs, devin_paths, toksave_abs, toksave_hook_command,
+};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
 /// Scrub a stale RTK hook entry from the pre-fix `~/.devin/hooks.json` location (Devin's real
@@ -117,7 +119,7 @@ impl Agent for DevinAgent {
                 let mut cfg = read_json_file(&p.config)?.unwrap_or_else(|| serde_json::json!({}));
                 let hook_entry = serde_json::json!({
                     "matcher": "exec",
-                    "hooks": [{ "type": "command", "command": format!("{} rtk-hook devin", toksave_abs()), "timeout": 10 }]
+                    "hooks": [{ "type": "command", "command": toksave_hook_command("rtk-hook devin"), "timeout": 10 }]
                 });
                 let hooks_obj = get_or_create_object(&mut cfg, "hooks");
                 crate::util::json::merge_pretool_use(hooks_obj, hook_entry, "rtk-hook devin");

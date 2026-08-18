@@ -194,11 +194,55 @@ fn rtk_hook_uses_absolute_path_when_rtk_locally_installed() {
     let cmd = v["hookSpecificOutput"]["updatedInput"]["command"]
         .as_str()
         .unwrap();
-    // The hook always normalizes to forward slashes on Windows (Git Bash breaks on
-    // backslashes), so the expected path must be normalized the same way -- PathBuf's
-    // to_string_lossy() keeps native backslashes on Windows and would otherwise fail here.
-    let expected_prefix = rtk_path.to_string_lossy().replace('\\', "/");
+    // cmd.exe, Windows PowerShell 5.1, and pwsh 7 need backslashes as the first
+    // token (`C:/...` makes PowerShell treat `C:` as Set-Location). Git Bash is
+    // not required; MCP argv still uses forward slashes via toksave_abs().
+    let expected_prefix = toksave::util::winsh::shell_exe_token(&rtk_path);
     assert_eq!(cmd, format!("{expected_prefix} git status"));
+}
+
+#[test]
+fn rtk_hook_does_not_double_prefix_absolute_rtk_path() {
+    let _env = common::setup();
+    let local_bin = common::ts_paths::local_bin();
+    std::fs::create_dir_all(&local_bin).unwrap();
+    let rtk_path = local_bin.join(toksave::tools::rtk::rtk_bin_name());
+    std::fs::write(&rtk_path, "#!/bin/sh\n").unwrap();
+    let prefix = toksave::util::winsh::shell_exe_token(&rtk_path);
+    let already = format!("{prefix} git status");
+    let input = serde_json::json!({
+        "tool_name": "Bash",
+        "tool_input": { "command": already }
+    })
+    .to_string();
+    let (code, stdout, _) = run_hook(&["rtk-hook", "claude"], &input, None);
+    assert_eq!(code, 0);
+    assert!(
+        stdout.trim().is_empty(),
+        "already-prefixed absolute rtk command must not be rewritten again, got {stdout}"
+    );
+}
+
+#[test]
+fn rtk_hook_does_not_double_prefix_forward_slash_windows_path() {
+    let _env = common::setup();
+    let local_bin = common::ts_paths::local_bin();
+    std::fs::create_dir_all(&local_bin).unwrap();
+    let rtk_path = local_bin.join(toksave::tools::rtk::rtk_bin_name());
+    std::fs::write(&rtk_path, "#!/bin/sh\n").unwrap();
+    let fwd = rtk_path.to_string_lossy().replace('\\', "/");
+    let already = format!("{fwd} git status");
+    let input = serde_json::json!({
+        "tool_name": "Bash",
+        "tool_input": { "command": already }
+    })
+    .to_string();
+    let (code, stdout, _) = run_hook(&["rtk-hook", "claude"], &input, None);
+    assert_eq!(code, 0);
+    assert!(
+        stdout.trim().is_empty(),
+        "forward-slash absolute rtk command must count as already prefixed, got {stdout}"
+    );
 }
 
 #[test]

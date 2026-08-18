@@ -324,7 +324,7 @@ fn push_unique(ids: &mut Vec<ToolId>, id: ToolId) {
 
 fn probe_issue_is_stale_wiring(issue: &RuntimeIssue) -> bool {
     issue.detail.contains("binary not found")
-        || issue.detail.contains("backslash path")
+        || issue.detail.contains("forward-slash path")
         || issue.detail.contains("/$bunfs/")
         || issue.detail.contains("mcp target not found")
 }

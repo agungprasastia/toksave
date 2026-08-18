@@ -433,6 +433,19 @@ async fn test_copilot_rtk_writes_native_hooks_file() {
     assert_eq!(verify_tool(AgentId::Copilot, ToolId::Rtk), Some(false));
 }
 
+#[test]
+fn copilot_empty_rtk_hook_file_is_not_wired() {
+    let _env = common::setup();
+    let p = copilot_paths();
+    std::fs::create_dir_all(&p.hooks_dir).unwrap();
+    write_file(&p.hooks_dir.join("toksave-rtk.json"), "{}").unwrap();
+    assert_eq!(
+        verify_tool(AgentId::Copilot, ToolId::Rtk),
+        Some(false),
+        "an empty toksave-rtk.json must not count as wired"
+    );
+}
+
 #[tokio::test]
 async fn test_claude_rtk_strips_dangling_rtk_ref_from_claude_md() {
     let _env = common::setup();

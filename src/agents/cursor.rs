@@ -6,7 +6,9 @@ use crate::util::json::{
     add_to_array_if_missing, get_or_create_object, read_json_file, remove_from_array,
     write_json_file, write_json_pruned,
 };
-use crate::util::paths::{cursor_desktop_paths, cursor_known_bin_dirs, cursor_paths, toksave_abs};
+use crate::util::paths::{
+    cursor_desktop_paths, cursor_known_bin_dirs, cursor_paths, toksave_abs, toksave_hook_command,
+};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 use serde_json::{Value, json};
 
@@ -107,7 +109,7 @@ impl Agent for CursorAgent {
                 }
                 let mut cfg = read_json_file(&p.hooks_file)?.unwrap_or_else(|| json!({}));
                 let hook_entry = json!({
-                    "command": format!("{} {RTK_MARKER}", toksave_abs()),
+                    "command": toksave_hook_command(RTK_MARKER),
                     "matcher": "Shell"
                 });
                 merge_cursor_pretool(&mut cfg, hook_entry, RTK_MARKER);

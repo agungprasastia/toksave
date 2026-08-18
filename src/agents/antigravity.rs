@@ -5,7 +5,7 @@ use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
 use crate::util::paths::{
     antigravity_desktop_paths, antigravity_known_bin_dirs, antigravity_mcp_files,
-    antigravity_paths, toksave_abs,
+    antigravity_paths, toksave_abs, toksave_hook_command,
 };
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
@@ -104,7 +104,7 @@ impl Agent for AntigravityAgent {
                 cfg["rtk"] = serde_json::json!({
                     "PreToolUse": [{
                         "matcher": "^(Bash|run_command|execute_command|cmd|sh|pwsh|run_shell_command)$",
-                        "hooks": [{ "type": "command", "command": format!("{} rtk-hook agy", toksave_abs()), "timeout": 10 }]
+                        "hooks": [{ "type": "command", "command": toksave_hook_command("rtk-hook agy"), "timeout": 10 }]
                     }]
                 });
                 write_json_file(&p.hooks, &cfg)?;

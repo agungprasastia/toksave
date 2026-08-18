@@ -6,7 +6,7 @@ use crate::util::json::{
     get_or_create_object, merge_hook_group, read_json_file, remove_hook_group, write_json_file,
     write_json_pruned,
 };
-use crate::util::paths::{codex_known_bin_dirs, codex_paths, toksave_abs};
+use crate::util::paths::{codex_known_bin_dirs, codex_paths, toksave_abs, toksave_hook_command};
 use crate::util::toml::{
     prune_empty_tables, read_toml_file, remove_table, set_table_array, upsert_table,
     write_toml_file, write_toml_pruned,
@@ -101,7 +101,7 @@ impl Agent for CodexAgent {
                 let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
                 let hook_entry = serde_json::json!({
                     "matcher": "Bash",
-                    "hooks": [{ "type": "command", "command": format!("{} rtk-hook codex", toksave_abs()), "timeout": 10 }]
+                    "hooks": [{ "type": "command", "command": toksave_hook_command("rtk-hook codex"), "timeout": 10 }]
                 });
                 let hooks = get_or_create_object(&mut cfg, "hooks");
                 merge_hook_group(hooks, "PreToolUse", hook_entry, "rtk-hook codex");
@@ -117,7 +117,7 @@ impl Agent for CodexAgent {
                 let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
                 let perm_entry = serde_json::json!({
                     "matcher": "",
-                    "hooks": [{ "type": "command", "command": format!("{} codex-perm-hook", toksave_abs()), "timeout": 5 }]
+                    "hooks": [{ "type": "command", "command": toksave_hook_command("codex-perm-hook"), "timeout": 5 }]
                 });
                 let hooks = get_or_create_object(&mut cfg, "hooks");
                 merge_hook_group(hooks, "PermissionRequest", perm_entry, "codex-perm-hook");

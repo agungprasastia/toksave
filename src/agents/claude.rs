@@ -7,7 +7,8 @@ use crate::util::json::{
     write_json_file, write_json_pruned,
 };
 use crate::util::paths::{
-    claude_desktop_paths, claude_known_bin_dirs, claude_paths, read_file, toksave_abs, write_file,
+    claude_desktop_paths, claude_known_bin_dirs, claude_paths, read_file, toksave_abs,
+    toksave_hook_command, write_file,
 };
 use std::path::Path;
 
@@ -168,7 +169,7 @@ fn allow_bash_pattern(pattern: &str) -> Result<()> {
 }
 
 fn rtk_hook_command() -> String {
-    format!("{} rtk-hook claude", toksave_abs())
+    toksave_hook_command("rtk-hook claude")
 }
 
 fn wire_rtk_hook() -> Result<()> {
@@ -292,8 +293,7 @@ fn override_claude_rtk_hook() -> Result<()> {
         Ok(v) => v,
         Err(_) => return Ok(()),
     };
-    let tok = toksave_abs();
-    let new_cmd = format!("{tok} rtk-hook claude");
+    let new_cmd = rtk_hook_command();
     let mut changed = false;
 
     if let Some(hooks) = cfg.get_mut("hooks").and_then(|h| h.as_object_mut())

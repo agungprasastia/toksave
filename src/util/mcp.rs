@@ -1,6 +1,10 @@
 //! MCP wiring health. Key-exists is not enough: leftover `/$bunfs/` paths,
-//! Git-Bash-hostile backslashes, dead binaries, and wrong `runmcp` argv all
-//! count as unwired so `toksave doctor --fix` will rewrite them.
+//! dead binaries, and wrong `runmcp` argv all count as unwired so
+//! `toksave doctor --fix` will rewrite them.
+//!
+//! Backslash Windows paths are *not* stale: cmd.exe, Windows PowerShell 5.1,
+//! and pwsh 7 all need them as the first token of a shell command. MCP argv
+//! still uses `toksave_abs()` (forward slashes / CreateProcess).
 
 use crate::registry::{AgentId, ToolId};
 use crate::util::paths::toksave_abs;
@@ -73,14 +77,7 @@ pub fn expected_runmcp_args(agent: AgentId, tool: ToolId) -> Option<&'static [&'
 }
 
 pub fn command_is_stale(command: &str) -> bool {
-    let normalized = command.replace('\\', "/");
-    if normalized.contains("/$bunfs/") {
-        return true;
-    }
-    if command.contains('\\') {
-        return true;
-    }
-    false
+    command.replace('\\', "/").contains("/$bunfs/")
 }
 
 pub fn command_is_current_toksave(command: &str) -> bool {
@@ -188,8 +185,10 @@ mod tests {
     }
 
     #[test]
-    fn backslash_path_is_stale() {
-        assert!(command_is_stale(r"C:\Users\me\toksave.exe"));
+    fn bunfs_is_stale_even_with_backslashes() {
+        assert!(command_is_stale(r"C:\$bunfs\root\toksave"));
+        assert!(command_is_stale("/$bunfs/root/toksave"));
+        assert!(!command_is_stale(r"C:\Users\me\toksave.exe"));
         assert!(!command_is_stale("C:/Users/me/toksave.exe"));
     }
 

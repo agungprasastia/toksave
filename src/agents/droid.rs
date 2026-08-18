@@ -5,6 +5,7 @@ use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
 use crate::util::paths::{
     droid_desktop_paths, droid_known_bin_dirs, droid_legacy_hooks_file, droid_paths, toksave_abs,
+    toksave_hook_command,
 };
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
@@ -114,7 +115,7 @@ impl Agent for DroidAgent {
                     read_json_file(&p.hooks_file)?.unwrap_or_else(|| serde_json::json!({}));
                 let hook_entry = serde_json::json!({
                     "matcher": "Execute",
-                    "hooks": [{ "type": "command", "command": format!("{} rtk-hook droid", toksave_abs()), "timeout": 10 }]
+                    "hooks": [{ "type": "command", "command": toksave_hook_command("rtk-hook droid"), "timeout": 10 }]
                 });
                 crate::util::json::merge_pretool_use(&mut cfg, hook_entry, "rtk-hook droid");
                 write_json_file(&p.hooks_file, &cfg)?;

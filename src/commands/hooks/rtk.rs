@@ -43,7 +43,7 @@ pub fn run(agent: Option<&str>) -> i32 {
         .and_then(Value::as_str)
         .unwrap_or("");
     let trimmed = command.trim();
-    if trimmed.is_empty() || trimmed.starts_with("rtk ") || trimmed == "rtk" {
+    if trimmed.is_empty() || already_has_rtk_prefix(trimmed) {
         return no_rewrite(&agent_lc);
     }
 
@@ -52,22 +52,32 @@ pub fn run(agent: Option<&str>) -> i32 {
     0
 }
 
-/// Absolute path to the locally-installed `rtk` binary when present (Windows-safe: forward
-/// slashes, since backslashes break Git Bash hooks -- same reasoning as `toksave_abs()`).
-/// Falls back to bare `rtk` when nothing is installed under toksave's managed bin dir, so a
-/// system-wide install (Homebrew, cargo install, PATH-managed) still works.
+/// Absolute path to the locally-installed `rtk` binary when present, formatted
+/// for cmd.exe / Windows PowerShell 5.1 / pwsh 7 (backslashes; see `winsh`).
+/// Falls back to bare `rtk` when nothing is installed under toksave's managed
+/// bin dir, so a system-wide install (Homebrew, cargo install, PATH-managed)
+/// still works.
 fn rtk_command_prefix() -> String {
     let local = crate::tools::rtk::local_rtk_path();
     if local.exists() {
-        let s = local.to_string_lossy().to_string();
-        if cfg!(windows) {
-            s.replace('\\', "/")
-        } else {
-            s
-        }
+        crate::util::winsh::shell_exe_token(&local)
     } else {
         "rtk".to_string()
     }
+}
+
+fn already_has_rtk_prefix(command: &str) -> bool {
+    use crate::util::winsh::command_starts_with_exe;
+    let command = command.trim();
+    if command_starts_with_exe(command, "rtk") || command_starts_with_exe(command, "rtk.exe") {
+        return true;
+    }
+    let local = crate::tools::rtk::local_rtk_path();
+    if local.exists() && command_starts_with_exe(command, &local.to_string_lossy()) {
+        return true;
+    }
+    let prefix = rtk_command_prefix();
+    command == prefix || command.starts_with(&format!("{prefix} "))
 }
 
 /// The exact `tool_name` each agent sends for a shell-command tool call. `None` falls back to
@@ -197,7 +207,7 @@ fn run_copilot(input: &str) -> i32 {
 
 fn rewritten_command(command: &str) -> Option<String> {
     let trimmed = command.trim();
-    if trimmed.is_empty() || trimmed.starts_with("rtk ") || trimmed == "rtk" {
+    if trimmed.is_empty() || already_has_rtk_prefix(trimmed) {
         return None;
     }
     Some(format!("{} {trimmed}", rtk_command_prefix()))

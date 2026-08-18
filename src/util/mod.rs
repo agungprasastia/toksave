@@ -23,3 +23,4 @@ pub mod probe;
 pub mod toml;
 pub mod ui;
 pub mod unified_block;
+pub mod winsh;

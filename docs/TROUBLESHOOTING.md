@@ -38,10 +38,11 @@ If TokSave or your AI agents behave unexpectedly after wiring:
 
 ---
 
-### 3. Backslash Path Warning in Git Bash Hooks
-- **Symptom**: `toksave doctor` warns: `hook — backslash path breaks Git Bash hooks`.
-- **Cause**: Windows paths like `D:\tools\toksave.exe` inside Bash scripts fail due to escape character treatment.
-- **Solution**: `toksave doctor --fix` automatically converts Windows paths to POSIX slashes (`D:/tools/toksave.exe`) in hook definitions.
+### 3. Windows shells: cmd, PowerShell 5.1, PowerShell 7
+- **Supported**: `cmd.exe`, Windows PowerShell 5.1 (`powershell.exe`), and PowerShell 7 (`pwsh`). Git Bash is not required.
+- **Symptom**: a hooked command never runs, or PowerShell errors on `C:/Users/.../toksave.exe` / `C:/Users/.../rtk.exe` (it treats `C:` as Set-Location and `/Users/...` as a switch).
+- **Cause**: older toksave versions wrote forward-slash hook paths for Git Bash. That form is valid in cmd and as MCP argv, but not as the first token of a PowerShell command.
+- **Solution**: `toksave doctor --fix` (or re-run `toksave init`) rewrites hook `command` strings and RTK prefixes to backslash form. MCP `command` fields stay forward-slash on purpose (CreateProcess).
 
 ---
 

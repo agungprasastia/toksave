@@ -51,19 +51,17 @@ pub fn is_managed_hook(fields: &[&str]) -> bool {
     MANAGED_HOOKS.contains(&fields[1])
 }
 
-/// Unquoted Windows paths with backslashes break Git Bash hooks.
-pub fn windows_bash_hostile_path(exe: &str) -> bool {
+/// Drive-letter paths with forward slashes (`C:/Users/.../toksave.exe`) are
+/// valid in cmd.exe and Git Bash, but Windows PowerShell 5.1 (and typically 7)
+/// parses `C:` as Set-Location and `/Users/...` as a switch. Hook command
+/// strings must use backslashes. MCP argv is CreateProcess and is exempt
+/// (those entries are not `is_managed_hook`).
+pub fn windows_powershell_hostile_path(exe: &str) -> bool {
     if !cfg!(windows) {
         return false;
     }
-    if exe.contains('/') {
-        return false;
-    }
     let b = exe.as_bytes();
-    if b.len() >= 3 && b[1] == b':' && b[2] == b'\\' {
-        return true;
-    }
-    exe.starts_with("\\\\")
+    b.len() >= 3 && b[1] == b':' && b[2] == b'/'
 }
 
 /// Walk a parsed config, collecting every `command` entry (string or argv
@@ -164,9 +162,9 @@ fn probe_command(exe: &str, args: &[String], managed: bool) -> Option<String> {
     if exe.is_empty() {
         return Some("empty command".to_string());
     }
-    if managed && windows_bash_hostile_path(exe) {
+    if managed && windows_powershell_hostile_path(exe) {
         return Some(format!(
-            "backslash path breaks Git Bash hooks: {}",
+            "forward-slash path breaks PowerShell 5.1/7: {}",
             short_path(exe)
         ));
     }
@@ -350,14 +348,13 @@ mod tests {
     }
 
     #[test]
-    fn windows_bash_hostile_path_detects_windows_paths() {
+    fn windows_powershell_hostile_path_detects_forward_slash_drive_paths() {
         if cfg!(windows) {
-            assert!(windows_bash_hostile_path(r"C:\tools\toksave.exe"));
-            assert!(windows_bash_hostile_path(r"\\server\share\toksave"));
-            assert!(!windows_bash_hostile_path("/usr/bin/toksave"));
-            assert!(!windows_bash_hostile_path("toksave"));
+            assert!(windows_powershell_hostile_path(r"C:/tools/toksave.exe"));
+            assert!(!windows_powershell_hostile_path(r"C:\tools\toksave.exe"));
+            assert!(!windows_powershell_hostile_path("toksave"));
         } else {
-            assert!(!windows_bash_hostile_path(r"C:\tools\toksave.exe"));
+            assert!(!windows_powershell_hostile_path(r"C:/tools/toksave.exe"));
         }
     }
 

@@ -6,7 +6,7 @@ use toksave::agents::Agent;
 use toksave::agents::claude::ClaudeAgent;
 use toksave::registry::{RunOpts, ToolId};
 use toksave::util::json::read_json_file;
-use toksave::util::paths::claude_paths;
+use toksave::util::paths::{claude_paths, toksave_hook_command};
 
 const OPTS: RunOpts = RunOpts {
     dry_run: false,
@@ -23,12 +23,11 @@ fn claude_wires_rtk_through_pretooluse_hook() {
     agent.wire(ToolId::Rtk, &OPTS).unwrap();
     let settings = read_json_file(&claude_paths().settings).unwrap().unwrap();
     let pre = settings["hooks"]["PreToolUse"].as_array().unwrap();
-    assert!(pre.iter().any(|g| {
-        g["hooks"][0]["command"]
-            .as_str()
-            .map(|c| c.contains("rtk-hook claude"))
-            .unwrap_or(false)
-    }));
+    let cmd = pre
+        .iter()
+        .find_map(|g| g["hooks"][0]["command"].as_str())
+        .unwrap();
+    assert_eq!(cmd, toksave_hook_command("rtk-hook claude"));
     assert_eq!(agent.verify(ToolId::Rtk), Some(true));
 }
 
