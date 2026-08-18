@@ -187,22 +187,26 @@ impl Agent for AntigravityAgent {
             ToolId::Codegraph => {
                 let file = antigravity_mcp_files().into_iter().next()?;
                 let cfg = read_json_file(&file).ok().flatten();
-                Some(
-                    cfg.as_ref()
-                        .and_then(|c| c.get("mcpServers"))
-                        .and_then(|m| m.get("codegraph"))
-                        .is_some(),
-                )
+                Some(cfg.as_ref().is_some_and(|c| {
+                    crate::util::mcp::json_tool_healthy(
+                        c,
+                        "mcpServers",
+                        crate::registry::AgentId::Antigravity,
+                        ToolId::Codegraph,
+                    )
+                }))
             }
             ToolId::ContextMode => {
                 let file = antigravity_mcp_files().into_iter().next()?;
                 let cfg = read_json_file(&file).ok().flatten();
-                Some(
-                    cfg.as_ref()
-                        .and_then(|c| c.get("mcpServers"))
-                        .and_then(|m| m.get("context-mode"))
-                        .is_some(),
-                )
+                Some(cfg.as_ref().is_some_and(|c| {
+                    crate::util::mcp::json_tool_healthy(
+                        c,
+                        "mcpServers",
+                        crate::registry::AgentId::Antigravity,
+                        ToolId::ContextMode,
+                    )
+                }))
             }
             ToolId::Caveman => Some(has_owner("antigravity", "caveman")),
             ToolId::Rtk => {

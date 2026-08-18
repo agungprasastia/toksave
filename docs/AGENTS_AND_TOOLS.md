@@ -76,7 +76,7 @@ This document provides a detailed technical reference on how **TokSave** wires e
 ---
 
 ### 9. Cursor CLI
-- **Configuration Path**: `~/.cursor/` (or `CURSOR_CONFIG_DIR` / `$XDG_CONFIG_HOME/cursor` on Unix)
+- **Configuration Path**: `~/.cursor/` (or `CURSOR_CONFIG_DIR`). Cursor reads `~/.cursor/hooks.json`, not `$XDG_CONFIG_HOME/cursor`.
 - **Hooks**: Native `hooks.json` `{ version, hooks.preToolUse }` with `matcher: "Shell"` calling `toksave rtk-hook cursor`.
 - **Permissions**: Adds `Shell(rtk *)` to `cli-config.json` `permissions.allow`.
 - **MCP Servers**: Configures `codegraph` and `context-mode` in `mcp.json`.

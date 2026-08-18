@@ -195,12 +195,14 @@ export const Plugin = async () => ({
         let p = opencode_paths();
         let cfg = read_json_file(&p.config).ok().flatten();
         match tool {
-            ToolId::Codegraph => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcp"))
-                    .and_then(|m| m.get("codegraph"))
-                    .is_some(),
-            ),
+            ToolId::Codegraph => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcp",
+                    crate::registry::AgentId::Opencode,
+                    ToolId::Codegraph,
+                )
+            })),
             ToolId::ContextMode => Some(
                 cfg.as_ref()
                     .and_then(|c| c.get("plugin"))

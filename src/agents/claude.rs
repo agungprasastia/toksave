@@ -139,8 +139,8 @@ impl Agent for ClaudeAgent {
     fn verify(&self, tool: ToolId) -> Option<bool> {
         match tool {
             ToolId::Rtk => Some(has_rtk_hook()),
-            ToolId::Codegraph => Some(has_mcp("codegraph")),
-            ToolId::ContextMode => Some(has_mcp("context-mode")),
+            ToolId::Codegraph => Some(mcp_healthy(ToolId::Codegraph)),
+            ToolId::ContextMode => Some(mcp_healthy(ToolId::ContextMode)),
             ToolId::Caveman => Some(crate::util::unified_block::has_owner("claude", "caveman")),
             ToolId::Ponytail => Some(crate::util::unified_block::has_owner("claude", "ponytail")),
             ToolId::Principles => Some(crate::util::unified_block::has_owner(
@@ -256,12 +256,28 @@ fn has_rtk_hook() -> bool {
     let Ok(Some(cfg)) = read_json_file(&p.settings) else {
         return false;
     };
-    let marker = "rtk-hook claude";
-    cfg.get("hooks")
+    let Some(arr) = cfg
+        .get("hooks")
         .and_then(|h| h.get("PreToolUse"))
         .and_then(|p| p.as_array())
-        .map(|arr| arr.iter().any(|g| hook_group_contains_marker(g, marker)))
-        .unwrap_or(false)
+    else {
+        return false;
+    };
+    let has_toksave = arr
+        .iter()
+        .any(|g| hook_group_contains_marker(g, "rtk-hook claude"));
+    let has_native = arr.iter().any(|g| {
+        g.get("hooks")
+            .and_then(|h| h.as_array())
+            .is_some_and(|hooks| {
+                hooks.iter().any(|h| {
+                    h.get("command")
+                        .and_then(|c| c.as_str())
+                        .is_some_and(|c| crate::util::mcp::command_is_native_rtk_hook(c, "claude"))
+                })
+            })
+    });
+    has_toksave && !has_native
 }
 
 /// Override rtk's own "rtk hook claude" command with the toksave wrapper, dedupe groups,
@@ -287,15 +303,21 @@ fn override_claude_rtk_hook() -> Result<()> {
             let Some(inner) = g.get_mut("hooks").and_then(|h| h.as_array_mut()) else {
                 continue;
             };
+            let before = inner.len();
+            inner.retain(|h| {
+                !h.get("command")
+                    .and_then(|c| c.as_str())
+                    .is_some_and(|c| crate::util::mcp::command_is_native_rtk_hook(c, "claude"))
+            });
+            if inner.len() != before {
+                changed = true;
+            }
             for h in inner.iter_mut() {
                 // Read command immutably first to avoid borrow conflict with *h = ...
                 let should_replace = h
                     .get("command")
                     .and_then(|c| c.as_str())
-                    .map(|c| {
-                        (c.contains("rtk hook claude") || c.contains("rtk-hook claude"))
-                            && c != new_cmd
-                    })
+                    .map(|c| c.contains("rtk-hook claude") && c != new_cmd)
                     .unwrap_or(false);
                 if should_replace {
                     *h =
@@ -304,6 +326,11 @@ fn override_claude_rtk_hook() -> Result<()> {
                 }
             }
         }
+        pre.retain(|g| {
+            g.get("hooks")
+                .and_then(|h| h.as_array())
+                .is_some_and(|hooks| !hooks.is_empty())
+        });
         // Deduplicate groups with same first hook command / marker
         if pre.len() > 1 {
             let mut seen = std::collections::HashSet::new();
@@ -399,11 +426,10 @@ fn remove_mcp(name: &str) -> Result<()> {
     Ok(())
 }
 
-fn has_mcp(name: &str) -> bool {
+fn mcp_healthy(tool: ToolId) -> bool {
     let p = claude_paths();
-    let cfg = read_json_file(&p.global_json).ok().flatten();
-    cfg.as_ref()
-        .and_then(|c| c.get("mcpServers"))
-        .and_then(|m| m.get(name))
-        .is_some()
+    let Some(cfg) = read_json_file(&p.global_json).ok().flatten() else {
+        return false;
+    };
+    crate::util::mcp::json_tool_healthy(&cfg, "mcpServers", crate::registry::AgentId::Claude, tool)
 }

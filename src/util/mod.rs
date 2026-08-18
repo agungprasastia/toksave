@@ -17,6 +17,7 @@ pub mod exec;
 pub mod health;
 pub mod json;
 pub mod manifest;
+pub mod mcp;
 pub mod paths;
 pub mod probe;
 pub mod toml;

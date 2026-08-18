@@ -57,12 +57,15 @@ fn backup_file(path: &Path) -> FileBackup {
 }
 
 fn mcp_file_has(path: &Path, tool: &str) -> bool {
-    read_json_file(path)
-        .ok()
-        .flatten()
-        .and_then(|c| c.get("mcpServers").cloned())
-        .and_then(|m| m.get(tool).cloned())
-        .is_some()
+    let Some(cfg) = read_json_file(path).ok().flatten() else {
+        return false;
+    };
+    let tool_id = match tool {
+        "codegraph" => ToolId::Codegraph,
+        "context-mode" => ToolId::ContextMode,
+        _ => return false,
+    };
+    crate::util::mcp::json_tool_healthy(&cfg, "mcpServers", crate::registry::AgentId::Warp, tool_id)
 }
 
 fn mcp_has_all(tool: &str) -> bool {

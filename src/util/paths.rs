@@ -445,12 +445,11 @@ pub struct CursorPaths {
 }
 
 pub fn cursor_paths() -> CursorPaths {
+    // Cursor's documented user config is ~/.cursor (hooks.json, mcp.json,
+    // cli-config.json). It does not read $XDG_CONFIG_HOME/cursor — wiring that
+    // path leaves a competing file official RTK already wrote under ~/.cursor.
     let dir = if let Some(d) = env::var_os("CURSOR_CONFIG_DIR") {
         PathBuf::from(d)
-    } else if !cfg!(windows)
-        && let Some(xdg) = env::var_os("XDG_CONFIG_HOME")
-    {
-        PathBuf::from(xdg).join("cursor")
     } else {
         home().join(".cursor")
     };

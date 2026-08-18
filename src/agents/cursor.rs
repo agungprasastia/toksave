@@ -166,25 +166,28 @@ impl Agent for CursorAgent {
         let p = cursor_paths();
         let cfg = read_json_file(&p.mcp_config).ok().flatten();
         match tool {
-            ToolId::Codegraph => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("codegraph"))
-                    .is_some(),
-            ),
-            ToolId::ContextMode => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("context-mode"))
-                    .is_some(),
-            ),
+            ToolId::Codegraph => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcpServers",
+                    crate::registry::AgentId::Cursor,
+                    ToolId::Codegraph,
+                )
+            })),
+            ToolId::ContextMode => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcpServers",
+                    crate::registry::AgentId::Cursor,
+                    ToolId::ContextMode,
+                )
+            })),
             ToolId::Caveman => Some(has_owner("cursor", "caveman")),
             ToolId::Rtk => {
                 let hcfg = read_json_file(&p.hooks_file).ok().flatten();
-                Some(
-                    hcfg.as_ref()
-                        .is_some_and(|c| has_cursor_pretool(c, RTK_MARKER)),
-                )
+                Some(hcfg.as_ref().is_some_and(|c| {
+                    has_cursor_pretool(c, RTK_MARKER) && !has_native_cursor_rtk(c)
+                }))
             }
             ToolId::Ponytail => Some(has_owner("cursor", "ponytail")),
             ToolId::Principles => Some(has_owner("cursor", "principles")),
@@ -274,7 +277,7 @@ fn merge_cursor_pretool(cfg: &mut Value, entry: Value, marker: &str) {
     let Some(items) = arr.as_array_mut() else {
         return;
     };
-    items.retain(|e| !is_managed_cursor_hook(e, marker));
+    items.retain(|e| !is_managed_cursor_hook(e, marker) && !is_native_cursor_rtk_entry(e));
     items.push(entry);
 }
 
@@ -298,6 +301,20 @@ fn remove_cursor_pretool(cfg: &mut Value, marker: &str) {
     {
         cfg.as_object_mut().expect("object").remove("version");
     }
+}
+
+fn is_native_cursor_rtk_entry(entry: &Value) -> bool {
+    entry
+        .get("command")
+        .and_then(|c| c.as_str())
+        .is_some_and(|c| crate::util::mcp::command_is_native_rtk_hook(c, "cursor"))
+}
+
+fn has_native_cursor_rtk(cfg: &Value) -> bool {
+    cfg.get("hooks")
+        .and_then(|h| h.get("preToolUse"))
+        .and_then(|v| v.as_array())
+        .is_some_and(|arr| arr.iter().any(is_native_cursor_rtk_entry))
 }
 
 fn has_cursor_pretool(cfg: &Value, marker: &str) -> bool {

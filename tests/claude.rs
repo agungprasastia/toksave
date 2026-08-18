@@ -61,3 +61,26 @@ fn claude_unparseable_settings_is_error_not_fallback() {
     assert!(agent.wire(ToolId::Rtk, &OPTS).is_err());
     assert_eq!(fs::read_to_string(claude_paths().settings).unwrap(), before);
 }
+
+#[test]
+fn claude_rtk_verify_false_when_native_rtk_hook_is_stacked() {
+    let _env = setup();
+    let agent = ClaudeAgent;
+    agent.wire(ToolId::Rtk, &OPTS).unwrap();
+    let settings_path = claude_paths().settings;
+    let mut cfg = read_json_file(&settings_path).unwrap().unwrap();
+    cfg["hooks"]["PreToolUse"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "matcher": "Bash",
+            "hooks": [{ "type": "command", "command": "rtk hook claude", "timeout": 10 }]
+        }));
+    std::fs::write(&settings_path, serde_json::to_string_pretty(&cfg).unwrap()).unwrap();
+
+    assert_eq!(
+        agent.verify(ToolId::Rtk),
+        Some(false),
+        "a sibling `rtk hook claude` must count as broken so doctor --fix will unstack it"
+    );
+}

@@ -161,18 +161,22 @@ impl Agent for CopilotAgent {
         let p = copilot_paths();
         let cfg = read_json_file(&p.mcp_config).ok().flatten();
         match tool {
-            ToolId::Codegraph => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("codegraph"))
-                    .is_some(),
-            ),
-            ToolId::ContextMode => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("context-mode"))
-                    .is_some(),
-            ),
+            ToolId::Codegraph => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcpServers",
+                    crate::registry::AgentId::Copilot,
+                    ToolId::Codegraph,
+                )
+            })),
+            ToolId::ContextMode => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcpServers",
+                    crate::registry::AgentId::Copilot,
+                    ToolId::ContextMode,
+                )
+            })),
             ToolId::Caveman => Some(has_owner("copilot", "caveman")),
             ToolId::Rtk => Some(p.hooks_dir.join("toksave-rtk.json").exists()),
             ToolId::Ponytail => Some(has_owner("copilot", "ponytail")),

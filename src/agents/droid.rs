@@ -182,18 +182,22 @@ impl Agent for DroidAgent {
         let p = droid_paths();
         let cfg = read_json_file(&p.mcp_config).ok().flatten();
         match tool {
-            ToolId::Codegraph => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("codegraph"))
-                    .is_some(),
-            ),
-            ToolId::ContextMode => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("context-mode"))
-                    .is_some(),
-            ),
+            ToolId::Codegraph => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcpServers",
+                    crate::registry::AgentId::Droid,
+                    ToolId::Codegraph,
+                )
+            })),
+            ToolId::ContextMode => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcpServers",
+                    crate::registry::AgentId::Droid,
+                    ToolId::ContextMode,
+                )
+            })),
             ToolId::Caveman => Some(has_owner("droid", "caveman")),
             ToolId::Rtk => {
                 let hcfg = read_json_file(&p.hooks_file).ok().flatten();

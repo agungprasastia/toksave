@@ -6,7 +6,7 @@ use crate::tools::{tool_health_check, tool_installed_version, tool_latest_versio
 use crate::util::colors;
 use crate::util::health::{HealthStatus, Severity};
 use crate::util::manifest::record_wire;
-use crate::util::probe::probe_agent;
+use crate::util::probe::{RuntimeIssue, probe_agent};
 use colored::Colorize;
 
 pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
@@ -40,6 +40,22 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
             .map(|t| t.id)
             .collect();
 
+        if fix {
+            for issue in probe_agent(agent.id) {
+                if !probe_issue_is_stale_wiring(&issue) {
+                    continue;
+                }
+                match issue.kind {
+                    "mcp" => {
+                        push_unique(&mut missing_ids, ToolId::Codegraph);
+                        push_unique(&mut missing_ids, ToolId::ContextMode);
+                    }
+                    "hook" => push_unique(&mut missing_ids, ToolId::Rtk),
+                    _ => {}
+                }
+            }
+        }
+
         if fix && !missing_ids.is_empty() {
             missing_ids = repair_agent_wiring(agent.id, &missing_ids, parsed).await;
         }
@@ -51,6 +67,14 @@ pub async fn run_doctor(parsed: &ParsedCli, offline: bool, fix: bool) -> i32 {
                 label,
                 "all tools wired".green()
             );
+            if agent.id == crate::registry::AgentId::Claude
+                && verify_tool(agent.id, ToolId::Rtk) == Some(true)
+            {
+                println!(
+                    "      {}",
+                    "official `rtk init --show` reports the Claude hook missing when only toksave's wrapper is present — keep only the toksave hook (`rtk init -g --no-patch`)".dimmed()
+                );
+            }
         } else {
             let missing_str = format!(
                 "missing: {}",
@@ -231,8 +255,34 @@ async fn repair_agent_wiring(
     let mut still_missing = vec![];
     for tool_id in missing_ids {
         let info = tool_info(*tool_id);
-        if !info.instruction_only && tool_installed_version(*tool_id).is_none() {
+        if !info.instruction_only
+            && *tool_id != ToolId::Rtk
+            && tool_installed_version(*tool_id).is_none()
+        {
+            let _ = tool_repair(*tool_id, &parsed.opts).await;
+        }
+        if !info.instruction_only
+            && *tool_id != ToolId::Rtk
+            && tool_installed_version(*tool_id).is_none()
+        {
             still_missing.push(*tool_id);
+            if matches!(*tool_id, ToolId::Codegraph | ToolId::ContextMode) {
+                println!(
+                    "      {} still broken: {} (not installed)",
+                    colors::CROSS.red(),
+                    info.label
+                );
+                println!(
+                    "      {}",
+                    "add the npm global bin and toksave install dir to the user PATH, then restart the agent".dimmed()
+                );
+                if cfg!(windows) {
+                    println!(
+                        "      {}",
+                        r"Windows: %APPDATA%\npm and %LOCALAPPDATA%\Programs\toksave".dimmed()
+                    );
+                }
+            }
             continue;
         }
 
@@ -264,6 +314,19 @@ fn tool_wire_name(t: ToolId) -> String {
         ToolId::Ponytail => "ponytail".to_string(),
         ToolId::Principles => "principles".to_string(),
     }
+}
+
+fn push_unique(ids: &mut Vec<ToolId>, id: ToolId) {
+    if !ids.contains(&id) {
+        ids.push(id);
+    }
+}
+
+fn probe_issue_is_stale_wiring(issue: &RuntimeIssue) -> bool {
+    issue.detail.contains("binary not found")
+        || issue.detail.contains("backslash path")
+        || issue.detail.contains("/$bunfs/")
+        || issue.detail.contains("mcp target not found")
 }
 
 fn print_health_issues(health: &HealthStatus) {
