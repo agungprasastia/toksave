@@ -448,10 +448,25 @@ args = ["runmcp", "codegraph", "serve", "--mcp"]
     #[test]
     fn live_hook_fails_on_bad_exit() {
         let exe = std::env::current_exe().expect("test binary");
-        // forward slashes so the Windows hostile-path check doesn't fire
-        let exe = exe.to_string_lossy().replace('\\', "/");
+        // Keep native separators. Forward-slash drive paths (`C:/...`) are
+        // flagged as PowerShell-hostile for hook strings and would skip live_hook.
+        let exe = exe.to_string_lossy().into_owned();
         let issue = probe_command(exe.as_str(), &["--badflag".to_string()], true)
             .expect("bad exit must be reported");
         assert!(issue.contains("hook not runnable"), "got: {issue}");
+    }
+
+    #[test]
+    fn probe_command_flags_forward_slash_managed_hook_on_windows() {
+        if !cfg!(windows) {
+            return;
+        }
+        let issue = probe_command(
+            r"C:/tools/toksave.exe",
+            &["rtk-hook".to_string(), "claude".to_string()],
+            true,
+        )
+        .expect("forward-slash hook must be flagged");
+        assert!(issue.contains("forward-slash path"), "got: {issue}");
     }
 }
