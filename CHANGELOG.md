@@ -5,7 +5,7 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-08-18
 
 ### Added
 
@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Absolute `rtk` prefix could rewrite twice**: the hook skipped only a bare `rtk ` prefix, so a second PreToolUse pass turned `/path/to/rtk ls` into `/path/to/rtk /path/to/rtk ls`. It now treats the resolved prefix (quoted when the path has spaces) as already rewritten.
 
 Minimum RTK version for the binary hook engine used by all of the above: **0.37+**.
+
+### Contributors
+
+- Huge thanks to [@jondmarien](https://github.com/jondmarien) for contributing exact per-agent RTK hook contracts, self-healing doctor/uninstall repairs, and Windows cmd/PowerShell compatibility in [#28](https://github.com/agungprasastia/toksave/pull/28)!
 
 ## [1.1.0] - 2026-08-17
 
