@@ -34,17 +34,21 @@ fn run_hook(args: &[&str], stdin: &str, dir: Option<&std::path::Path>) -> (i32, 
 
 #[test]
 fn rtk_hook_prefixes_bash_command_codex() {
+    let _env = common::setup();
     let input = r#"{"tool_name":"Bash","tool_input":{"command":"ls -la"}}"#;
     let (code, stdout, _) = run_hook(&["rtk-hook", "codex"], input, None);
     assert_eq!(code, 0);
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
     let out = &v["hookSpecificOutput"];
     assert_eq!(out["hookEventName"], "PreToolUse");
-    assert_eq!(out["modifiedToolInput"]["command"], "rtk ls -la");
+    assert_eq!(out["permissionDecision"], "allow");
+    assert_eq!(out["updatedInput"]["command"], "rtk ls -la");
+    assert!(out.get("modifiedToolInput").is_none());
 }
 
 #[test]
 fn rtk_hook_uses_updated_input_for_claude() {
+    let _env = common::setup();
     let input = r#"{"tool_name":"Bash","tool_input":{"command":"git status"}}"#;
     let (code, stdout, _) = run_hook(&["rtk-hook", "claude"], input, None);
     assert_eq!(code, 0);
@@ -55,20 +59,96 @@ fn rtk_hook_uses_updated_input_for_claude() {
 }
 
 #[test]
-fn rtk_hook_uses_updated_input_for_cursor_shell() {
+fn rtk_hook_uses_updated_input_for_droid_execute() {
+    let _env = common::setup();
+    let input = r#"{"tool_name":"Execute","tool_input":{"command":"cargo test"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "droid"], input, None);
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(
+        v["hookSpecificOutput"]["updatedInput"]["command"],
+        "rtk cargo test"
+    );
+}
+
+#[test]
+fn rtk_hook_droid_ignores_lowercase_execute() {
+    // Droid's tool_name is the exact case-sensitive string "Execute" -- "execute" must not match.
+    let input = r#"{"tool_name":"execute","tool_input":{"command":"cargo test"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "droid"], input, None);
+    assert_eq!(code, 0);
+    assert!(stdout.trim().is_empty());
+}
+
+#[test]
+fn rtk_hook_uses_updated_input_for_devin_exec() {
+    let _env = common::setup();
+    let input = r#"{"tool_name":"exec","tool_input":{"command":"npm test"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "devin"], input, None);
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(
+        v["hookSpecificOutput"]["updatedInput"]["command"],
+        "rtk npm test"
+    );
+}
+
+#[test]
+fn rtk_hook_devin_ignores_execute_tool_name() {
+    // Devin's real tool name is "exec", not "Execute" (that's Droid's).
+    let input = r#"{"tool_name":"Execute","tool_input":{"command":"npm test"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "devin"], input, None);
+    assert_eq!(code, 0);
+    assert!(stdout.trim().is_empty());
+}
+
+#[test]
+fn rtk_hook_uses_cursor_native_format() {
+    let _env = common::setup();
     let input = r#"{"tool_name":"Shell","tool_input":{"command":"bun test"}}"#;
     let (code, stdout, _) = run_hook(&["rtk-hook", "cursor"], input, None);
     assert_eq!(code, 0);
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
-    let out = &v["hookSpecificOutput"];
-    assert_eq!(out["hookEventName"], "PreToolUse");
-    assert_eq!(out["updatedInput"]["command"], "rtk bun test");
-    assert!(out.get("modifiedToolInput").is_none());
+    assert_eq!(v["permission"], "allow");
+    assert_eq!(v["updated_input"]["command"], "rtk bun test");
+    assert!(v.get("hookSpecificOutput").is_none());
+}
+
+#[test]
+fn rtk_hook_cursor_emits_empty_object_on_no_rewrite() {
+    // Cursor requires JSON output on every path -- empty stdout is invalid for it.
+    let input = r#"{"tool_name":"Edit","tool_input":{"command":"ls"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "cursor"], input, None);
+    assert_eq!(code, 0);
+    assert_eq!(stdout.trim(), "{}");
+}
+
+#[test]
+fn rtk_hook_uses_run_shell_command_for_antigravity() {
+    let _env = common::setup();
+    let input = r#"{"tool_name":"run_shell_command","tool_input":{"command":"git diff"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "agy"], input, None);
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(v["decision"], "allow");
+    assert_eq!(
+        v["hookSpecificOutput"]["tool_input"]["command"],
+        "rtk git diff"
+    );
 }
 
 #[test]
 fn rtk_hook_skips_non_bash_tool() {
     let input = r#"{"tool_name":"Edit","tool_input":{"command":"ls"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "agy"], input, None);
+    assert_eq!(code, 0);
+    assert!(stdout.trim().is_empty());
+}
+
+#[test]
+fn rtk_hook_agy_ignores_bare_bash_tool_name() {
+    // Antigravity's tool name is specifically "run_shell_command" -- generic "Bash" must not match.
+    let input = r#"{"tool_name":"Bash","tool_input":{"command":"ls"}}"#;
     let (code, stdout, _) = run_hook(&["rtk-hook", "agy"], input, None);
     assert_eq!(code, 0);
     assert!(stdout.trim().is_empty());
@@ -92,6 +172,129 @@ fn rtk_hook_tolerates_empty_stdin() {
 #[test]
 fn rtk_hook_tolerates_invalid_json() {
     let (code, stdout, _) = run_hook(&["rtk-hook", "codex"], "not json {", None);
+    assert_eq!(code, 0);
+    assert!(stdout.trim().is_empty());
+}
+
+#[test]
+fn rtk_hook_uses_absolute_path_when_rtk_locally_installed() {
+    // A bare "rtk" prefix fails when the agent's shell session predates rtk's install-time
+    // PATH update (fresh install, GUI-launched session). The hook must prefer the absolute
+    // path toksave itself manages.
+    let _env = common::setup();
+    let local_bin = common::ts_paths::local_bin();
+    std::fs::create_dir_all(&local_bin).unwrap();
+    let rtk_path = local_bin.join(toksave::tools::rtk::rtk_bin_name());
+    std::fs::write(&rtk_path, "#!/bin/sh\n").unwrap();
+
+    let input = r#"{"tool_name":"Bash","tool_input":{"command":"git status"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "claude"], input, None);
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    let cmd = v["hookSpecificOutput"]["updatedInput"]["command"]
+        .as_str()
+        .unwrap();
+    // cmd.exe, Windows PowerShell 5.1, and pwsh 7 need backslashes as the first
+    // token (`C:/...` makes PowerShell treat `C:` as Set-Location). Git Bash is
+    // not required; MCP argv still uses forward slashes via toksave_abs().
+    let expected_prefix = toksave::util::winsh::shell_exe_token(&rtk_path);
+    assert_eq!(cmd, format!("{expected_prefix} git status"));
+}
+
+#[test]
+fn rtk_hook_does_not_double_prefix_absolute_rtk_path() {
+    let _env = common::setup();
+    let local_bin = common::ts_paths::local_bin();
+    std::fs::create_dir_all(&local_bin).unwrap();
+    let rtk_path = local_bin.join(toksave::tools::rtk::rtk_bin_name());
+    std::fs::write(&rtk_path, "#!/bin/sh\n").unwrap();
+    let prefix = toksave::util::winsh::shell_exe_token(&rtk_path);
+    let already = format!("{prefix} git status");
+    let input = serde_json::json!({
+        "tool_name": "Bash",
+        "tool_input": { "command": already }
+    })
+    .to_string();
+    let (code, stdout, _) = run_hook(&["rtk-hook", "claude"], &input, None);
+    assert_eq!(code, 0);
+    assert!(
+        stdout.trim().is_empty(),
+        "already-prefixed absolute rtk command must not be rewritten again, got {stdout}"
+    );
+}
+
+#[test]
+fn rtk_hook_does_not_double_prefix_forward_slash_windows_path() {
+    let _env = common::setup();
+    let local_bin = common::ts_paths::local_bin();
+    std::fs::create_dir_all(&local_bin).unwrap();
+    let rtk_path = local_bin.join(toksave::tools::rtk::rtk_bin_name());
+    std::fs::write(&rtk_path, "#!/bin/sh\n").unwrap();
+    let fwd = rtk_path.to_string_lossy().replace('\\', "/");
+    let already = format!("{fwd} git status");
+    let input = serde_json::json!({
+        "tool_name": "Bash",
+        "tool_input": { "command": already }
+    })
+    .to_string();
+    let (code, stdout, _) = run_hook(&["rtk-hook", "claude"], &input, None);
+    assert_eq!(code, 0);
+    assert!(
+        stdout.trim().is_empty(),
+        "forward-slash absolute rtk command must count as already prefixed, got {stdout}"
+    );
+}
+
+#[test]
+fn rtk_hook_falls_back_to_bare_rtk_when_not_locally_installed() {
+    let _env = common::setup();
+    let input = r#"{"tool_name":"Bash","tool_input":{"command":"git status"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "claude"], input, None);
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(
+        v["hookSpecificOutput"]["updatedInput"]["command"],
+        "rtk git status"
+    );
+}
+
+// ---- rtk-hook copilot (dual format) ----
+
+#[test]
+fn rtk_hook_copilot_vscode_snake_case_format() {
+    let _env = common::setup();
+    let input = r#"{"tool_name":"Bash","tool_input":{"command":"git status"}}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "copilot"], input, None);
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(
+        v["hookSpecificOutput"]["updatedInput"]["command"],
+        "rtk git status"
+    );
+}
+
+#[test]
+fn rtk_hook_copilot_cli_camel_case_format() {
+    let _env = common::setup();
+    let input = r#"{"toolName":"bash","toolArgs":"{\"command\":\"git status\"}"}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "copilot"], input, None);
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(v["permissionDecision"], "allow");
+    assert_eq!(v["modifiedArgs"]["command"], "rtk git status");
+}
+
+#[test]
+fn rtk_hook_copilot_cli_format_skips_non_bash_tool() {
+    let input = r#"{"toolName":"edit","toolArgs":"{\"path\":\"foo.rs\"}"}"#;
+    let (code, stdout, _) = run_hook(&["rtk-hook", "copilot"], input, None);
+    assert_eq!(code, 0);
+    assert!(stdout.trim().is_empty());
+}
+
+#[test]
+fn rtk_hook_copilot_tolerates_empty_stdin() {
+    let (code, stdout, _) = run_hook(&["rtk-hook", "copilot"], "", None);
     assert_eq!(code, 0);
     assert!(stdout.trim().is_empty());
 }

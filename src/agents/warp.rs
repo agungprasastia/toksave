@@ -4,8 +4,8 @@ use crate::util::detect::find_binary_in;
 use crate::util::errors::{Result, ToksaveError};
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
 use crate::util::paths::{
-    toksave_abs, warp_cli_paths, warp_desktop_paths, warp_known_bin_dirs, warp_mcp_files,
-    warp_paths,
+    toksave_abs, warp_cli_paths, warp_desktop_paths, warp_known_bin_dirs, warp_legacy_config_files,
+    warp_mcp_files, warp_paths,
 };
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 use serde_json::Value;
@@ -57,12 +57,15 @@ fn backup_file(path: &Path) -> FileBackup {
 }
 
 fn mcp_file_has(path: &Path, tool: &str) -> bool {
-    read_json_file(path)
-        .ok()
-        .flatten()
-        .and_then(|c| c.get("mcpServers").cloned())
-        .and_then(|m| m.get(tool).cloned())
-        .is_some()
+    let Some(cfg) = read_json_file(path).ok().flatten() else {
+        return false;
+    };
+    let tool_id = match tool {
+        "codegraph" => ToolId::Codegraph,
+        "context-mode" => ToolId::ContextMode,
+        _ => return false,
+    };
+    crate::util::mcp::json_tool_healthy(&cfg, "mcpServers", crate::registry::AgentId::Warp, tool_id)
 }
 
 fn mcp_has_all(tool: &str) -> bool {
@@ -112,6 +115,36 @@ fn remove_mcp_all(tool: &str) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Scrub dead `/$bunfs/root/toksave` command references (the old Bun-compiled binary path)
+/// from a legacy Warp CLI config dir that toksave never wires but earlier Warp CLI versions
+/// may have read. Best-effort: a corrupted legacy file is left alone rather than failing the
+/// whole wire/unwire call over dead config nobody asked to fix.
+fn cleanup_legacy_warp_config() {
+    const DEAD_PATH_MARKER: &str = "/$bunfs/root/toksave";
+    for path in warp_legacy_config_files() {
+        if !path.exists() {
+            continue;
+        }
+        let Ok(Some(mut cfg)) = read_json_file(&path) else {
+            continue;
+        };
+        let before = cfg.clone();
+        if cfg.get("PreToolUse").is_some() {
+            crate::util::json::remove_pretool_use(&mut cfg, DEAD_PATH_MARKER);
+        }
+        if let Some(servers) = cfg.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
+            servers.retain(|_, v| {
+                !v.get("command")
+                    .and_then(|c| c.as_str())
+                    .is_some_and(|c| c.contains(DEAD_PATH_MARKER))
+            });
+        }
+        if cfg != before {
+            let _ = write_json_pruned(&path, &cfg);
+        }
+    }
 }
 
 impl Agent for WarpAgent {
@@ -191,26 +224,16 @@ impl Agent for WarpAgent {
                 Ok(true)
             }
             ToolId::Rtk => {
-                // Trust boundary: if hooks_file exists but is corrupted, read_json_file will return ToksaveError::Config
-                if p.hooks_file.exists() {
-                    let raw = std::fs::read_to_string(&p.hooks_file).unwrap_or_default();
-                    if !raw.trim().is_empty()
-                        && serde_json::from_str::<serde_json::Value>(&raw).is_err()
-                    {
-                        return Err(ToksaveError::config(
-                            &p.hooks_file.to_string_lossy(),
-                            "Corrupted JSON in Warp hooks file",
-                        ));
-                    }
+                // Neither the Warp Agent CLI nor the desktop app has a documented
+                // PreToolUse-style hook engine (docs.warp.dev only exposes settings.toml for
+                // theme/statusline/MCP) -- there's nothing to wire here. RTK relies on `rtk`
+                // being on PATH instead. Trust boundary: if a pre-existing hooks_file is
+                // corrupted, read_json_file returns ToksaveError::Config.
+                if let Some(mut cfg) = read_json_file(&p.hooks_file)? {
+                    crate::util::json::remove_pretool_use(&mut cfg, "rtk-hook warp");
+                    write_json_pruned(&p.hooks_file, &cfg)?;
                 }
-                let mut cfg =
-                    read_json_file(&p.hooks_file)?.unwrap_or_else(|| serde_json::json!({}));
-                let hook_entry = serde_json::json!({
-                    "matcher": "Execute",
-                    "hooks": [{ "type": "command", "command": format!("{} rtk-hook warp", toksave_abs()), "timeout": 10 }]
-                });
-                crate::util::json::merge_pretool_use(&mut cfg, hook_entry, "rtk-hook warp");
-                write_json_file(&p.hooks_file, &cfg)?;
+                cleanup_legacy_warp_config();
                 Ok(true)
             }
             ToolId::Ponytail => {
@@ -246,6 +269,7 @@ impl Agent for WarpAgent {
                     crate::util::json::remove_pretool_use(&mut cfg, "rtk-hook warp");
                     write_json_pruned(&p.hooks_file, &cfg)?;
                 }
+                cleanup_legacy_warp_config();
                 Ok(true)
             }
             ToolId::Ponytail => {
@@ -260,17 +284,13 @@ impl Agent for WarpAgent {
     }
 
     fn verify(&self, tool: ToolId) -> Option<bool> {
-        let p = warp_paths();
         match tool {
             ToolId::Codegraph => Some(mcp_has_all("codegraph")),
             ToolId::ContextMode => Some(mcp_has_all("context-mode")),
             ToolId::Caveman => Some(has_owner("warp", "caveman")),
-            ToolId::Rtk => {
-                let hcfg = read_json_file(&p.hooks_file).ok().flatten();
-                Some(hcfg.as_ref().is_some_and(|c| {
-                    crate::util::json::has_pretool_with_command_marker(c, "rtk-hook warp")
-                }))
-            }
+            // Warp has no hook engine to wire against RTK -- it relies on `rtk` being on
+            // PATH, which RtkTool's own health check covers. Nothing to verify here.
+            ToolId::Rtk => Some(true),
             ToolId::Ponytail => Some(has_owner("warp", "ponytail")),
             ToolId::Principles => Some(has_owner("warp", "principles")),
         }

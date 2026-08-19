@@ -20,6 +20,7 @@ pub struct ClaudePaths {
     pub settings: PathBuf,
     pub skills_dir: PathBuf,
     pub agents_md: PathBuf,
+    pub claude_md: PathBuf,
 }
 
 pub fn claude_paths() -> ClaudePaths {
@@ -30,6 +31,7 @@ pub fn claude_paths() -> ClaudePaths {
         settings: dir.join("settings.json"),
         skills_dir: dir.join("skills"),
         agents_md: dir.join("AGENTS.md"),
+        claude_md: dir.join("CLAUDE.md"),
         dir,
     }
 }
@@ -126,14 +128,12 @@ pub struct AntigravityPaths {
     pub hooks: PathBuf,
 }
 
+/// Antigravity CLI (`agy`) preserves Gemini CLI's directory namespace even though Gemini CLI
+/// itself is being discontinued (Google's own migration guide + antigravity-cli's CHANGELOG
+/// both confirm shared config lives under `~/.gemini/config/`, not `~/.antigravity` -- that
+/// directory is never created or read by any version of Antigravity CLI).
 pub fn antigravity_paths() -> AntigravityPaths {
-    let h = home();
-    let gemini = h.join(".gemini");
-    let dir = if gemini.exists() {
-        gemini
-    } else {
-        h.join(".antigravity")
-    };
+    let dir = home().join(".gemini");
     AntigravityPaths {
         hooks: dir.join("config").join("hooks.json"),
         dir,
@@ -180,12 +180,12 @@ pub fn antigravity_desktop_paths() -> Vec<PathBuf> {
     }
 }
 
+/// Antigravity CLI's real, documented MCP config file is `mcp_config.json` (confirmed at
+/// antigravity.google/docs/cli/gcli-migration: "Global servers: `~/.gemini/config/mcp_config.json`")
+/// -- not `mcp.json`.
 pub fn antigravity_mcp_files() -> Vec<PathBuf> {
     let p = antigravity_paths();
-    vec![
-        p.dir.join("mcp.json"),
-        p.dir.join("config").join("mcp.json"),
-    ]
+    vec![p.dir.join("config").join("mcp_config.json")]
 }
 
 pub fn antigravity_settings_files() -> Vec<PathBuf> {
@@ -226,9 +226,12 @@ pub struct DroidPaths {
     pub mcp_config: PathBuf,
 }
 
+/// Factory Droid's real user-scoped config directory is `~/.factory` (confirmed
+/// by docs.factory.ai/harness/hooks and rtk-ai/rtk#912) -- not `~/.factory-droid`,
+/// which no version of the Droid CLI ever reads.
 pub fn droid_paths() -> DroidPaths {
     let h = home();
-    let dir = h.join(".factory-droid");
+    let dir = h.join(".factory");
     DroidPaths {
         hooks_file: dir.join("hooks.json"),
         mcp_config: dir.join("mcp.json"),
@@ -238,6 +241,12 @@ pub fn droid_paths() -> DroidPaths {
 
 pub fn droid_known_bin_dirs() -> Vec<PathBuf> {
     vec![home().join(".local").join("bin")]
+}
+
+/// Pre-fix location toksave wired Droid's RTK hook to (`~/.factory-droid/hooks.json`), which
+/// no Droid CLI version ever reads. Kept around only so wire/unwire can clean up the orphan.
+pub fn droid_legacy_hooks_file() -> PathBuf {
+    home().join(".factory-droid").join("hooks.json")
 }
 
 pub fn droid_desktop_paths() -> Vec<PathBuf> {
@@ -262,14 +271,31 @@ pub struct DevinPaths {
     pub dir: PathBuf,
     pub hooks_file: PathBuf,
     pub mcp_config: PathBuf,
+    /// Devin CLI's real user-level config file (docs.devin.ai/cli/extensibility/hooks/overview):
+    /// `~/.config/devin/config.json`, or `%APPDATA%\devin\config.json` on Windows. Hooks live
+    /// nested under this file's `"hooks"` key -- there is no standalone `~/.devin/hooks.json`.
+    pub config: PathBuf,
 }
 
 pub fn devin_paths() -> DevinPaths {
     let h = home();
     let dir = h.join(".devin");
+    let config = if cfg!(windows) {
+        env::var_os("APPDATA")
+            .map(|a| PathBuf::from(a).join("devin").join("config.json"))
+            .unwrap_or_else(|| {
+                h.join("AppData")
+                    .join("Roaming")
+                    .join("devin")
+                    .join("config.json")
+            })
+    } else {
+        xdg_config_home().join("devin").join("config.json")
+    };
     DevinPaths {
         hooks_file: dir.join("hooks.json"),
         mcp_config: dir.join("mcp.json"),
+        config,
         dir,
     }
 }
@@ -385,6 +411,14 @@ pub fn warp_known_bin_dirs() -> Vec<PathBuf> {
     vec![home().join(".local").join("bin")]
 }
 
+/// Legacy Linux Warp CLI config dir (`~/.config/warp`) from before the CLI moved to
+/// `~/.config/warp-terminal/cli`. toksave never wires here, but older installs may still
+/// have `hooks.json`/`mcp.json` here pointing at a dead `/$bunfs/root/toksave` binary path.
+pub fn warp_legacy_config_files() -> Vec<PathBuf> {
+    let dir = home().join(".config").join("warp");
+    vec![dir.join("hooks.json"), dir.join("mcp.json")]
+}
+
 pub fn warp_desktop_paths() -> Vec<PathBuf> {
     if cfg!(windows) {
         if let Some(local) = env::var_os("LOCALAPPDATA") {
@@ -411,12 +445,11 @@ pub struct CursorPaths {
 }
 
 pub fn cursor_paths() -> CursorPaths {
+    // Cursor's documented user config is ~/.cursor (hooks.json, mcp.json,
+    // cli-config.json). It does not read $XDG_CONFIG_HOME/cursor — wiring that
+    // path leaves a competing file official RTK already wrote under ~/.cursor.
     let dir = if let Some(d) = env::var_os("CURSOR_CONFIG_DIR") {
         PathBuf::from(d)
-    } else if !cfg!(windows)
-        && let Some(xdg) = env::var_os("XDG_CONFIG_HOME")
-    {
-        PathBuf::from(xdg).join("cursor")
     } else {
         home().join(".cursor")
     };
@@ -502,12 +535,17 @@ pub fn write_file(p: &Path, content: &str) -> Result<()> {
     Ok(())
 }
 
+/// Absolute toksave path for MCP `command` fields (CreateProcess argv).
+///
+/// On Windows this uses forward slashes. Win32 `CreateProcess` accepts them,
+/// and they are also valid in Git Bash. Do **not** use this as the first token
+/// of a shell command string — Windows PowerShell 5.1 parses `C:/...` as the
+/// `C:` drive alias plus a `/...` switch. Hook strings use
+/// [`toksave_hook_command`].
 pub fn toksave_abs() -> String {
     std::env::current_exe()
         .map(|p| {
             let s = p.to_string_lossy().to_string();
-            // Forward slashes work in cmd.exe, PowerShell, and Git Bash;
-            // backslashes break Git Bash hooks (see #24).
             if cfg!(windows) {
                 s.replace('\\', "/")
             } else {
@@ -515,6 +553,19 @@ pub fn toksave_abs() -> String {
             }
         })
         .unwrap_or_else(|_| "toksave".to_string())
+}
+
+/// Absolute toksave path as a cmd.exe / Windows PowerShell 5.1 / pwsh 7 token.
+pub fn toksave_shell_abs() -> String {
+    std::env::current_exe()
+        .map(|p| crate::util::winsh::shell_exe_token(&p))
+        .unwrap_or_else(|_| "toksave".to_string())
+}
+
+/// Hook `command` string that runs in cmd, Windows PowerShell 5.1, and pwsh 7.
+/// `rest` is the toksave subcommand, e.g. `rtk-hook claude`.
+pub fn toksave_hook_command(rest: &str) -> String {
+    format!("{} {rest}", toksave_shell_abs())
 }
 
 #[cfg(test)]
@@ -627,5 +678,47 @@ mod tests {
                 None => env::remove_var("LOCALAPPDATA"),
             }
         }
+    }
+
+    #[test]
+    fn antigravity_paths_always_use_gemini_namespace() {
+        // Antigravity CLI keeps Gemini CLI's ~/.gemini namespace even with Gemini CLI
+        // discontinued; it never creates or reads ~/.antigravity, so toksave must not
+        // fall back there even when ~/.gemini doesn't exist yet (fresh install).
+        let _g = crate::util::env_test_lock();
+        let tmp = env::temp_dir().join("toksave-antigravity-paths-test");
+        fs::create_dir_all(&tmp).unwrap();
+        let old_home = env::var_os("HOME");
+        unsafe {
+            env::set_var("HOME", &tmp);
+        }
+
+        let p = antigravity_paths();
+        assert_eq!(p.dir, tmp.join(".gemini"));
+        assert_eq!(
+            p.hooks,
+            tmp.join(".gemini").join("config").join("hooks.json")
+        );
+
+        // Even if a legacy ~/.antigravity dir happens to exist, it must still resolve to
+        // ~/.gemini -- there is no version of Antigravity CLI that reads the former.
+        fs::create_dir_all(tmp.join(".antigravity")).unwrap();
+        let p2 = antigravity_paths();
+        assert_eq!(p2.dir, tmp.join(".gemini"));
+
+        let files = antigravity_mcp_files();
+        assert_eq!(files.len(), 1);
+        assert_eq!(
+            files[0],
+            tmp.join(".gemini").join("config").join("mcp_config.json")
+        );
+
+        unsafe {
+            match old_home {
+                Some(o) => env::set_var("HOME", o),
+                None => env::remove_var("HOME"),
+            }
+        }
+        fs::remove_dir_all(&tmp).ok();
     }
 }

@@ -43,9 +43,9 @@ This document provides a detailed technical reference on how **TokSave** wires e
 ---
 
 ### 4. Antigravity
-- **Configuration Path**: `~/.antigravity/`
-- **MCP & Hooks**: Modifies `~/.antigravity/mcp.json` and `~/.antigravity/hooks.json`.
-- **Skills**: Writes skill rules under `~/.antigravity/config/skills/`.
+- **Configuration Path**: `~/.gemini/` (Antigravity CLI keeps Gemini CLI's namespace; it never reads `~/.antigravity`).
+- **MCP & Hooks**: Hooks at `~/.gemini/config/hooks.json`; MCP at `~/.gemini/config/mcp_config.json`.
+- **Skills**: Writes skill rules under `~/.gemini/config/skills/`.
 
 ---
 
@@ -71,12 +71,12 @@ This document provides a detailed technical reference on how **TokSave** wires e
 - **Desktop**: `~/.warp/mcp.json` (legacy TokSave path) and official file-based MCP at `~/.warp/.mcp.json`.
 - **Warp Agent CLI**: platform MCP file (`~/.warp_cli/.mcp.json` on macOS; `${XDG_CONFIG_HOME:-~/.config}/warp-terminal/cli/.mcp.json` on Linux; `%LOCALAPPDATA%\warp\Warp\config\cli\.mcp.json` on Windows), plus the documented `~/.warp_cli/.mcp.json` path on every platform.
 - **Oz cloud**: same `warp` / `oz` agent id. Cloud MCP is per-run (`oz agent run --mcp` / agent YAML) and is not written by TokSave. Shared rules/skills still apply.
-- **Wiring**: MCP for CodeGraph and Context-Mode on every local Warp MCP file; RTK via `~/.warp/hooks.json`; instructions via `~/.warp/instructions.md`.
+- **Wiring**: MCP for CodeGraph and Context-Mode on every local Warp MCP file; RTK via `rtk` on PATH (Warp has no PreToolUse hook engine); instructions via `~/.warp/instructions.md`.
 
 ---
 
 ### 9. Cursor CLI
-- **Configuration Path**: `~/.cursor/` (or `CURSOR_CONFIG_DIR` / `$XDG_CONFIG_HOME/cursor` on Unix)
+- **Configuration Path**: `~/.cursor/` (or `CURSOR_CONFIG_DIR`). Cursor reads `~/.cursor/hooks.json`, not `$XDG_CONFIG_HOME/cursor`.
 - **Hooks**: Native `hooks.json` `{ version, hooks.preToolUse }` with `matcher: "Shell"` calling `toksave rtk-hook cursor`.
 - **Permissions**: Adds `Shell(rtk *)` to `cli-config.json` `permissions.allow`.
 - **MCP Servers**: Configures `codegraph` and `context-mode` in `mcp.json`.
@@ -111,3 +111,9 @@ Follow lazy senior developer discipline:
 ```
 
 Unwiring an agent surgically strips this block while leaving user-written instructions untouched.
+
+## Windows shells
+
+TokSave on Windows supports **cmd.exe**, **Windows PowerShell 5.1** (`powershell.exe`), and **PowerShell 7** (`pwsh`). Git Bash is not required.
+
+Hook `command` strings and RTK prefixes use backslashes (`C:\Users\...\toksave.exe rtk-hook claude`). MCP `command` fields keep forward slashes because agents spawn them with CreateProcess, not a shell. Re-run `toksave init` or `toksave doctor --fix` after upgrading so old `C:/...` hook paths are rewritten.

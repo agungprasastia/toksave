@@ -51,19 +51,17 @@ pub fn is_managed_hook(fields: &[&str]) -> bool {
     MANAGED_HOOKS.contains(&fields[1])
 }
 
-/// Unquoted Windows paths with backslashes break Git Bash hooks.
-pub fn windows_bash_hostile_path(exe: &str) -> bool {
+/// Drive-letter paths with forward slashes (`C:/Users/.../toksave.exe`) are
+/// valid in cmd.exe and Git Bash, but Windows PowerShell 5.1 (and typically 7)
+/// parses `C:` as Set-Location and `/Users/...` as a switch. Hook command
+/// strings must use backslashes. MCP argv is CreateProcess and is exempt
+/// (those entries are not `is_managed_hook`).
+pub fn windows_powershell_hostile_path(exe: &str) -> bool {
     if !cfg!(windows) {
         return false;
     }
-    if exe.contains('/') {
-        return false;
-    }
     let b = exe.as_bytes();
-    if b.len() >= 3 && b[1] == b':' && b[2] == b'\\' {
-        return true;
-    }
-    exe.starts_with("\\\\")
+    b.len() >= 3 && b[1] == b':' && b[2] == b'/'
 }
 
 /// Walk a parsed config, collecting every `command` entry (string or argv
@@ -164,9 +162,9 @@ fn probe_command(exe: &str, args: &[String], managed: bool) -> Option<String> {
     if exe.is_empty() {
         return Some("empty command".to_string());
     }
-    if managed && windows_bash_hostile_path(exe) {
+    if managed && windows_powershell_hostile_path(exe) {
         return Some(format!(
-            "backslash path breaks Git Bash hooks: {}",
+            "forward-slash path breaks PowerShell 5.1/7: {}",
             short_path(exe)
         ));
     }
@@ -255,7 +253,9 @@ fn probe_files(agent: AgentId) -> Vec<PathBuf> {
         }
         AgentId::Devin => {
             let p = devin_paths();
-            v.push(p.hooks_file);
+            // Devin's real RTK hook lives nested under "hooks" in its own config.json
+            // (docs.devin.ai/cli/extensibility/hooks/overview); hooks_file is legacy/unused.
+            v.push(p.config);
             v.push(p.mcp_config);
         }
         AgentId::Warp => {
@@ -348,14 +348,13 @@ mod tests {
     }
 
     #[test]
-    fn windows_bash_hostile_path_detects_windows_paths() {
+    fn windows_powershell_hostile_path_detects_forward_slash_drive_paths() {
         if cfg!(windows) {
-            assert!(windows_bash_hostile_path(r"C:\tools\toksave.exe"));
-            assert!(windows_bash_hostile_path(r"\\server\share\toksave"));
-            assert!(!windows_bash_hostile_path("/usr/bin/toksave"));
-            assert!(!windows_bash_hostile_path("toksave"));
+            assert!(windows_powershell_hostile_path(r"C:/tools/toksave.exe"));
+            assert!(!windows_powershell_hostile_path(r"C:\tools\toksave.exe"));
+            assert!(!windows_powershell_hostile_path("toksave"));
         } else {
-            assert!(!windows_bash_hostile_path(r"C:\tools\toksave.exe"));
+            assert!(!windows_powershell_hostile_path(r"C:/tools/toksave.exe"));
         }
     }
 
@@ -449,10 +448,25 @@ args = ["runmcp", "codegraph", "serve", "--mcp"]
     #[test]
     fn live_hook_fails_on_bad_exit() {
         let exe = std::env::current_exe().expect("test binary");
-        // forward slashes so the Windows hostile-path check doesn't fire
-        let exe = exe.to_string_lossy().replace('\\', "/");
+        // Keep native separators. Forward-slash drive paths (`C:/...`) are
+        // flagged as PowerShell-hostile for hook strings and would skip live_hook.
+        let exe = exe.to_string_lossy().into_owned();
         let issue = probe_command(exe.as_str(), &["--badflag".to_string()], true)
             .expect("bad exit must be reported");
         assert!(issue.contains("hook not runnable"), "got: {issue}");
+    }
+
+    #[test]
+    fn probe_command_flags_forward_slash_managed_hook_on_windows() {
+        if !cfg!(windows) {
+            return;
+        }
+        let issue = probe_command(
+            r"C:/tools/toksave.exe",
+            &["rtk-hook".to_string(), "claude".to_string()],
+            true,
+        )
+        .expect("forward-slash hook must be flagged");
+        assert!(issue.contains("forward-slash path"), "got: {issue}");
     }
 }

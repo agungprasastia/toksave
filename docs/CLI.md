@@ -65,7 +65,7 @@ toksave doctor -a claude           # Check only specific agents
 
 **What Doctor Probes:**
 - **Agent Wiring**: Verifies JSON/TOML configuration blocks and hook paths.
-- **Hook Paths**: Checks Windows backslash paths (`\`) that break Git Bash POSIX shells.
+- **Hook Paths**: On Windows, flags forward-slash drive paths (`C:/...`) in hook command strings that break PowerShell 5.1 / 7. Backslash paths are the supported form for cmd, Windows PowerShell 5.1, and pwsh. MCP argv is unchanged.
 - **Binary Resolution**: Validates tool executables exist on system `PATH`.
 - **Version Checks**: Probes local version vs. remote npm/GitHub release endpoints.
 

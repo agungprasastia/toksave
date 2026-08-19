@@ -3,8 +3,27 @@ use crate::registry::{Detection, RunOpts, ToolId};
 use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
-use crate::util::paths::{devin_desktop_paths, devin_known_bin_dirs, devin_paths, toksave_abs};
+use crate::util::paths::{
+    devin_desktop_paths, devin_known_bin_dirs, devin_paths, toksave_abs, toksave_hook_command,
+};
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
+
+/// Scrub a stale RTK hook entry from the pre-fix `~/.devin/hooks.json` location (Devin's real
+/// hooks live nested in `~/.config/devin/config.json`; this standalone file was never read).
+/// Best-effort: a corrupted legacy file is left alone rather than failing the whole call.
+fn cleanup_legacy_devin_hooks(legacy_path: &std::path::Path) {
+    if !legacy_path.exists() {
+        return;
+    }
+    let Ok(Some(mut cfg)) = read_json_file(legacy_path) else {
+        return;
+    };
+    let before = cfg.clone();
+    crate::util::json::remove_pretool_use(&mut cfg, "rtk-hook devin");
+    if cfg != before {
+        let _ = write_json_pruned(legacy_path, &cfg);
+    }
+}
 
 pub struct DevinAgent;
 
@@ -94,14 +113,18 @@ impl Agent for DevinAgent {
                 Ok(true)
             }
             ToolId::Rtk => {
-                let mut cfg =
-                    read_json_file(&p.hooks_file)?.unwrap_or_else(|| serde_json::json!({}));
+                // Devin CLI's shell tool is named "exec" (not "Execute" -- that's Droid), and
+                // its hooks live nested under the "hooks" key of its own config.json, not a
+                // standalone hooks.json (docs.devin.ai/cli/extensibility/hooks/overview).
+                let mut cfg = read_json_file(&p.config)?.unwrap_or_else(|| serde_json::json!({}));
                 let hook_entry = serde_json::json!({
-                    "matcher": "Execute",
-                    "hooks": [{ "type": "command", "command": format!("{} rtk-hook devin", toksave_abs()), "timeout": 10 }]
+                    "matcher": "exec",
+                    "hooks": [{ "type": "command", "command": toksave_hook_command("rtk-hook devin"), "timeout": 10 }]
                 });
-                crate::util::json::merge_pretool_use(&mut cfg, hook_entry, "rtk-hook devin");
-                write_json_file(&p.hooks_file, &cfg)?;
+                let hooks_obj = get_or_create_object(&mut cfg, "hooks");
+                crate::util::json::merge_pretool_use(hooks_obj, hook_entry, "rtk-hook devin");
+                write_json_file(&p.config, &cfg)?;
+                cleanup_legacy_devin_hooks(&p.hooks_file);
                 Ok(true)
             }
             ToolId::Ponytail => {
@@ -143,10 +166,13 @@ impl Agent for DevinAgent {
                 Ok(true)
             }
             ToolId::Rtk => {
-                if let Some(mut cfg) = read_json_file(&p.hooks_file)? {
-                    crate::util::json::remove_pretool_use(&mut cfg, "rtk-hook devin");
-                    write_json_pruned(&p.hooks_file, &cfg)?;
+                if let Some(mut cfg) = read_json_file(&p.config)? {
+                    if let Some(hooks) = cfg.get_mut("hooks") {
+                        crate::util::json::remove_pretool_use(hooks, "rtk-hook devin");
+                    }
+                    write_json_pruned(&p.config, &cfg)?;
                 }
+                cleanup_legacy_devin_hooks(&p.hooks_file);
                 Ok(true)
             }
             ToolId::Ponytail => {
@@ -164,23 +190,29 @@ impl Agent for DevinAgent {
         let p = devin_paths();
         let cfg = read_json_file(&p.mcp_config).ok().flatten();
         match tool {
-            ToolId::Codegraph => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("codegraph"))
-                    .is_some(),
-            ),
-            ToolId::ContextMode => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcpServers"))
-                    .and_then(|m| m.get("context-mode"))
-                    .is_some(),
-            ),
+            ToolId::Codegraph => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcpServers",
+                    crate::registry::AgentId::Devin,
+                    ToolId::Codegraph,
+                )
+            })),
+            ToolId::ContextMode => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcpServers",
+                    crate::registry::AgentId::Devin,
+                    ToolId::ContextMode,
+                )
+            })),
             ToolId::Caveman => Some(has_owner("devin", "caveman")),
             ToolId::Rtk => {
-                let hcfg = read_json_file(&p.hooks_file).ok().flatten();
-                Some(hcfg.as_ref().is_some_and(|c| {
-                    crate::util::json::has_pretool_with_command_marker(c, "rtk-hook devin")
+                let cfg = read_json_file(&p.config).ok().flatten();
+                Some(cfg.as_ref().is_some_and(|c| {
+                    c.get("hooks").is_some_and(|h| {
+                        crate::util::json::has_pretool_with_command_marker(h, "rtk-hook devin")
+                    })
                 }))
             }
             ToolId::Ponytail => Some(has_owner("devin", "ponytail")),

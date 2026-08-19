@@ -34,6 +34,14 @@ async fn test_full_9x6_agent_tool_matrix() {
                 tool.id
             );
 
+            // Warp has no hook engine to wire RTK against (relies on `rtk` being on PATH),
+            // so verify(Rtk) always reports Some(true) regardless of wire/unwire state.
+            if agent.id == toksave::registry::AgentId::Warp
+                && tool.id == toksave::registry::ToolId::Rtk
+            {
+                continue;
+            }
+
             let is_wired_after = verify_tool(agent.id, tool.id);
             assert_eq!(
                 is_wired_after,

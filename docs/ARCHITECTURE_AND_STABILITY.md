@@ -47,7 +47,7 @@ When running `toksave uninstall` or unwiring specific agents:
 
 ### 3. Windows Native Reliability
 - **PATHEXT Resolution**: Spawns PATHEXT-qualified binaries (`.cmd` / `.exe`) to prevent bare npm shim execution failures (`os error 193`).
-- **Git Bash Path Validation**: `toksave doctor` checks Windows backslash paths inside hooks that would fail in Git Bash / POSIX environments.
+- **Windows shell tokens**: Hook `command` strings and RTK prefixes use backslashes so they run in cmd.exe, Windows PowerShell 5.1, and pwsh 7 without Git Bash. MCP `command` fields stay forward-slash (`toksave_abs()`) because agents spawn them via CreateProcess. `toksave doctor` flags leftover `C:/...` hook paths that PowerShell cannot run.
 
 ### 4. Smart Init Sequence
 During `toksave init`:

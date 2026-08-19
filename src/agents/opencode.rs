@@ -114,12 +114,31 @@ export const Plugin = async () => ({
             }
             ToolId::Rtk => {
                 let plugin_file = p.plugins_dir.join("toksave-rtk.js");
+                // Resolve rtk's absolute path the same way toksave's own hook does: a bare
+                // `rtk` prefix fails when OpenCode was launched before rtk's install dir was
+                // added to PATH (fresh install, GUI-launched session, stale shell PATH cache).
                 let rtk_plugin = r#"export const Plugin = async () => ({
   "tool.execute.before": async (input, output) => {
     if (input.tool !== "bash") return;
     const command = String(output.args.command ?? "").trim();
-    if (!command || command === "rtk" || command.startsWith("rtk ")) return;
-    output.args.command = `rtk ${command}`;
+    if (!command || /^(rtk|rtk\.exe)(\s|$)/.test(command)) return;
+    const os = require("node:os");
+    const path = require("node:path");
+    const fs = require("node:fs");
+    let rtkBin = "rtk";
+    const localPath = process.platform === "win32"
+      ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "Programs", "toksave", "rtk.exe")
+      : path.join(os.homedir(), ".local", "bin", "rtk");
+    if (fs.existsSync(localPath)) {
+      // cmd.exe + Windows PowerShell 5.1 + pwsh 7 all need backslashes as the
+      // first token. Forward slashes (`C:/...`) make PowerShell treat `C:` as
+      // Set-Location. Do not prefix `&` (cmd command separator).
+      rtkBin = process.platform === "win32" ? localPath.replace(/\//g, "\\") : localPath;
+      if (/\s/.test(rtkBin)) rtkBin = `"${rtkBin}"`;
+    }
+    const alts = [rtkBin, rtkBin.replace(/\\/g, "/"), rtkBin.replace(/\//g, "\\")];
+    if (alts.some((p) => command === p || command.startsWith(p + " "))) return;
+    output.args.command = `${rtkBin} ${command}`;
   },
 });
 "#;
@@ -184,12 +203,14 @@ export const Plugin = async () => ({
         let p = opencode_paths();
         let cfg = read_json_file(&p.config).ok().flatten();
         match tool {
-            ToolId::Codegraph => Some(
-                cfg.as_ref()
-                    .and_then(|c| c.get("mcp"))
-                    .and_then(|m| m.get("codegraph"))
-                    .is_some(),
-            ),
+            ToolId::Codegraph => Some(cfg.as_ref().is_some_and(|c| {
+                crate::util::mcp::json_tool_healthy(
+                    c,
+                    "mcp",
+                    crate::registry::AgentId::Opencode,
+                    ToolId::Codegraph,
+                )
+            })),
             ToolId::ContextMode => Some(
                 cfg.as_ref()
                     .and_then(|c| c.get("plugin"))

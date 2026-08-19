@@ -1,6 +1,7 @@
 use crate::cli::ParsedCli;
 use crate::registry::{
     ALL_AGENTS, ALL_TOOLS, AgentId, ToolId, agent_info, detect_agent, tool_info, unwire_tool,
+    verify_tool,
 };
 use crate::util::colors;
 use crate::util::manifest::remove_wire;
@@ -69,6 +70,7 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
 
     // ── Unwire ──
     let mut prog = crate::util::ui::Progress::new();
+    let mut residual: Vec<(AgentId, ToolId)> = vec![];
     for agent_id in &agent_ids {
         let info = agent_info(*agent_id);
         prog.start(&format!("Uninstalling from {}", info.label));
@@ -79,9 +81,23 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
                     &format!("{:?}", agent_id).to_lowercase(),
                     tool_name(*tool_id),
                 );
+                // Warp's Rtk has no hook file to remove (relies on `rtk` on PATH), so
+                // verify() always reports Some(true) -- that's not residual wiring.
+                let is_warp_rtk = matches!((agent_id, tool_id), (AgentId::Warp, ToolId::Rtk));
+                if !is_warp_rtk && verify_tool(*agent_id, *tool_id) == Some(true) {
+                    residual.push((*agent_id, *tool_id));
+                }
             }
         }
         prog.stop(&format!("{} {}", colors::CHECK, info.label));
+    }
+
+    for (agent_id, tool_id) in &residual {
+        colors::warn(&format!(
+            "{} still appears wired to {} after unwire -- config may need manual cleanup",
+            tool_info(*tool_id).label,
+            agent_info(*agent_id).label
+        ));
     }
 
     // ── Cleanup cache + purge binaries on full removal ──

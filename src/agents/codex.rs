@@ -6,10 +6,10 @@ use crate::util::json::{
     get_or_create_object, merge_hook_group, read_json_file, remove_hook_group, write_json_file,
     write_json_pruned,
 };
-use crate::util::paths::{codex_known_bin_dirs, codex_paths, toksave_abs};
+use crate::util::paths::{codex_known_bin_dirs, codex_paths, toksave_abs, toksave_hook_command};
 use crate::util::toml::{
-    has_table, prune_empty_tables, read_toml_file, remove_table, upsert_table, write_toml_file,
-    write_toml_pruned,
+    prune_empty_tables, read_toml_file, remove_table, set_table_array, upsert_table,
+    write_toml_file, write_toml_pruned,
 };
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
@@ -60,6 +60,17 @@ impl Agent for CodexAgent {
             ToolId::Codegraph => {
                 let mut doc = read_toml_file(&p.config)?;
                 upsert_table(&mut doc, "mcp_servers.codegraph", &toksave_abs());
+                if let Some(args) = crate::util::mcp::expected_runmcp_args(
+                    crate::registry::AgentId::Codex,
+                    ToolId::Codegraph,
+                ) {
+                    set_table_array(
+                        &mut doc,
+                        "mcp_servers.codegraph",
+                        "args",
+                        &args.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
+                    );
+                }
                 write_toml_file(&p.config, &doc)?;
                 write_owner("codex", "codegraph")?;
                 Ok(true)
@@ -67,6 +78,17 @@ impl Agent for CodexAgent {
             ToolId::ContextMode => {
                 let mut doc = read_toml_file(&p.config)?;
                 upsert_table(&mut doc, "mcp_servers.context-mode", &toksave_abs());
+                if let Some(args) = crate::util::mcp::expected_runmcp_args(
+                    crate::registry::AgentId::Codex,
+                    ToolId::ContextMode,
+                ) {
+                    set_table_array(
+                        &mut doc,
+                        "mcp_servers.context-mode",
+                        "args",
+                        &args.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
+                    );
+                }
                 write_toml_file(&p.config, &doc)?;
                 write_owner("codex", "context-mode")?;
                 Ok(true)
@@ -79,7 +101,7 @@ impl Agent for CodexAgent {
                 let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
                 let hook_entry = serde_json::json!({
                     "matcher": "Bash",
-                    "hooks": [{ "type": "command", "command": format!("{} rtk-hook codex", toksave_abs()), "timeout": 10 }]
+                    "hooks": [{ "type": "command", "command": toksave_hook_command("rtk-hook codex"), "timeout": 10 }]
                 });
                 let hooks = get_or_create_object(&mut cfg, "hooks");
                 merge_hook_group(hooks, "PreToolUse", hook_entry, "rtk-hook codex");
@@ -95,7 +117,7 @@ impl Agent for CodexAgent {
                 let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
                 let perm_entry = serde_json::json!({
                     "matcher": "",
-                    "hooks": [{ "type": "command", "command": format!("{} codex-perm-hook", toksave_abs()), "timeout": 5 }]
+                    "hooks": [{ "type": "command", "command": toksave_hook_command("codex-perm-hook"), "timeout": 5 }]
                 });
                 let hooks = get_or_create_object(&mut cfg, "hooks");
                 merge_hook_group(hooks, "PermissionRequest", perm_entry, "codex-perm-hook");
@@ -171,11 +193,19 @@ impl Agent for CodexAgent {
         match tool {
             ToolId::Codegraph => {
                 let doc = read_toml_file(&p.config).ok()?;
-                Some(has_table(&doc, "mcp_servers.codegraph"))
+                Some(crate::util::mcp::toml_tool_healthy(
+                    &doc,
+                    crate::registry::AgentId::Codex,
+                    ToolId::Codegraph,
+                ))
             }
             ToolId::ContextMode => {
                 let doc = read_toml_file(&p.config).ok()?;
-                Some(has_table(&doc, "mcp_servers.context-mode"))
+                Some(crate::util::mcp::toml_tool_healthy(
+                    &doc,
+                    crate::registry::AgentId::Codex,
+                    ToolId::ContextMode,
+                ))
             }
             ToolId::Caveman => Some(has_owner("codex", "caveman")),
             ToolId::Rtk => {

@@ -5,7 +5,7 @@ use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
 use crate::util::paths::{
     antigravity_desktop_paths, antigravity_known_bin_dirs, antigravity_mcp_files,
-    antigravity_paths, toksave_abs,
+    antigravity_paths, toksave_abs, toksave_hook_command,
 };
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
@@ -103,8 +103,8 @@ impl Agent for AntigravityAgent {
                 let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
                 cfg["rtk"] = serde_json::json!({
                     "PreToolUse": [{
-                        "matcher": "^(Bash|run_command|execute_command|cmd|sh|pwsh)$",
-                        "hooks": [{ "type": "command", "command": format!("{} rtk-hook agy", toksave_abs()), "timeout": 10 }]
+                        "matcher": "^(Bash|run_command|execute_command|cmd|sh|pwsh|run_shell_command)$",
+                        "hooks": [{ "type": "command", "command": toksave_hook_command("rtk-hook agy"), "timeout": 10 }]
                     }]
                 });
                 write_json_file(&p.hooks, &cfg)?;
@@ -187,22 +187,26 @@ impl Agent for AntigravityAgent {
             ToolId::Codegraph => {
                 let file = antigravity_mcp_files().into_iter().next()?;
                 let cfg = read_json_file(&file).ok().flatten();
-                Some(
-                    cfg.as_ref()
-                        .and_then(|c| c.get("mcpServers"))
-                        .and_then(|m| m.get("codegraph"))
-                        .is_some(),
-                )
+                Some(cfg.as_ref().is_some_and(|c| {
+                    crate::util::mcp::json_tool_healthy(
+                        c,
+                        "mcpServers",
+                        crate::registry::AgentId::Antigravity,
+                        ToolId::Codegraph,
+                    )
+                }))
             }
             ToolId::ContextMode => {
                 let file = antigravity_mcp_files().into_iter().next()?;
                 let cfg = read_json_file(&file).ok().flatten();
-                Some(
-                    cfg.as_ref()
-                        .and_then(|c| c.get("mcpServers"))
-                        .and_then(|m| m.get("context-mode"))
-                        .is_some(),
-                )
+                Some(cfg.as_ref().is_some_and(|c| {
+                    crate::util::mcp::json_tool_healthy(
+                        c,
+                        "mcpServers",
+                        crate::registry::AgentId::Antigravity,
+                        ToolId::ContextMode,
+                    )
+                }))
             }
             ToolId::Caveman => Some(has_owner("antigravity", "caveman")),
             ToolId::Rtk => {
