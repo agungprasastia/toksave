@@ -116,7 +116,7 @@ impl Agent for CodexAgent {
                 write_owner("codex", "principles")?;
                 let mut cfg = read_json_file(&p.hooks)?.unwrap_or_else(|| serde_json::json!({}));
                 let perm_entry = serde_json::json!({
-                    "matcher": "",
+                    "matcher": "*",
                     "hooks": [{ "type": "command", "command": toksave_hook_command("codex-perm-hook"), "timeout": 5 }]
                 });
                 let hooks = get_or_create_object(&mut cfg, "hooks");
