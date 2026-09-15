@@ -5,6 +5,16 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-09-15
+
+### Fixed
+
+- **Codex permission hook matcher**: Codex's `PermissionRequest` hook now uses the `"*"` matcher, ensuring `toksave codex-perm-hook` receives permission requests and applies its existing safe-command allowlist. ([#29](https://github.com/agungprasastia/toksave/pull/29))
+
+### Contributors
+
+- Thanks to the contributor of [#29](https://github.com/agungprasastia/toksave/pull/29) for fixing Codex `PermissionRequest` hook matching.
+
 ## [1.2.0] - 2026-08-18
 
 ### Added
@@ -13,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`toksave uninstall` warns on residual wiring**: after `unwire_tool`, uninstall now re-checks `verify_tool` and warns if a hook/MCP entry survives instead of silently trusting the unwire succeeded.
 
 ### Fixed
+
+- **Codex permission hook matcher**: Codex's `PermissionRequest` hook used an empty matcher, so `toksave codex-perm-hook` was not invoked for permission requests. The matcher now uses `"*"`, allowing TokSave's existing safe-command allowlist to handle every request. ([#29](https://github.com/agungprasastia/toksave/pull/29))
 
 - **RTK hook never fires for Warp, Antigravity, Codex, Droid, or Devin**: `toksave rtk-hook <agent>` only recognized `tool_name` values `bash|shell|run_command|execute_command|cmd|sh|pwsh`, but the real tool names are agent-specific: Cursor sends `Shell`, Antigravity/Gemini CLI sends `run_shell_command`, Factory Droid sends `Execute` (exact case), Devin CLI sends `exec`. The hook silently produced no output for all of these, so RTK never rewrote a single command on those agents. Matchers are now per-agent and exact where the agent's real tool name is confirmed (against each agent's own hook docs and RTK's own `hooks/README.md`), falling back to a broad matcher for unlisted agents.
 - **Wrong response JSON per agent**: Cursor's real contract (confirmed against `rtk-ai/rtk`'s own hook implementation) is a top-level `{"permission":"allow","updated_input":{...}}`, and it requires `{}` — not empty stdout — on every no-rewrite path; toksave was emitting Claude-shaped `hookSpecificOutput.updatedInput`, which Cursor ignores. Antigravity/Gemini's contract is `{"decision":"allow","hookSpecificOutput":{"tool_input":{...}}}`; toksave emitted `modifiedToolInput`, which Gemini CLI doesn't read. Codex, Droid, and Devin all use Claude's `hookSpecificOutput.updatedInput` shape, not `modifiedToolInput` — Codex was previously miscategorized into the wrong bucket.
@@ -35,6 +47,7 @@ Minimum RTK version for the binary hook engine used by all of the above: **0.37+
 ### Contributors
 
 - Huge thanks to [@jondmarien](https://github.com/jondmarien) for contributing exact per-agent RTK hook contracts, self-healing doctor/uninstall repairs, and Windows cmd/PowerShell compatibility in [#28](https://github.com/agungprasastia/toksave/pull/28)!
+- Thanks to the contributor of [#29](https://github.com/agungprasastia/toksave/pull/29) for fixing Codex `PermissionRequest` hook matching and restoring automatic permission handling.
 
 ## [1.1.0] - 2026-08-17
 
