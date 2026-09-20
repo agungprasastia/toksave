@@ -71,8 +71,14 @@ pub struct OpencodePaths {
 pub fn opencode_paths() -> OpencodePaths {
     let h = home();
     let dir = h.join(".config").join("opencode");
+    let opencode_json = dir.join("opencode.json");
+    let config = if opencode_json.exists() {
+        opencode_json
+    } else {
+        dir.join("config.json")
+    };
     OpencodePaths {
-        config: dir.join("config.json"),
+        config,
         agents_md: dir.join("AGENTS.md"),
         plugins_dir: dir.join("plugins"),
         dir,
