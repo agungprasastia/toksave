@@ -11,9 +11,11 @@ use crate::util::paths::{
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 use std::fs;
 
+/// Agent implementation managing OpenCode integration (v1 and v2).
 pub struct OpencodeAgent;
 
 impl OpencodeAgent {
+    /// Creates a new `OpencodeAgent` instance.
     pub fn new() -> Self {
         Self
     }
@@ -79,10 +81,13 @@ impl Agent for OpencodeAgent {
                     "enabled": true
                 });
                 mcp["codegraph"] = server_entry.clone();
-                if let Some(servers) = mcp.get_mut("servers").and_then(|s| s.as_object_mut()) {
+                let is_v2 = p.config.file_name().and_then(|f| f.to_str()) == Some("opencode.json")
+                    || mcp.get("servers").is_some();
+                if is_v2 {
+                    let servers = get_or_create_object(mcp, "servers");
                     let mut v2_server = server_entry;
                     v2_server["disabled"] = serde_json::json!(false);
-                    servers.insert("codegraph".to_string(), v2_server);
+                    servers["codegraph"] = v2_server;
                 }
                 write_json_file(&p.config, &cfg)?;
                 write_owner("opencode", "codegraph")?;
@@ -106,11 +111,9 @@ export default Plugin.define({
                 Ok(true)
             }
             ToolId::ContextMode => {
-                let key = if cfg.get("plugins").is_some() {
-                    "plugins"
-                } else {
-                    "plugin"
-                };
+                let is_v2 = cfg.get("plugins").is_some()
+                    || p.config.file_name().and_then(|f| f.to_str()) == Some("opencode.json");
+                let key = if is_v2 { "plugins" } else { "plugin" };
                 let plugins = cfg.get_mut(key).and_then(|v| v.as_array_mut());
                 let mut plugin_arr = match plugins {
                     Some(arr) => arr.clone(),
@@ -205,9 +208,7 @@ export default Plugin.define({
                     for key in ["plugin", "plugins"] {
                         if let Some(plugins) = cfg.get_mut(key).and_then(|v| v.as_array_mut()) {
                             plugins.retain(|v| {
-                                v.as_str()
-                                    .map(|s| !s.contains("context-mode"))
-                                    .unwrap_or(true)
+                                v.as_str().map(|s| s != "context-mode").unwrap_or(true)
                             });
                         }
                     }
