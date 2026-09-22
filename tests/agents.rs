@@ -334,9 +334,17 @@ async fn test_opencode_paths_prefers_opencode_json() {
     let _env = common::setup();
     let dir = _env.home().join(".config").join("opencode");
     std::fs::create_dir_all(&dir).unwrap();
+
+    // Fresh install defaults to opencode.json
+    let p_fresh = toksave::util::paths::opencode_paths();
+    assert_eq!(p_fresh.config, dir.join("opencode.json"));
+
+    // Legacy install with config.json uses config.json
+    write_file(&dir.join("config.json"), "{}").unwrap();
     let p_legacy = toksave::util::paths::opencode_paths();
     assert_eq!(p_legacy.config, dir.join("config.json"));
 
+    // When opencode.json also exists, opencode.json takes precedence
     write_file(&dir.join("opencode.json"), "{}").unwrap();
     let p_v2 = toksave::util::paths::opencode_paths();
     assert_eq!(p_v2.config, dir.join("opencode.json"));
@@ -369,6 +377,8 @@ async fn test_opencode_v2_rtk_and_codegraph_wire_verify() {
     let rtk_content = std::fs::read_to_string(p.plugins_dir.join("toksave-rtk.js")).unwrap();
     assert!(rtk_content.contains("Plugin.define"));
     assert!(rtk_content.contains("shell"));
+    assert!(rtk_content.contains(r#"^(rtk|rtk\.exe)(\s|$)"#));
+    assert!(!rtk_content.contains(r#"\\s"#));
 
     wire_tool(AgentId::Opencode, ToolId::Codegraph, &opts)
         .await

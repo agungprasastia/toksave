@@ -163,7 +163,7 @@ export default Plugin.define({
       const input = event.input;
       if (!input || typeof input !== "object") return;
       const command = String(input.command ?? "").trim();
-      if (!command || /^(rtk|rtk\\.exe)(\\s|$)/.test(command) || alts.some((p) => command === p || command.startsWith(p + " "))) return;
+      if (!command || /^(rtk|rtk\.exe)(\s|$)/.test(command) || alts.some((p) => command === p || command.startsWith(p + " "))) return;
       input.command = `${rtkBin} ${command}`;
     });
   },
@@ -281,9 +281,7 @@ export default Plugin.define({
                             .and_then(|p| p.as_array())
                             .map(|arr| {
                                 arr.iter().any(|pl| {
-                                    pl.as_str()
-                                        .map(|s| s.contains("context-mode"))
-                                        .unwrap_or(false)
+                                    pl.as_str().map(|s| s == "context-mode").unwrap_or(false)
                                 })
                             })
                             .unwrap_or(false);

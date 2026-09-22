@@ -75,10 +75,13 @@ pub fn opencode_paths() -> OpencodePaths {
     let h = home();
     let dir = h.join(".config").join("opencode");
     let opencode_json = dir.join("opencode.json");
+    let config_json = dir.join("config.json");
     let config = if opencode_json.exists() {
         opencode_json
+    } else if config_json.exists() {
+        config_json
     } else {
-        dir.join("config.json")
+        opencode_json
     };
     OpencodePaths {
         config,
