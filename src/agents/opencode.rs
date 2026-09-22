@@ -11,9 +11,11 @@ use crate::util::paths::{
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 use std::fs;
 
+/// Agent implementation managing OpenCode integration (v1 and v2).
 pub struct OpencodeAgent;
 
 impl OpencodeAgent {
+    /// Creates a new `OpencodeAgent` instance.
     pub fn new() -> Self {
         Self
     }
@@ -73,21 +75,35 @@ impl Agent for OpencodeAgent {
         match tool {
             ToolId::Codegraph => {
                 let mcp = get_or_create_object(&mut cfg, "mcp");
-                mcp["codegraph"] = serde_json::json!({
+                let server_entry = serde_json::json!({
                     "type": "local",
                     "command": [crate::util::paths::toksave_abs(), "runmcp", "codegraph", "serve", "--mcp"],
                     "enabled": true
                 });
+                mcp["codegraph"] = server_entry.clone();
+                let is_v2 = p.config.file_name().and_then(|f| f.to_str()) == Some("opencode.json")
+                    || mcp.get("servers").is_some();
+                if is_v2 {
+                    let servers = get_or_create_object(mcp, "servers");
+                    let mut v2_server = server_entry;
+                    v2_server["disabled"] = serde_json::json!(false);
+                    servers["codegraph"] = v2_server;
+                }
                 write_json_file(&p.config, &cfg)?;
                 write_owner("opencode", "codegraph")?;
                 let plugin_file = p.plugins_dir.join("toksave-autoindex.js");
-                let plugin_code = r#"let indexed = false;
-export const Plugin = async () => ({
-  "tool.execute.before": async () => {
-    if (indexed) return;
-    indexed = true;
-    const { execSync } = require("node:child_process");
-    try { execSync("toksave index --auto", { timeout: 120000 }); } catch {}
+                let plugin_code = r#"import { execSync } from "node:child_process";
+import { Plugin } from "@opencode/plugin";
+
+let indexed = false;
+export default Plugin.define({
+  id: "toksave.autoindex",
+  async setup(ctx) {
+    await ctx.tool.hook("execute.before", () => {
+      if (indexed) return;
+      indexed = true;
+      try { execSync("toksave index --auto", { timeout: 120000 }); } catch {}
+    });
   },
 });
 "#;
@@ -95,7 +111,10 @@ export const Plugin = async () => ({
                 Ok(true)
             }
             ToolId::ContextMode => {
-                let plugins = cfg.get_mut("plugin").and_then(|v| v.as_array_mut());
+                let is_v2 = cfg.get("plugins").is_some()
+                    || p.config.file_name().and_then(|f| f.to_str()) == Some("opencode.json");
+                let key = if is_v2 { "plugins" } else { "plugin" };
+                let plugins = cfg.get_mut(key).and_then(|v| v.as_array_mut());
                 let mut plugin_arr = match plugins {
                     Some(arr) => arr.clone(),
                     None => vec![],
@@ -103,7 +122,7 @@ export const Plugin = async () => ({
                 if !plugin_arr.contains(&serde_json::json!("context-mode")) {
                     plugin_arr.push(serde_json::json!("context-mode"));
                 }
-                cfg["plugin"] = serde_json::Value::Array(plugin_arr);
+                cfg[key] = serde_json::Value::Array(plugin_arr);
                 write_json_file(&p.config, &cfg)?;
                 write_owner("opencode", "context-mode")?;
                 Ok(true)
@@ -117,28 +136,36 @@ export const Plugin = async () => ({
                 // Resolve rtk's absolute path the same way toksave's own hook does: a bare
                 // `rtk` prefix fails when OpenCode was launched before rtk's install dir was
                 // added to PATH (fresh install, GUI-launched session, stale shell PATH cache).
-                let rtk_plugin = r#"export const Plugin = async () => ({
-  "tool.execute.before": async (input, output) => {
-    if (input.tool !== "bash") return;
-    const command = String(output.args.command ?? "").trim();
-    if (!command || /^(rtk|rtk\.exe)(\s|$)/.test(command)) return;
-    const os = require("node:os");
-    const path = require("node:path");
-    const fs = require("node:fs");
-    let rtkBin = "rtk";
-    const localPath = process.platform === "win32"
-      ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "Programs", "toksave", "rtk.exe")
-      : path.join(os.homedir(), ".local", "bin", "rtk");
-    if (fs.existsSync(localPath)) {
-      // cmd.exe + Windows PowerShell 5.1 + pwsh 7 all need backslashes as the
-      // first token. Forward slashes (`C:/...`) make PowerShell treat `C:` as
-      // Set-Location. Do not prefix `&` (cmd command separator).
-      rtkBin = process.platform === "win32" ? localPath.replace(/\//g, "\\") : localPath;
-      if (/\s/.test(rtkBin)) rtkBin = `"${rtkBin}"`;
-    }
+                let rtk_plugin = r#"import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { Plugin } from "@opencode/plugin";
+
+function resolveRtkBin() {
+  let rtkBin = "rtk";
+  const localPath = process.platform === "win32"
+    ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "Programs", "toksave", "rtk.exe")
+    : path.join(os.homedir(), ".local", "bin", "rtk");
+  if (fs.existsSync(localPath)) {
+    rtkBin = process.platform === "win32" ? localPath.replace(/\//g, "\\") : localPath;
+    if (/\s/.test(rtkBin)) rtkBin = `"${rtkBin}"`;
+  }
+  return rtkBin;
+}
+
+export default Plugin.define({
+  id: "toksave.rtk",
+  async setup(ctx) {
+    const rtkBin = resolveRtkBin();
     const alts = [rtkBin, rtkBin.replace(/\\/g, "/"), rtkBin.replace(/\//g, "\\")];
-    if (alts.some((p) => command === p || command.startsWith(p + " "))) return;
-    output.args.command = `${rtkBin} ${command}`;
+    await ctx.tool.hook("execute.before", (event) => {
+      if (event.tool !== "shell" && event.tool !== "bash") return;
+      const input = event.input;
+      if (!input || typeof input !== "object") return;
+      const command = String(input.command ?? "").trim();
+      if (!command || /^(rtk|rtk\.exe)(\s|$)/.test(command) || alts.some((p) => command === p || command.startsWith(p + " "))) return;
+      input.command = `${rtkBin} ${command}`;
+    });
   },
 });
 "#;
@@ -163,17 +190,34 @@ export const Plugin = async () => ({
                 if let Some(mut cfg) = read_json_file(&p.config)? {
                     if let Some(mcp) = cfg.get_mut("mcp").and_then(|v| v.as_object_mut()) {
                         mcp.remove("codegraph");
+                        if let Some(servers) =
+                            mcp.get_mut("servers").and_then(|s| s.as_object_mut())
+                        {
+                            servers.remove("codegraph");
+                        }
                     }
                     write_json_pruned(&p.config, &cfg)?;
                 }
                 let _ = fs::remove_file(p.plugins_dir.join("toksave-autoindex.js"));
+                let _ = fs::remove_dir_all(p.plugins_dir.join("toksave-autoindex"));
                 remove_owner("opencode", "codegraph")?;
                 Ok(true)
             }
             ToolId::ContextMode => {
                 if let Some(mut cfg) = read_json_file(&p.config)? {
-                    if let Some(plugins) = cfg.get_mut("plugin").and_then(|v| v.as_array_mut()) {
-                        plugins.retain(|v| v != "context-mode");
+                    for key in ["plugin", "plugins"] {
+                        if let Some(plugins) = cfg.get_mut(key).and_then(|v| v.as_array_mut()) {
+                            plugins.retain(|v| {
+                                v.as_str().map(|s| s != "context-mode").unwrap_or(true)
+                            });
+                        }
+                    }
+                    if let Some(servers) = cfg
+                        .get_mut("mcp")
+                        .and_then(|m| m.get_mut("servers"))
+                        .and_then(|s| s.as_object_mut())
+                    {
+                        servers.remove("context-mode");
                     }
                     write_json_pruned(&p.config, &cfg)?;
                 }
@@ -186,6 +230,7 @@ export const Plugin = async () => ({
             }
             ToolId::Rtk => {
                 let _ = fs::remove_file(p.plugins_dir.join("toksave-rtk.js"));
+                let _ = fs::remove_dir_all(p.plugins_dir.join("toksave-rtk"));
                 Ok(true)
             }
             ToolId::Ponytail => {
@@ -209,17 +254,51 @@ export const Plugin = async () => ({
                     "mcp",
                     crate::registry::AgentId::Opencode,
                     ToolId::Codegraph,
-                )
+                ) || c
+                    .get("mcp")
+                    .and_then(|m| m.get("servers"))
+                    .is_some_and(|s| {
+                        let mut wrapper = serde_json::json!({});
+                        wrapper["servers"] = s.clone();
+                        crate::util::mcp::json_tool_healthy(
+                            &wrapper,
+                            "servers",
+                            crate::registry::AgentId::Opencode,
+                            ToolId::Codegraph,
+                        )
+                    })
             })),
             ToolId::ContextMode => Some(
                 cfg.as_ref()
-                    .and_then(|c| c.get("plugin"))
-                    .and_then(|p| p.as_array())
-                    .map(|arr| arr.contains(&serde_json::json!("context-mode")))
+                    .map(|c| {
+                        let in_v1 = c
+                            .get("plugin")
+                            .and_then(|p| p.as_array())
+                            .map(|arr| arr.contains(&serde_json::json!("context-mode")))
+                            .unwrap_or(false);
+                        let in_v2 = c
+                            .get("plugins")
+                            .and_then(|p| p.as_array())
+                            .map(|arr| {
+                                arr.iter().any(|pl| {
+                                    pl.as_str().map(|s| s == "context-mode").unwrap_or(false)
+                                })
+                            })
+                            .unwrap_or(false);
+                        let in_mcp = c
+                            .get("mcp")
+                            .and_then(|m| m.get("servers"))
+                            .and_then(|s| s.get("context-mode"))
+                            .is_some();
+                        in_v1 || in_v2 || in_mcp
+                    })
                     .unwrap_or(false),
             ),
             ToolId::Caveman => Some(has_owner("opencode", "caveman")),
-            ToolId::Rtk => Some(p.plugins_dir.join("toksave-rtk.js").exists()),
+            ToolId::Rtk => Some(
+                p.plugins_dir.join("toksave-rtk.js").exists()
+                    || p.plugins_dir.join("toksave-rtk").exists(),
+            ),
             ToolId::Ponytail => Some(has_owner("opencode", "ponytail")),
             ToolId::Principles => Some(has_owner("opencode", "principles")),
         }

@@ -61,6 +61,7 @@ pub fn claude_desktop_paths() -> Vec<PathBuf> {
     }
 }
 
+/// File and directory locations for OpenCode agent integration.
 pub struct OpencodePaths {
     pub dir: PathBuf,
     pub config: PathBuf,
@@ -68,11 +69,22 @@ pub struct OpencodePaths {
     pub plugins_dir: PathBuf,
 }
 
+/// Resolves paths for OpenCode configuration and plugins.
+/// Prefers `opencode.json` (OpenCode v2), falling back to `config.json` (v1 legacy).
 pub fn opencode_paths() -> OpencodePaths {
     let h = home();
     let dir = h.join(".config").join("opencode");
+    let opencode_json = dir.join("opencode.json");
+    let config_json = dir.join("config.json");
+    let config = if opencode_json.exists() {
+        opencode_json
+    } else if config_json.exists() {
+        config_json
+    } else {
+        opencode_json
+    };
     OpencodePaths {
-        config: dir.join("config.json"),
+        config,
         agents_md: dir.join("AGENTS.md"),
         plugins_dir: dir.join("plugins"),
         dir,

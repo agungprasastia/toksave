@@ -330,6 +330,88 @@ async fn test_devin_rtk_wires_under_config_devin_with_exec_matcher() {
 }
 
 #[tokio::test]
+async fn test_opencode_paths_prefers_opencode_json() {
+    let _env = common::setup();
+    let dir = _env.home().join(".config").join("opencode");
+    std::fs::create_dir_all(&dir).unwrap();
+
+    // Fresh install defaults to opencode.json
+    let p_fresh = toksave::util::paths::opencode_paths();
+    assert_eq!(p_fresh.config, dir.join("opencode.json"));
+
+    // Legacy install with config.json uses config.json
+    write_file(&dir.join("config.json"), "{}").unwrap();
+    let p_legacy = toksave::util::paths::opencode_paths();
+    assert_eq!(p_legacy.config, dir.join("config.json"));
+
+    // When opencode.json also exists, opencode.json takes precedence
+    write_file(&dir.join("opencode.json"), "{}").unwrap();
+    let p_v2 = toksave::util::paths::opencode_paths();
+    assert_eq!(p_v2.config, dir.join("opencode.json"));
+}
+
+#[tokio::test]
+async fn test_opencode_v2_rtk_and_codegraph_wire_verify() {
+    let _env = common::setup();
+    let p = toksave::util::paths::opencode_paths();
+    std::fs::create_dir_all(&p.dir).unwrap();
+    // Simulate v2 config with mcp.servers and plugins
+    write_file(
+        &p.dir.join("opencode.json"),
+        r#"{
+            "$schema": "https://opencode.ai/config.json",
+            "plugins": ["./plugins/caveman"],
+            "mcp": {
+                "servers": {}
+            }
+        }"#,
+    )
+    .unwrap();
+
+    let opts = RunOpts::default();
+    wire_tool(AgentId::Opencode, ToolId::Rtk, &opts)
+        .await
+        .unwrap();
+    assert_eq!(verify_tool(AgentId::Opencode, ToolId::Rtk), Some(true));
+
+    let rtk_content = std::fs::read_to_string(p.plugins_dir.join("toksave-rtk.js")).unwrap();
+    assert!(rtk_content.contains("Plugin.define"));
+    assert!(rtk_content.contains("shell"));
+    assert!(rtk_content.contains(r#"^(rtk|rtk\.exe)(\s|$)"#));
+    assert!(!rtk_content.contains(r#"\\s"#));
+
+    wire_tool(AgentId::Opencode, ToolId::Codegraph, &opts)
+        .await
+        .unwrap();
+    assert_eq!(
+        verify_tool(AgentId::Opencode, ToolId::Codegraph),
+        Some(true)
+    );
+
+    let autoindex_content =
+        std::fs::read_to_string(p.plugins_dir.join("toksave-autoindex.js")).unwrap();
+    assert!(autoindex_content.contains("Plugin.define"));
+
+    let cfg = read_json_file(&p.dir.join("opencode.json"))
+        .unwrap()
+        .unwrap();
+    assert!(cfg["mcp"]["servers"]["codegraph"].is_object());
+
+    unwire_tool(AgentId::Opencode, ToolId::Rtk, &opts)
+        .await
+        .unwrap();
+    assert_eq!(verify_tool(AgentId::Opencode, ToolId::Rtk), Some(false));
+
+    unwire_tool(AgentId::Opencode, ToolId::Codegraph, &opts)
+        .await
+        .unwrap();
+    assert_eq!(
+        verify_tool(AgentId::Opencode, ToolId::Codegraph),
+        Some(false)
+    );
+}
+
+#[tokio::test]
 async fn test_warp_rtk_wire_writes_no_hook_file() {
     let _env = common::setup();
     let p = warp_paths();
