@@ -279,7 +279,7 @@ fn verify_checksum_sha256(bytes: &[u8], expected: &str, url: &str) -> Result<()>
     use sha2::Digest;
     let mut h = sha2::Sha256::new();
     h.update(bytes);
-    let actual = format!("{:x}", h.finalize());
+    let actual: String = h.finalize().iter().map(|b| format!("{b:02x}")).collect();
     if actual != expected.to_lowercase() {
         return Err(ToksaveError::integrity(
             "downloaded file",

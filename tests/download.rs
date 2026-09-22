@@ -93,7 +93,10 @@ fn make_valid_zip() -> Vec<u8> {
 #[tokio::test]
 async fn download_zip_good_checksum_succeeds() {
     let bytes = make_valid_zip();
-    let hash = format!("{:x}", Sha256::digest(&bytes));
+    let hash: String = Sha256::digest(&bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
 
     let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
     let port = server.server_addr().to_ip().unwrap().port();
