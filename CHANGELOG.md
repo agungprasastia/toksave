@@ -5,6 +5,20 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-09-22
+
+### Added
+
+- **OpenCode v2 configuration & plugin schema support**: Full compatibility with OpenCode 2.0. Prefers `opencode.json` with fallback to legacy `config.json`, registers MCP servers under `mcp.servers`, wires plugins via the modern ESM `@opencode/plugin` API (`Plugin.define`), and supports both `shell` and `bash` execution hooks. ([#38](https://github.com/agungprasastia/toksave/pull/38))
+
+### Fixed
+
+- **OpenCode RTK plugin regex & command prefixing**: Fixed JavaScript regex escaping in the emitted `toksave-rtk.js` template to prevent repeated `rtk` command prefixes, ensured exact string matching in Context-Mode plugin verification, and ensured fresh installs default to `opencode.json`. ([#38](https://github.com/agungprasastia/toksave/pull/38))
+
+### Contributors
+
+- Thanks to [@jondmarien](https://github.com/jondmarien) for contributing OpenCode v2 support in [#38](https://github.com/agungprasastia/toksave/pull/38)!
+
 ## [1.2.1] - 2026-09-15
 
 ### Fixed
