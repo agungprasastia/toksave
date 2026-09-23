@@ -16,6 +16,7 @@ pub enum CommandType {
     Index,
     AgyHook,
     CopilotHook,
+    Info,
 }
 
 #[derive(Debug, Parser)]
@@ -107,6 +108,8 @@ enum Command {
         #[arg(allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    /// Show how toksave was installed, plus paths and config locations
+    Info,
 }
 
 #[derive(Debug, Clone)]
@@ -207,6 +210,7 @@ pub fn parse_cli(args: Vec<String>) -> ParsedCli {
             parsed.command = CommandType::CopilotHook;
             parsed.hook_args = args;
         }
+        Some(Command::Info) => parsed.command = CommandType::Info,
     }
 
     parsed

@@ -2,15 +2,12 @@ use crate::registry::AgentId;
 use colored::Colorize;
 use crossterm::{
     ExecutableCommand,
-    cursor::{Hide, MoveTo, Show},
+    cursor::{Hide, Show},
     event::{self, Event, KeyCode, KeyModifiers},
-    terminal::{
-        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
-        enable_raw_mode, size,
-    },
+    terminal::{disable_raw_mode, enable_raw_mode, size},
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use std::io::{IsTerminal, stdout};
+use std::io::{IsTerminal, Write, stdout};
 use std::time::Duration;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
@@ -36,21 +33,33 @@ impl Progress {
         }
     }
 
-    /// Section header + tree branch (e.g. `Tools` / `Agents` like tokless).
-    pub fn start_section(&mut self, name: &str) {
-        println!("{}", name.bold());
-        println!("{}", "│".dimmed());
+    /// Root section header (e.g. `┌─ Tools` like tokless).
+    pub fn start_root_section(&mut self, name: &str) {
+        println!("{}{}", "┌─ ".dimmed(), name.bold());
     }
 
+    /// Mid-tree section header (e.g. `├─ Agents` like tokless).
+    pub fn start_section(&mut self, name: &str) {
+        println!("{}{}", "├─ ".dimmed(), name.bold());
+    }
+
+    /// Close current tree section connector (`│`).
+    pub fn done(&mut self) {
+        println!("{}", "│".dimmed());
+    }
     pub fn start(&mut self, label: &str) {
         if !self.tty {
-            println!("  {label}");
+            println!("{}  {label}", "│".dimmed());
             self.last_label = Some(label.to_string());
             return;
         }
         let bar = ProgressBar::new(100);
+        let template = format!(
+            "{} {{spinner}} {{msg}}[{{bar:20}}] {{percent:>3}}%",
+            "│ ".dimmed()
+        );
         bar.set_style(
-            ProgressStyle::with_template("  {spinner} {msg}[{bar:20}] {percent:>3}%")
+            ProgressStyle::with_template(&template)
                 .unwrap()
                 .progress_chars("█░")
                 .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
@@ -84,13 +93,12 @@ impl Progress {
     pub fn stop(&mut self, message: &str) {
         let clean = strip_ansi(message);
         let clean = clean.trim_start_matches('✔').trim_start().to_string();
+        let stem = "│  ".dimmed();
         if let Some(bar) = self.bar.take() {
             bar.finish_and_clear();
             self.label = None;
-            // Split "Label tail..." → label + tail (version / note).
             let (label, tail) = parse_label_and_tail(&clean);
-            // 2 indent + ✔ + space + label(<40) + [bar] + 100% + tail
-            let padded = format!("  {} {:<BAR_COL$}", "✔".green(), label.bold());
+            let padded = format!("{stem}{} {:<BAR_COL$}", "✔".green(), label.bold());
             let green_bar = "█".repeat(20).green();
             let tail_dim = if tail.is_empty() {
                 String::new()
@@ -99,18 +107,16 @@ impl Progress {
             };
             let warn = clean.contains(" not installed") || clean.contains("skipped");
             if warn {
-                println!("  {} {}", "⚠".yellow(), clean.dimmed());
+                println!("{stem}{} {}", "⚠".yellow(), clean.dimmed());
             } else {
                 println!("{padded}[{green_bar}] {}{}", "100%".green(), tail_dim);
             }
         } else {
-            // Non-TTY: "start" already printed "  {label}"; only failures and
-            // warnings print here — a success would duplicate the label line.
             if self.last_label.is_some() {
                 self.last_label = None;
             }
             if clean.starts_with('✖') || clean.starts_with('⚠') {
-                println!("  {clean}");
+                println!("{stem}{clean}");
             }
         }
     }
@@ -207,6 +213,62 @@ pub struct SelectOption {
     pub selected: bool,
 }
 
+fn settle_multi_select(title: &str, options: &[SelectOption]) {
+    let corner = "┌─ ".dimmed();
+    let stem = "│   ".dimmed();
+    let bul = "│".dimmed();
+
+    let label_w = options
+        .iter()
+        .map(|o| o.label.chars().count())
+        .max()
+        .unwrap_or(0);
+
+    println!("{}{}", corner, title.bold());
+    for opt in options {
+        let pad = " ".repeat(label_w.saturating_sub(opt.label.chars().count()));
+        let (box_sym, label, tag, extra) = if opt.disabled {
+            (
+                "·".dimmed().to_string(),
+                opt.label.dimmed().to_string(),
+                "[MISSING]".yellow().to_string(),
+                if opt.hint.is_empty() {
+                    String::new()
+                } else {
+                    format!("  {}", opt.hint.dimmed())
+                },
+            )
+        } else if opt.selected {
+            (
+                "◉".green().bold().to_string(),
+                opt.label.green().bold().to_string(),
+                format!("{} {}", "✓".green().bold(), "[READY]".green()),
+                if opt.hint.is_empty() {
+                    String::new()
+                } else {
+                    format!("  {}", opt.hint.dimmed())
+                },
+            )
+        } else {
+            (
+                "○".dimmed().to_string(),
+                opt.label.to_string(),
+                format!("  {}", "[READY]".green()),
+                if opt.hint.is_empty() {
+                    String::new()
+                } else {
+                    format!("  {}", opt.hint.dimmed())
+                },
+            )
+        };
+        println!(
+            "{}{}  {}{}  {:<11}{}",
+            stem, box_sym, label, pad, tag, extra
+        );
+    }
+    println!("{}", bul);
+}
+
 pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId> {
     if !stdout().is_terminal() {
         return options
@@ -221,26 +283,38 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
     let _ = enable_raw_mode();
     let mut out = stdout();
     let _ = out.execute(Hide);
-    let _ = out.execute(EnterAlternateScreen);
 
     // Drain any leftover keys (e.g. Enter keypress from spawning command)
     while event::poll(Duration::from_millis(50)).unwrap_or(false) {
         let _ = event::read();
     }
 
-    loop {
-        let _ = out.execute(Clear(ClearType::All));
-        let _ = out.execute(MoveTo(0, 0));
+    let total_lines = options.len() + 3;
+    let mut first_render = true;
 
-        // Title line matching original TS tokless/toksave UI
-        println!(
-            "\r{} {}\x1b[K",
+    loop {
+        if !first_render {
+            print!("\x1b[{}A", total_lines);
+        }
+        first_render = false;
+        print!("\x1b[0J");
+
+        // Title line matching original tokless UI
+        print!(
+            "\r{} {}\x1b[K\r\n",
             "●".magenta().bold(),
             title.magenta().bold()
         );
 
-        // Options
         let terminal_width = size().map(|(width, _)| width as usize).unwrap_or(80);
+        let label_w = options
+            .iter()
+            .map(|o| o.label.chars().count())
+            .max()
+            .unwrap_or(16)
+            .max(16);
+
+        // Options
         for (i, opt) in options.iter().enumerate() {
             let is_hovered = i == cursor;
             let prefix = if is_hovered {
@@ -257,12 +331,11 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
                 "○ ".dimmed().to_string()
             };
 
-            let padded_label = format!("{:<width$}", opt.label, width = 16);
-
+            let pad = " ".repeat(label_w.saturating_sub(opt.label.chars().count()));
             let display_label = if opt.disabled {
-                padded_label.dimmed().to_string()
+                opt.label.dimmed().to_string()
             } else {
-                padded_label.bold().to_string()
+                opt.label.bold().to_string()
             };
 
             let tag = if opt.disabled {
@@ -271,24 +344,23 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
                 format!("{:<11}", "[READY]".green())
             };
 
-            // Keep each option on one terminal row; redraw assumes a fixed height.
-            let hint_width = terminal_width.saturating_sub(37);
+            let hint_width = terminal_width.saturating_sub(label_w + 32);
             let hint = truncate_to_width(&opt.hint, hint_width)
                 .dimmed()
                 .to_string();
 
-            println!("\r{prefix}{icon}{display_label}    {tag}  {hint}\x1b[K");
+            print!("\r│   {prefix}{icon}{display_label}{pad}    {tag}  {hint}\x1b[K\r\n");
         }
 
         // Footer rule
-        println!(
-            "\r{}",
+        print!(
+            "\r│   {}\x1b[K\r\n",
             "──────────────────────────────────────────────────────────".dimmed()
         );
 
         // Controls
-        println!(
-            "\r{} {}  ·  {} {}  ·  {} {}  ·  {} {}",
+        print!(
+            "\r│   {} {}  ·  {} {}  ·  {} {}  ·  {} {}\x1b[K\r\n",
             "↑/↓".yellow(),
             "move".dimmed(),
             "<space>".yellow(),
@@ -299,12 +371,14 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
             "confirm".dimmed()
         );
 
+        let _ = out.flush();
+
         if let Ok(Event::Key(key)) = event::read() {
             if key.kind != event::KeyEventKind::Press {
                 continue;
             }
             if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
-                let _ = out.execute(LeaveAlternateScreen);
+                print!("\r\n");
                 let _ = out.execute(Show);
                 let _ = disable_raw_mode();
                 std::process::exit(1);
@@ -353,9 +427,11 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
         }
     }
 
-    let _ = out.execute(LeaveAlternateScreen);
+    print!("\x1b[{}A\x1b[0J", total_lines);
+    settle_multi_select(title, &options);
     let _ = out.execute(Show);
     let _ = disable_raw_mode();
+    let _ = out.flush();
 
     options
         .into_iter()

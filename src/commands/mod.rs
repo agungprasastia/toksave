@@ -2,6 +2,7 @@ pub mod disable;
 pub mod doctor;
 pub mod hooks;
 pub mod index;
+pub mod info;
 pub mod init;
 pub mod runmcp;
 pub mod self_update;

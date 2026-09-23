@@ -41,6 +41,7 @@ fn main() {
             let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
             rt.block_on(toksave::commands::self_update::run())
         }
+        CommandType::Info => toksave::commands::info::run_info(),
     };
     std::process::exit(code);
 }

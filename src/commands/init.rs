@@ -17,8 +17,14 @@ impl Prog {
     fn new() -> Self {
         Self(Arc::new(Mutex::new(crate::util::ui::Progress::new())))
     }
+    fn start_root_section(&self, name: &str) {
+        self.0.lock().unwrap().start_root_section(name);
+    }
     fn start_section(&self, name: &str) {
         self.0.lock().unwrap().start_section(name);
+    }
+    fn done(&self) {
+        self.0.lock().unwrap().done();
     }
     fn start(&self, label: &str) {
         self.0.lock().unwrap().start(label);
@@ -114,7 +120,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
     // ── Step 5: Install tools ──
     let mut installed_tools = std::collections::HashSet::new();
     let prog = Prog::new();
-    prog.start_section("Tools");
+    prog.start_root_section("Tools");
     for t in &tools {
         let info = tool_info(*t);
         let is_npm = info.channel == crate::registry::Channel::Npm;
@@ -177,6 +183,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         }
         crate::util::download::clear_download_progress_bar();
     }
+    prog.done();
 
     let detected_by_id: std::collections::HashMap<AgentId, String> = detected.into_iter().collect();
 
@@ -250,6 +257,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
             failures.push((*agent_id, failed_tools));
         }
     }
+    prog.done();
 
     // ── Step 7: Summary ──
     let wired: Vec<&str> = requested
@@ -259,6 +267,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         .map(|id| agent_info(*id).label)
         .collect();
     if !wired.is_empty() {
+        print_version_tree(&tools);
         crate::util::ui::green_box(&format!("Equipped {}.", wired.join(", ")));
     }
     for (id, failed) in &failures {
@@ -268,7 +277,6 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
             failed.join(", ")
         ));
     }
-    print_version_table(&tools);
     println!();
 
     if failures.is_empty() || parsed.opts.dry_run {
@@ -316,16 +324,25 @@ fn tool_name(t: ToolId) -> String {
     }
 }
 
-fn print_version_table(tools: &[ToolId]) {
-    for t in tools {
+fn print_version_tree(tools: &[ToolId]) {
+    println!("{}{}", "├─ ".dimmed(), "All fully updated".bold().magenta());
+    let len = tools.len();
+    for (i, t) in tools.iter().enumerate() {
+        let is_last = i + 1 == len;
+        let branch = if is_last { "└── " } else { "├── " };
         let info = tool_info(*t);
-        if info.instruction_only {
-            println!("  {} {} instruction-only", colors::CHECK, info.label);
-            continue;
-        }
-        match tool_installed_version(*t) {
-            Some(v) => println!("  {} {} {}", colors::CHECK, info.label, v),
-            None => println!("  {} {} not installed", colors::BULLET, info.label),
-        }
+        let note = if info.instruction_only {
+            "installed".to_string()
+        } else {
+            tool_installed_version(*t).unwrap_or_else(|| "not installed".to_string())
+        };
+        println!(
+            "{}{}{} · {}",
+            "│   ".dimmed(),
+            branch.dimmed(),
+            info.label,
+            note.dimmed()
+        );
     }
+    println!("{}", "│".dimmed());
 }

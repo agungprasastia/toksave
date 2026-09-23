@@ -45,5 +45,33 @@ if ($userPath -notlike "*$installDir*") {
     Write-Host "  ⚠ Restart your terminal for PATH changes to take effect." -ForegroundColor Yellow
 }
 
-Write-Host ""
-Write-Host "  Run 'toksave' to get started." -ForegroundColor Cyan
+# install.json for `toksave info`
+$dataDir = Join-Path $env:LOCALAPPDATA "toksave"
+New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+$exePath = Join-Path $installDir "toksave.exe"
+$v = & $exePath --version 2>$null
+@{
+    method  = "install script"
+    path    = $exePath
+    version = "$v"
+    at      = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+} | ConvertTo-Json -Compress | Set-Content -Path (Join-Path $dataDir "install.json") -Encoding UTF8
+
+if ([Environment]::UserInteractive -and -not $env:CI) {
+    Write-Host ""
+    $hadInstallerRun = Test-Path Env:TOKSAVE_INSTALLER_RUN
+    $prevInstallerRun = $env:TOKSAVE_INSTALLER_RUN
+    try {
+        $env:TOKSAVE_INSTALLER_RUN = "1"
+        & $exePath
+    } finally {
+        if ($hadInstallerRun) {
+            $env:TOKSAVE_INSTALLER_RUN = $prevInstallerRun
+        } else {
+            Remove-Item Env:TOKSAVE_INSTALLER_RUN -ErrorAction SilentlyContinue
+        }
+    }
+} else {
+    Write-Host ""
+    Write-Host "  Run 'toksave' to get started." -ForegroundColor Cyan
+}

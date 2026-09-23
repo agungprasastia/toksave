@@ -83,6 +83,7 @@ fn all_commands_parse() {
         ("index", CommandType::Index),
         ("agy-hook", CommandType::AgyHook),
         ("copilot-hook", CommandType::CopilotHook),
+        ("info", CommandType::Info),
     ] {
         let c = parse(&[name]);
         assert_eq!(c.command, expected);

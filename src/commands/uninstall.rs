@@ -70,6 +70,7 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
 
     // ── Unwire ──
     let mut prog = crate::util::ui::Progress::new();
+    prog.start_root_section("Agents");
     let mut residual: Vec<(AgentId, ToolId)> = vec![];
     for agent_id in &agent_ids {
         let info = agent_info(*agent_id);
@@ -91,6 +92,7 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
         }
         prog.stop(&format!("{} {}", colors::CHECK, info.label));
     }
+    prog.done();
 
     for (agent_id, tool_id) in &residual {
         colors::warn(&format!(

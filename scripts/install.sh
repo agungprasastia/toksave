@@ -58,5 +58,18 @@ if ! echo "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
   echo "    export PATH=\"$INSTALL_DIR:\$PATH\""
   echo ""
 fi
+# install.json for `toksave info`
+DATA_DIR="${HOME}/.local/share/toksave"
+mkdir -p "$DATA_DIR"
+printf '{"method":"install script","path":"%s","version":"%s","at":"%s"}\n' \
+  "${INSTALL_DIR}/toksave" \
+  "$("${INSTALL_DIR}/toksave" --version 2>/dev/null || echo "unknown")" \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${DATA_DIR}/install.json"
 
-echo "  Run 'toksave' to get started."
+# Run now, reconnecting the keyboard via /dev/tty so the picker works under a pipe.
+if [ -r /dev/tty ]; then
+  printf '\n'
+  TOKSAVE_INSTALLER_RUN=1 "${INSTALL_DIR}/toksave" </dev/tty || true
+else
+  echo "  Run 'toksave' to get started."
+fi
