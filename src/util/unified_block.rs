@@ -337,14 +337,16 @@ mod tests {
     #[test]
     fn write_owner_consolidates_owners_and_keeps_surroundings() {
         let _g = crate::util::env_test_lock();
-        let tmp = std::env::temp_dir().join("toksave-block-test");
+        let tmp = std::env::temp_dir().join(format!("toksave_block_test_{}", std::process::id()));
         let claude_dir = tmp.join(".claude");
         std::fs::create_dir_all(&claude_dir).unwrap();
         let path = claude_dir.join("AGENTS.md");
         let old_home = std::env::var_os("HOME");
+        let old_up = std::env::var_os("USERPROFILE");
         // Safe: serialized by env_test_lock against other env-mutating tests.
         unsafe {
             std::env::set_var("HOME", &tmp);
+            std::env::set_var("USERPROFILE", &tmp);
         }
         let block = agent_instructions::agent_instructions();
         let mut first = String::from("# My file\n\nuser content\n\n");
@@ -375,19 +377,28 @@ mod tests {
             } else {
                 std::env::remove_var("HOME");
             }
+            if let Some(up) = old_up {
+                std::env::set_var("USERPROFILE", up);
+            } else {
+                std::env::remove_var("USERPROFILE");
+            }
         }
         std::fs::remove_dir_all(&tmp).ok();
     }
 
     #[test]
     fn write_owner_preserves_initial_user_content_without_prior_block() {
+        let _g = crate::util::env_test_lock();
         let tmp = std::env::temp_dir().join(format!("toksave_test_user_{}", std::process::id()));
-        std::fs::create_dir_all(&tmp).unwrap();
+        let claude_dir = tmp.join(".claude");
+        std::fs::create_dir_all(&claude_dir).unwrap();
+        let path = claude_dir.join("AGENTS.md");
         let old_home = std::env::var_os("HOME");
+        let old_up = std::env::var_os("USERPROFILE");
         unsafe {
             std::env::set_var("HOME", &tmp);
+            std::env::set_var("USERPROFILE", &tmp);
         }
-        let path = claude_paths().agents_md;
         write_file(&path, "# Custom User Instructions\n\nDo not break this.").unwrap();
 
         write_owner("claude", "caveman").unwrap();
@@ -401,6 +412,11 @@ mod tests {
                 std::env::set_var("HOME", h);
             } else {
                 std::env::remove_var("HOME");
+            }
+            if let Some(up) = old_up {
+                std::env::set_var("USERPROFILE", up);
+            } else {
+                std::env::remove_var("USERPROFILE");
             }
         }
         std::fs::remove_dir_all(&tmp).ok();
