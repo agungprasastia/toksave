@@ -6,7 +6,7 @@ pub fn run_info() -> i32 {
     colors::banner("toksave info", "install + paths");
 
     // ── TokSave block ──
-    println!("{}{}", "┌─ ".dimmed(), "TokSave".bold().magenta());
+    println!("{}{}", "┌─ ".dimmed(), "TokSave".bold().cyan());
     let ver = crate::util::version::toksave_version();
     let exe = std::env::current_exe()
         .map(|p| p.display().to_string())
@@ -31,7 +31,7 @@ pub fn run_info() -> i32 {
     println!("{}", "│".dimmed());
 
     // ── Agents block ──
-    println!("{}{}", "├─ ".dimmed(), "Agents".bold().magenta());
+    println!("{}{}", "├─ ".dimmed(), "Agents".bold().cyan());
     let mut detected_any = false;
     for a in ALL_AGENTS {
         let det = detect_agent(a.id);
@@ -61,7 +61,7 @@ pub fn run_info() -> i32 {
     println!("{}", "│".dimmed());
 
     // ── Tools block ──
-    println!("{}{}", "├─ ".dimmed(), "Tools".bold().magenta());
+    println!("{}{}", "├─ ".dimmed(), "Tools".bold().cyan());
     for t in ALL_TOOLS {
         if t.instruction_only {
             continue;
@@ -87,7 +87,7 @@ pub fn run_info() -> i32 {
     println!("{}", "│".dimmed());
 
     // ── State block ──
-    println!("{}{}", "├─ ".dimmed(), "State".bold().magenta());
+    println!("{}{}", "├─ ".dimmed(), "State".bold().cyan());
     let manifest_path = crate::util::paths::cache_dir().join("manifest.json");
     if manifest_path.exists() {
         println!(
@@ -117,7 +117,7 @@ pub fn run_info() -> i32 {
         "run ".dimmed(),
         "toksave doctor".cyan().bold()
     );
-    println!("{}", "│".dimmed());
+    crate::util::ui::tree_footer(52);
 
     println!();
     0

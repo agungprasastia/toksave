@@ -29,9 +29,9 @@ pub fn banner(title: &str, subtitle: &str) {
     );
     println!(
         "  {} {}  {}",
-        "✔".magenta().bold(),
+        "✔".green().bold(),
         format!("{title} v{}", crate::util::version::toksave_version())
-            .magenta()
+            .cyan()
             .bold(),
         subtitle.dimmed()
     );

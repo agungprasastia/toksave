@@ -205,6 +205,10 @@ pub fn green_box(title: &str) {
     println!();
 }
 
+pub fn tree_footer(rule_width: usize) {
+    println!("{}{}", "└".dimmed(), "─".repeat(rule_width).dimmed());
+}
+
 pub struct SelectOption {
     pub value: AgentId,
     pub label: String,
@@ -300,11 +304,7 @@ pub fn multi_select(title: &str, mut options: Vec<SelectOption>) -> Vec<AgentId>
         print!("\x1b[0J");
 
         // Title line matching original tokless UI
-        print!(
-            "\r{} {}\x1b[K\r\n",
-            "●".magenta().bold(),
-            title.magenta().bold()
-        );
+        print!("\r{} {}\x1b[K\r\n", "●".cyan().bold(), title.cyan().bold());
 
         let terminal_width = size().map(|(width, _)| width as usize).unwrap_or(80);
         let label_w = options

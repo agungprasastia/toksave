@@ -296,15 +296,18 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         .collect();
     if !wired.is_empty() {
         print_version_tree(&tools);
-        crate::util::ui::green_box(&format!("Equipped {}.", wired.join(", ")));
     }
     for (id, failed) in &failures {
-        colors::warn(&format!(
-            "{}: {} not wired. Run `toksave doctor` for details.",
+        println!(
+            "{}  {} {}: {} not wired. Run {} for details.",
+            "│".dimmed(),
+            colors::WARN.yellow(),
             agent_info(*id).label,
-            failed.join(", ")
-        ));
+            failed.join(", "),
+            "toksave doctor".cyan()
+        );
     }
+    crate::util::ui::tree_footer(52);
     println!();
 
     if failures.is_empty() || parsed.opts.dry_run {
@@ -361,20 +364,16 @@ fn print_version_tree(tools: &[ToolId]) {
     if non_instruction.is_empty() {
         return;
     }
-    println!("{}{}", "├─ ".dimmed(), "All fully updated".bold().magenta());
-    let len = non_instruction.len();
-    for (i, t) in non_instruction.iter().enumerate() {
-        let is_last = i + 1 == len;
-        let branch = if is_last { "└── " } else { "├── " };
+    println!("{}{}", "├─ ".dimmed(), "All fully updated".bold().cyan());
+    for t in &non_instruction {
         let info = tool_info(*t);
         let note = tool_installed_version(*t).unwrap_or_else(|| "not installed".to_string());
         println!(
-            "{}{}{} · {}",
-            "│   ".dimmed(),
-            branch.dimmed(),
+            "{}  {} {:<16}{}",
+            "│".dimmed(),
+            "✔".green(),
             info.label,
             note.green()
         );
     }
-    println!("{}", "│".dimmed());
 }
