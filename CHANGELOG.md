@@ -5,11 +5,13 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] - 2026-09-25
 
 ### Added
 
-- **Tree footer**: Added clean tree footer (`└─────`) to close installer and agent trees across `toksave init`, `info`, `uninstall`, and `disable` without dangling vertical continuation trunks.
+- **`toksave info` command**: New subperintah to inspect system and installation diagnostics, local toksave binary paths, detected agent locations and integration modes, and current tool versions.
+- **Interactive multi-select**: Native terminal agent and tool multi-selection with cursor navigation and toggle keys.
+- **Tree footer**: Clean tree footer (`└─────`) to terminate installer and agent trees across `toksave init`, `info`, `uninstall`, and `disable` without dangling vertical continuation trunks.
 
 ### Fixed
 
