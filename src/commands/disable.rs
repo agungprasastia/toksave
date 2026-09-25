@@ -52,6 +52,7 @@ pub async fn run_disable(parsed: &ParsedCli) -> i32 {
 
     // ── Unwire + mark disabled ──
     let mut prog = crate::util::ui::Progress::new();
+    prog.start_root_section("Agents");
     for agent_id in &agent_ids {
         let info = agent_info(*agent_id);
         prog.start(&format!("Disabling in {}", info.label));
@@ -66,7 +67,23 @@ pub async fn run_disable(parsed: &ParsedCli) -> i32 {
         }
         prog.stop(&format!("{} {}", colors::CHECK, info.label));
     }
+    crate::util::ui::tree_footer(52);
 
+    let agent_names: Vec<&str> = agent_ids
+        .iter()
+        .map(|id| match id {
+            AgentId::Claude => "claude",
+            AgentId::Opencode => "opencode",
+            AgentId::Codex => "codex",
+            AgentId::Antigravity => "antigravity",
+            AgentId::Copilot => "copilot",
+            AgentId::Droid => "droid",
+            AgentId::Devin => "devin",
+            AgentId::Warp => "warp",
+            AgentId::Cursor => "cursor",
+        })
+        .collect();
+    crate::util::unified_block::ensure_instruction_separators(&agent_names);
     // ── Summary ──
     println!();
     let agent_labels: Vec<&str> = agent_ids.iter().map(|id| agent_info(*id).label).collect();

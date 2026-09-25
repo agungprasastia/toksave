@@ -92,8 +92,23 @@ pub async fn run_uninstall(parsed: &ParsedCli) -> i32 {
         }
         prog.stop(&format!("{} {}", colors::CHECK, info.label));
     }
-    prog.done();
+    crate::util::ui::tree_footer(52);
 
+    let agent_names: Vec<&str> = agent_ids
+        .iter()
+        .map(|id| match id {
+            AgentId::Claude => "claude",
+            AgentId::Opencode => "opencode",
+            AgentId::Codex => "codex",
+            AgentId::Antigravity => "antigravity",
+            AgentId::Copilot => "copilot",
+            AgentId::Droid => "droid",
+            AgentId::Devin => "devin",
+            AgentId::Warp => "warp",
+            AgentId::Cursor => "cursor",
+        })
+        .collect();
+    crate::util::unified_block::ensure_instruction_separators(&agent_names);
     for (agent_id, tool_id) in &residual {
         colors::warn(&format!(
             "{} still appears wired to {} after unwire -- config may need manual cleanup",

@@ -114,7 +114,9 @@ pub fn write_owner(agent: &str, owner: &str) -> Result<bool> {
         }
         _ => {
             let block = agent_instructions::render_agent_body(&[owner]);
-            if !existing.trim().is_empty() {
+            let trimmed = existing.trim();
+            if !trimmed.is_empty() {
+                out.push(trimmed.to_string());
                 out.push(String::new());
             }
             out.push(format!("<!-- TOKSAVE:{owner}:START -->"));
@@ -366,6 +368,33 @@ mod tests {
         let out = read_file(&path).unwrap();
         assert!(!out.contains("TOKSAVE:"));
         assert!(out.contains("user content"));
+
+        unsafe {
+            if let Some(h) = old_home {
+                std::env::set_var("HOME", h);
+            } else {
+                std::env::remove_var("HOME");
+            }
+        }
+        std::fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn write_owner_preserves_initial_user_content_without_prior_block() {
+        let tmp = std::env::temp_dir().join(format!("toksave_test_user_{}", std::process::id()));
+        std::fs::create_dir_all(&tmp).unwrap();
+        let old_home = std::env::var_os("HOME");
+        unsafe {
+            std::env::set_var("HOME", &tmp);
+        }
+        let path = claude_paths().agents_md;
+        write_file(&path, "# Custom User Instructions\n\nDo not break this.").unwrap();
+
+        write_owner("claude", "caveman").unwrap();
+        let out = read_file(&path).unwrap();
+        assert!(out.contains("# Custom User Instructions"));
+        assert!(out.contains("Do not break this."));
+        assert!(out.contains("TOKSAVE:caveman:START"));
 
         unsafe {
             if let Some(h) = old_home {

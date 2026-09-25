@@ -302,7 +302,22 @@ async fn repair_agent_wiring(
             still_missing.push(*tool_id);
         }
     }
+    crate::util::unified_block::ensure_instruction_separators(&[agent_wire_name(agent)]);
     still_missing
+}
+
+fn agent_wire_name(a: crate::registry::AgentId) -> &'static str {
+    match a {
+        crate::registry::AgentId::Claude => "claude",
+        crate::registry::AgentId::Opencode => "opencode",
+        crate::registry::AgentId::Codex => "codex",
+        crate::registry::AgentId::Antigravity => "antigravity",
+        crate::registry::AgentId::Copilot => "copilot",
+        crate::registry::AgentId::Droid => "droid",
+        crate::registry::AgentId::Devin => "devin",
+        crate::registry::AgentId::Warp => "warp",
+        crate::registry::AgentId::Cursor => "cursor",
+    }
 }
 
 fn tool_wire_name(t: ToolId) -> String {

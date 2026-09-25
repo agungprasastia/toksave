@@ -131,34 +131,27 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
     };
 
     let mut prog = crate::util::ui::Progress::new();
-    let mut set = tokio::task::JoinSet::new();
-    for id in changed {
-        let opts = upgrade_opts.clone();
-        set.spawn(async move {
-            let result = install_tool(id, &opts).await;
-            (id, result)
-        });
-    }
     let mut upgraded: Vec<ToolId> = vec![];
     let mut failed: Vec<String> = vec![];
-    while let Some(join_res) = set.join_next().await {
-        match join_res {
-            Ok((id, Ok(_))) => {
-                upgraded.push(id);
-                prog.stop(&format!("{} {}", colors::CHECK, tool_info(id).label));
+    for id in &changed {
+        let info = tool_info(*id);
+        prog.start(&format!("Upgrading {}", info.label));
+        match install_tool(*id, &upgrade_opts).await {
+            Ok(true) => {
+                upgraded.push(*id);
+                prog.stop(&format!("{} {}", colors::CHECK, info.label));
             }
-            Ok((id, Err(e))) => {
-                let info = tool_info(id);
-                failed.push(info.label.to_string());
-                prog.stop(&format!("{} {} — {}", colors::CROSS, info.label, e.message));
+            Ok(false) => {
+                prog.stop(&format!("{} {} — skipped", colors::WARN, info.label));
             }
             Err(e) => {
-                failed.push("unknown".to_string());
-                colors::err(&format!("task panicked: {e}"));
+                failed.push(info.label.to_string());
+                let first = e.message.lines().next().unwrap_or("").to_string();
+                prog.stop(&format!("{} {} — {}", colors::CROSS, info.label, first));
             }
         }
-        prog.start("Upgrading");
     }
+    prog.done();
 
     // ── Re-sync wiring (only where already wired) ──
     for tool_id in &upgraded {
@@ -197,7 +190,7 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
     // ── Summary ──
     if !upgraded.is_empty() {
         let names: Vec<&str> = upgraded.iter().map(|id| tool_info(*id).label).collect();
-        crate::util::ui::green_box(&format!("Updated {}.", names.join(", ")));
+        colors::ok(&format!("Updated {}.", names.join(", ")));
     }
     for name in &failed {
         colors::warn(&format!("{name} failed to update."));

@@ -64,6 +64,7 @@ impl Agent for CopilotAgent {
                 });
                 write_json_file(&p.mcp_config, &cfg)?;
                 write_owner("copilot", "codegraph")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
             ToolId::ContextMode => {
@@ -78,6 +79,7 @@ impl Agent for CopilotAgent {
                 });
                 write_json_file(&p.mcp_config, &cfg)?;
                 write_owner("copilot", "context-mode")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
             ToolId::Caveman => {
@@ -130,6 +132,7 @@ impl Agent for CopilotAgent {
                     write_json_pruned(&p.mcp_config, &cfg)?;
                 }
                 remove_owner("copilot", "codegraph")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
             ToolId::ContextMode => {
@@ -140,10 +143,12 @@ impl Agent for CopilotAgent {
                     write_json_pruned(&p.mcp_config, &cfg)?;
                 }
                 remove_owner("copilot", "context-mode")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
             ToolId::Caveman => {
                 remove_owner("copilot", "caveman")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
             ToolId::Rtk => {
@@ -153,10 +158,12 @@ impl Agent for CopilotAgent {
             }
             ToolId::Ponytail => {
                 remove_owner("copilot", "ponytail")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
             ToolId::Principles => {
                 remove_owner("copilot", "principles")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
         }

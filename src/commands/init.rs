@@ -322,6 +322,9 @@ fn check_deps(need_node: bool, min_node: u32) -> bool {
         return true;
     }
     let Some(out) = run_stdout("node", &["--version"]) else {
+        colors::warn(
+            "Node.js not found — npm-channel tools require Node.js. Install: https://nodejs.org",
+        );
         return false;
     };
     let v = out.trim_start_matches('v');
@@ -331,9 +334,9 @@ fn check_deps(need_node: bool, min_node: u32) -> bool {
         .and_then(|s| s.parse().ok())
         .unwrap_or(0);
     if major < min_node {
-        eprintln!(
+        colors::warn(&format!(
             "Node.js {out} detected but >= v{min_node}.x required. Upgrade Node.js at https://nodejs.org"
-        );
+        ));
         return false;
     }
     true
