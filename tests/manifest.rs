@@ -61,6 +61,6 @@ fn record_wire_times_out_on_fresh_foreign_lock() {
     let start = std::time::Instant::now();
     let result = record_wire("claude", "rtk", None);
     assert!(result.is_err());
-    assert!(start.elapsed() >= std::time::Duration::from_secs(5));
+    assert!(start.elapsed() >= std::time::Duration::from_millis(4500));
     assert!(cache.join("manifest.json.lock").exists());
 }

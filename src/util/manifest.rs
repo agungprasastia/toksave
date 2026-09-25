@@ -69,7 +69,7 @@ fn with_manifest_lock<T>(f: impl FnOnce() -> Result<T>) -> Result<T> {
     if let Some(parent) = lock.parent() {
         let _ = crate::util::paths::ensure_dir(parent);
     }
-    let started = SystemTime::now();
+    let started = std::time::Instant::now();
     loop {
         match fs::create_dir(&lock) {
             Ok(()) => break,
@@ -81,7 +81,7 @@ fn with_manifest_lock<T>(f: impl FnOnce() -> Result<T>) -> Result<T> {
                     let _ = fs::remove_dir_all(&lock);
                     continue;
                 }
-                if started.elapsed().unwrap_or_default() > Duration::from_secs(5) {
+                if started.elapsed() >= Duration::from_secs(5) {
                     return Err(ToksaveError::tool(
                         "manifest",
                         &format!("Timed out waiting for manifest lock: {}", lock.display()),
