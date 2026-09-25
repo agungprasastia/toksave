@@ -5,6 +5,22 @@ All notable changes to TokSave will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Tree footer**: Added clean tree footer (`└─────`) to close installer and agent trees across `toksave init`, `info`, `uninstall`, and `disable` without dangling vertical continuation trunks.
+
+### Fixed
+
+- **Instruction-only tool model (`caveman`, `ponytail`, `principles`)**: Aligned `caveman` and `ponytail` with the `tokless` specification as instruction-only tools (`instruction_only = true`, `not_trackable = true`). Removed unnecessary external npm package installations, binary PATH lookups, and false-positive missing binary warnings in `toksave doctor`.
+- **Preserve user instructions during wiring**: Fixed critical data loss bug in `write_owner` (`src/util/unified_block.rs`) where existing custom instructions in `AGENTS.md` or `instructions.md` were overwritten when no prior `TOKSAVE` block existed.
+- **GitHub Copilot IDE instructions synchronization**: Fixed missing `sync_copilot_ide_instructions()` calls on `codegraph` and `context-mode` wiring, as well as on all tool unwire operations in `src/agents/copilot.rs`.
+- **`toksave update` sequential upgrades & progress cleanup**: Converted concurrent update installations to sequential execution with per-tool progress bars to prevent npm global lockfile contention (`EBUSY`/`EPERM`), and eliminated orphaned progress bars left active upon completion.
+- **Instruction separators on unwire & disable**: Ensured `ensure_instruction_separators` is invoked across `toksave disable`, `toksave uninstall`, and `toksave doctor --fix` to prevent markdown block collision.
+- **UI theme & styling**: Replaced purple/magenta color accents with cyan and green across CLI banners, section headers, and checkmarks for improved legibility. Standardized column spacing (`BAR_COL = 40`) for progress indicators.
+- **Node.js preflight warning**: Fixed silent preflight failure in `toksave init` by reporting clear actionable warnings via `colors::warn` when Node.js is missing or below the required major version.
+
 ## [1.2.2] - 2026-09-22
 
 ### Added

@@ -74,12 +74,12 @@ toksave --agents claude,opencode,antigravity # or any combination
 
 | Tool | Stars | Description |
 | :--- | :---: | :--- |
-| **RTK** | ![](https://img.shields.io/github/stars/rtk-ai/rtk?style=flat-square&label=) | CLI proxy that compresses tool output — **60-90% token savings** |
-| **Caveman** | ![](https://img.shields.io/github/stars/JuliusBrussee/caveman?style=flat-square&label=) | Terse response mode — **~75% output token reduction** |
-| **CodeGraph** | ![](https://img.shields.io/github/stars/colbymchenry/codegraph?style=flat-square&label=) | Pre-indexed code knowledge graph — **fewer MCP calls** |
-| **Context-Mode** | ![](https://img.shields.io/github/stars/mksglu/context-mode?style=flat-square&label=) | MCP sandbox with session memory — **98% context compression** |
-| **Ponytail** | ![](https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&label=) | Lazy-coding discipline — YAGNI, stdlib first, delete over add |
-| **Principles** | ![](https://img.shields.io/github/stars/multica-ai/andrej-karpathy-skills?style=flat-square&label=) | Coding standards — think, simplify, edit surgically |
+| [**RTK**](https://github.com/rtk-ai/rtk) | ![](https://img.shields.io/github/stars/rtk-ai/rtk?style=flat-square&label=) | CLI proxy that compresses tool output — **60-90% token savings** |
+| [**Caveman**](https://github.com/JuliusBrussee/caveman) | ![](https://img.shields.io/github/stars/JuliusBrussee/caveman?style=flat-square&label=) | Terse response mode — **~75% output token reduction** |
+| [**CodeGraph**](https://github.com/colbymchenry/codegraph) | ![](https://img.shields.io/github/stars/colbymchenry/codegraph?style=flat-square&label=) | Pre-indexed code knowledge graph — **fewer MCP calls** |
+| [**Context-Mode**](https://github.com/mksglu/context-mode) | ![](https://img.shields.io/github/stars/mksglu/context-mode?style=flat-square&label=) | MCP sandbox with session memory — **98% context compression** |
+| [**Ponytail**](https://github.com/DietrichGebert/ponytail) | ![](https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&label=) | Lazy-coding discipline — YAGNI, stdlib first, delete over add |
+| [**Principles**](https://github.com/multica-ai/andrej-karpathy-skills) | ![](https://img.shields.io/github/stars/multica-ai/andrej-karpathy-skills?style=flat-square&label=) | Coding standards — think, simplify, edit surgically |
 
 ### Wiring Matrix
 
@@ -95,8 +95,8 @@ toksave --agents claude,opencode,antigravity # or any combination
 | Tool | Claude | OpenCode | Codex | Antigravity | Copilot | Droid | Devin | Warp | Cursor |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **RTK** | Hook + Allow | Plugin | Hook | Hook + Allow | Hook + Allow | Hook | Hook | Hook | Hook + Allow |
-| **Caveman** | Plugin + Instr. | Plugin + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. |
-| **Ponytail** | Plugin + Instr. | Plugin + Instr. | Plugin + Instr. | Plugin + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. | Skill + Instr. |
+| **Caveman** | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. |
+| **Ponytail** | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. |
 | **CodeGraph** | MCP + Allow + Instr. | MCP + Auto-index | MCP + Instr. | MCP + Hook + Instr. | MCP + Hook + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Instr. | MCP + Instr. |
 | **Context-Mode** | MCP + Allow + Instr. | Plugin + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Hook + Instr. | MCP + Instr. | MCP + Instr. | MCP + Instr. | MCP + Instr. |
 | **Principles** | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. | Instr. |
@@ -138,6 +138,7 @@ toksave                    # detects agents, installs tools, wires everything
 | Command | Description |
 | :--- | :--- |
 | `toksave` | Install + wire all tools into detected agents |
+| `toksave info` | Display installation details, agent detection, and tool status |
 | `toksave doctor` | Health check with repair suggestions |
 | `toksave doctor --fix` | Repair unhealthy tool installations |
 | `toksave update` | Update all tools to latest versions |
