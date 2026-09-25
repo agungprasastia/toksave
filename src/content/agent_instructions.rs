@@ -198,3 +198,60 @@ Shell stays for git, mkdir, rm, mv, installs, tests. Write/Edit for file changes
 Windows: `pwsh -NoProfile -Command`, absolute paths, `X:\` maps to `/x/`, quote spaces.
 "#
 }
+pub fn instruction_index_section() -> &'static str {
+    let full = agent_instructions();
+    if let Some(idx) = full.find("\n## ") {
+        full[..idx].trim_end()
+    } else {
+        full.trim_end()
+    }
+}
+
+pub fn instruction_section(owner: &str) -> &'static str {
+    let marker = match owner {
+        "principles" => "## Principles",
+        "caveman" => "## Response Style (caveman)",
+        "ponytail" => "## Build Discipline (ponytail)",
+        "codegraph" => "## Code Index (codegraph)",
+        "context-mode" => "## Context Tools (context-mode)",
+        _ => return "",
+    };
+    let full = agent_instructions().trim_end();
+    let Some(start) = full.find(marker) else {
+        return "";
+    };
+    let start = if start > 0 {
+        full[..start].rfind('\n').map(|i| i + 1).unwrap_or(start)
+    } else {
+        start
+    };
+    let rest = &full[start..];
+    if let Some(idx) = rest[1..].find("\n## ") {
+        rest[..=idx].trim_end()
+    } else {
+        rest.trim_end()
+    }
+}
+
+pub fn render_agent_body(owners: &[&str]) -> String {
+    let mut parts = Vec::new();
+    if owners.len() >= 2 {
+        parts.push(instruction_index_section());
+    }
+    if !owners.is_empty() {
+        parts.push(instruction_section("principles"));
+    }
+    if owners.contains(&"caveman") {
+        parts.push(instruction_section("caveman"));
+    }
+    if owners.contains(&"ponytail") {
+        parts.push(instruction_section("ponytail"));
+    }
+    if owners.contains(&"codegraph") {
+        parts.push(instruction_section("codegraph"));
+    }
+    if owners.contains(&"context-mode") {
+        parts.push(instruction_section("context-mode"));
+    }
+    parts.join("\n\n")
+}

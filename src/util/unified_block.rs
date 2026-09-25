@@ -38,6 +38,49 @@ fn parse_owners(header: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
+pub fn section_markers(owner: &str) -> &'static [&'static str] {
+    match owner {
+        "principles" => &[
+            "## Principles",
+            "## 1. Principles",
+            "## Principles (craft) →",
+            "## Principles (craft)",
+        ],
+        "caveman" => &[
+            "## Response Style (caveman)",
+            "## 2. Response Style",
+            "## Response Style",
+            "## Style",
+            "## Caveman Style",
+            "## Caveman",
+            "## Voice (caveman)",
+        ],
+        "ponytail" => &[
+            "## Build Discipline (ponytail)",
+            "## 3. Build Discipline",
+            "## Build Discipline",
+            "## Build Less",
+            "## Ponytail",
+            "## Ponytail: Build Less",
+            "## Reuse Ladder (ponytail)",
+            "## Lazy Ladder (ponytail)",
+        ],
+        "codegraph" => &[
+            "## Code Index (codegraph)",
+            "## 4. Code Search",
+            "## Codegraph",
+            "## Codegraph — MUST USE FOR CODE",
+        ],
+        "context-mode" => &[
+            "## Context Tools (context-mode)",
+            "## 5. Context Control",
+            "## Context Tools",
+            "## Context Tools — MUST USE FOR DATA",
+        ],
+        _ => &[],
+    }
+}
+
 /// One managed block per instruction file, carrying every wired tool in the
 /// header (`TOKSAVE:a,b:START`). Writes upsert the block body and consolidate
 /// the owner list; surrounding user content is preserved.
@@ -46,7 +89,6 @@ pub fn write_owner(agent: &str, owner: &str) -> Result<bool> {
         return Ok(false);
     };
     let existing = read_file(&path).unwrap_or_default();
-    let block = agent_instructions::agent_instructions();
     let lines: Vec<&str> = existing.lines().collect();
     let start_idx = lines
         .iter()
@@ -62,18 +104,21 @@ pub fn write_owner(agent: &str, owner: &str) -> Result<bool> {
             if !owners.iter().any(|o| o == owner) {
                 owners.push(owner.to_string());
             }
+            let owner_refs: Vec<&str> = owners.iter().map(|s| s.as_str()).collect();
+            let block = agent_instructions::render_agent_body(&owner_refs);
             out.extend(lines[..s].iter().map(|l| l.to_string()));
             out.push(format!("<!-- TOKSAVE:{}:START -->", owners.join(",")));
-            out.push(block.to_string());
+            out.push(block);
             out.push("<!-- TOKSAVE:END -->".to_string());
             out.extend(lines[e + 1..].iter().map(|l| l.to_string()));
         }
         _ => {
+            let block = agent_instructions::render_agent_body(&[owner]);
             if !existing.trim().is_empty() {
                 out.push(String::new());
             }
             out.push(format!("<!-- TOKSAVE:{owner}:START -->"));
-            out.push(block.to_string());
+            out.push(block);
             out.push("<!-- TOKSAVE:END -->".to_string());
         }
     }
@@ -113,11 +158,15 @@ pub fn remove_owner(agent: &str, owner: &str) -> Result<bool> {
                 write_file(&path, &content)?;
             }
         } else {
+            let owner_refs: Vec<&str> = owners.iter().map(|s| s.as_str()).collect();
+            let block = agent_instructions::render_agent_body(&owner_refs);
             let header = format!("<!-- TOKSAVE:{}:START -->", owners.join(","));
             let mut new_lines: Vec<String> =
                 lines[..start_idx].iter().map(|l| l.to_string()).collect();
             new_lines.push(header);
-            new_lines.extend(lines[start_idx + 1..].iter().map(|l| l.to_string()));
+            new_lines.push(block);
+            new_lines.push("<!-- TOKSAVE:END -->".to_string());
+            new_lines.extend(lines[end_idx + 1..].iter().map(|l| l.to_string()));
             let content = ensure_separators(&strip_legacy_fences(&new_lines.join("\n")));
             write_file(&path, &content)?;
         }
@@ -132,9 +181,32 @@ pub fn has_owner(agent: &str, owner: &str) -> bool {
     };
     if let Some(content) = read_file(&path) {
         let tag = format!("TOKSAVE:{owner}");
-        return content.contains(&tag) || content.contains(owner);
+        if content.contains(&tag)
+            || content.contains(&format!("TOKSAVE:{owner},"))
+            || content.contains(&format!(",{owner}:"))
+            || content.contains(&format!(",{owner},"))
+        {
+            return true;
+        }
+        for marker in section_markers(owner) {
+            if content.contains(marker) {
+                return true;
+            }
+        }
     }
     false
+}
+
+pub fn ensure_instruction_separators(agents: &[&str]) {
+    for agent in agents {
+        if let Some(path) = instruction_path(agent)
+            && path.exists()
+            && let Some(content) = read_file(&path)
+        {
+            let cleaned = ensure_separators(&strip_legacy_fences(&content));
+            let _ = write_file(&path, &cleaned);
+        }
+    }
 }
 
 /// Fence pairs left behind by earlier tooling (tokless-era markers). Blocks

@@ -4,7 +4,7 @@ use crate::util::detect::find_binary_in;
 use crate::util::errors::Result;
 use crate::util::json::{get_or_create_object, read_json_file, write_json_file, write_json_pruned};
 use crate::util::paths::{
-    copilot_known_bin_dirs, copilot_paths, toksave_abs, toksave_hook_command,
+    copilot_known_bin_dirs, copilot_paths, read_file, toksave_abs, toksave_hook_command, write_file,
 };
 use crate::util::unified_block::{has_owner, remove_owner, write_owner};
 
@@ -82,6 +82,7 @@ impl Agent for CopilotAgent {
             }
             ToolId::Caveman => {
                 write_owner("copilot", "caveman")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
             ToolId::Rtk => {
@@ -107,10 +108,12 @@ impl Agent for CopilotAgent {
             }
             ToolId::Ponytail => {
                 write_owner("copilot", "ponytail")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
             ToolId::Principles => {
                 write_owner("copilot", "principles")?;
+                sync_copilot_ide_instructions();
                 Ok(true)
             }
         }
@@ -209,4 +212,19 @@ fn has_rtk_hook() -> bool {
                         .is_some_and(|c| c.contains("rtk-hook copilot"))
             })
         })
+}
+
+pub fn sync_copilot_ide_instructions() {
+    let p = copilot_paths();
+    let Some(body) = read_file(&p.instructions) else {
+        return;
+    };
+    if body.trim().is_empty() {
+        return;
+    }
+    let ide_dir = std::path::Path::new(".github");
+    let ide_path = ide_dir.join("copilot-instructions.md");
+    if ide_dir.exists() || ide_path.exists() {
+        let _ = write_file(&ide_path, &(body.trim_end().to_string() + "\n"));
+    }
 }

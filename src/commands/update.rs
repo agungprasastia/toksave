@@ -44,6 +44,15 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
         let installed = tool_installed_version(*t);
         let latest = latest_versions.get(t).cloned().flatten();
         let label = format!("{:<width$}", info.label, width = pad);
+        if info.instruction_only {
+            println!(
+                "  {} {}{}",
+                colors::CHECK.green(),
+                label,
+                "instruction-only (up to date)".dimmed()
+            );
+            continue;
+        }
         let inst_str = installed
             .as_deref()
             .map(display_version)
@@ -52,7 +61,6 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
             .as_deref()
             .map(display_version)
             .unwrap_or_else(|| "?".to_string());
-
         let needs_upgrade = installed.is_some()
             && latest.is_some()
             && !version_up_to_date(installed.as_deref().unwrap(), latest.as_deref().unwrap());
@@ -168,6 +176,21 @@ pub async fn run_update(parsed: &ParsedCli) -> i32 {
                     tool_installed_version(*tool_id).as_deref(),
                 );
             }
+        }
+    }
+    // ── Re-sync instruction wiring (only where already wired) ──
+    for tool in ALL_TOOLS {
+        if !tool.instruction_only {
+            continue;
+        }
+        for agent in ALL_AGENTS {
+            if !detect_agent(agent.id).installed {
+                continue;
+            }
+            if verify_tool(agent.id, tool.id) != Some(true) {
+                continue;
+            }
+            let _ = wire_tool(agent.id, tool.id, &upgrade_opts).await;
         }
     }
 

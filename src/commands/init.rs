@@ -119,9 +119,21 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
 
     // ── Step 5: Install tools ──
     let mut installed_tools = std::collections::HashSet::new();
+    for t in &tools {
+        if tool_info(*t).instruction_only {
+            installed_tools.insert(*t);
+        }
+    }
+
+    let install_tools: Vec<ToolId> = tools
+        .iter()
+        .filter(|t| !tool_info(**t).instruction_only)
+        .copied()
+        .collect();
+
     let prog = Prog::new();
     prog.start_root_section("Tools");
-    for t in &tools {
+    for t in &install_tools {
         let info = tool_info(*t);
         let is_npm = info.channel == crate::registry::Channel::Npm;
         if is_npm && !node_ok {
@@ -216,7 +228,7 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
             match wire_tool(*agent_id, *t, &parsed.opts).await {
                 Ok(true) => {
                     if parsed.opts.dry_run {
-                        if tool_installed_version(*t).is_none() {
+                        if !tool_info(*t).instruction_only && tool_installed_version(*t).is_none() {
                             failed_tools.push(tool_info(*t).label.to_string());
                         }
                         continue;
@@ -258,6 +270,22 @@ pub async fn run_init(parsed: &ParsedCli) -> i32 {
         }
     }
     prog.done();
+
+    let agent_names: Vec<&str> = requested
+        .iter()
+        .map(|id| match id {
+            AgentId::Claude => "claude",
+            AgentId::Opencode => "opencode",
+            AgentId::Codex => "codex",
+            AgentId::Antigravity => "antigravity",
+            AgentId::Copilot => "copilot",
+            AgentId::Droid => "droid",
+            AgentId::Devin => "devin",
+            AgentId::Warp => "warp",
+            AgentId::Cursor => "cursor",
+        })
+        .collect();
+    crate::util::unified_block::ensure_instruction_separators(&agent_names);
 
     // ── Step 7: Summary ──
     let wired: Vec<&str> = requested
@@ -325,23 +353,27 @@ fn tool_name(t: ToolId) -> String {
 }
 
 fn print_version_tree(tools: &[ToolId]) {
+    let non_instruction: Vec<_> = tools
+        .iter()
+        .filter(|t| !tool_info(**t).instruction_only)
+        .copied()
+        .collect();
+    if non_instruction.is_empty() {
+        return;
+    }
     println!("{}{}", "├─ ".dimmed(), "All fully updated".bold().magenta());
-    let len = tools.len();
-    for (i, t) in tools.iter().enumerate() {
+    let len = non_instruction.len();
+    for (i, t) in non_instruction.iter().enumerate() {
         let is_last = i + 1 == len;
         let branch = if is_last { "└── " } else { "├── " };
         let info = tool_info(*t);
-        let note = if info.instruction_only {
-            "installed".to_string()
-        } else {
-            tool_installed_version(*t).unwrap_or_else(|| "not installed".to_string())
-        };
+        let note = tool_installed_version(*t).unwrap_or_else(|| "not installed".to_string());
         println!(
             "{}{}{} · {}",
             "│   ".dimmed(),
             branch.dimmed(),
             info.label,
-            note.dimmed()
+            note.green()
         );
     }
     println!("{}", "│".dimmed());

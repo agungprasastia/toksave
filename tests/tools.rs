@@ -36,15 +36,15 @@ fn health_check_and_version_for_all_tools() {
 
     // Caveman
     let caveman_hc = tool_health_check(ToolId::Caveman);
-    assert_eq!(
-        caveman_hc.healthy,
-        CavemanTool.installed_version().is_some()
-    );
+    assert!(caveman_hc.healthy);
     assert_eq!(
         tool_installed_version(ToolId::Caveman),
-        CavemanTool.installed_version()
+        Some("instruction-only".to_string())
     );
-
+    assert_eq!(
+        CavemanTool.installed_version(),
+        Some("instruction-only".to_string())
+    );
     // Codegraph
     let codegraph_hc = tool_health_check(ToolId::Codegraph);
     assert_eq!(
@@ -69,15 +69,15 @@ fn health_check_and_version_for_all_tools() {
 
     // Ponytail
     let ponytail_hc = tool_health_check(ToolId::Ponytail);
-    assert_eq!(
-        ponytail_hc.healthy,
-        PonytailTool.installed_version().is_some()
-    );
+    assert!(ponytail_hc.healthy);
     assert_eq!(
         tool_installed_version(ToolId::Ponytail),
-        PonytailTool.installed_version()
+        Some("instruction-only".to_string())
     );
-
+    assert_eq!(
+        PonytailTool.installed_version(),
+        Some("instruction-only".to_string())
+    );
     // Principles
     let principles_hc = tool_health_check(ToolId::Principles);
     assert!(principles_hc.healthy);
